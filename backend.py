@@ -91,7 +91,7 @@ class OllamaConfig:
     MODEL_NAME = os.getenv("OLLAMA_MODEL", "mistral:7b")
     
     # Enable/disable LLM features
-    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "false"
+    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
     
     # System prompt for astrology chatbot
     SYSTEM_PROMPT = """You are AstroBot, an expert Vedic astrology assistant with deep knowledge of Nadi Jyotish. 
