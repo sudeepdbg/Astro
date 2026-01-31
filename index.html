@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nadi Jyotish • by Astrologer Sudeep | +919590675753 </title>
+    <title>Nadi Jyotish • by Astrologer Sudeep | +919590675753</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Cinzel+Decorative:wght@400;700;900&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
             margin: 0;
@@ -90,6 +91,11 @@
             }
         }
 
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
         .animate-slideUp {
             animation: slideUp 0.6s ease-out forwards;
         }
@@ -100,6 +106,10 @@
 
         .animate-scaleIn {
             animation: scaleIn 0.5s ease-out forwards;
+        }
+
+        .animate-pulse {
+            animation: pulse 2s infinite;
         }
 
         .glass-card {
@@ -204,6 +214,120 @@
             font-weight: 600;
             color: #ffd700;
         }
+
+        .prediction-type-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: linear-gradient(135deg, rgba(86, 98, 246, 0.2), rgba(86, 98, 246, 0.1));
+            border: 1px solid rgba(86, 98, 246, 0.3);
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #5662f6;
+        }
+
+        .feature-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .feature-card.active {
+            background: rgba(255, 215, 0, 0.2);
+            border-color: #ffd700;
+        }
+
+        .yoga-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(147, 51, 234, 0.1));
+            border: 1px solid rgba(147, 51, 234, 0.3);
+            border-radius: 12px;
+            font-size: 11px;
+            color: #d8b4fe;
+            margin: 2px;
+        }
+
+        .dasha-badge {
+            display: inline-block;
+            padding: 6px 14px;
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 16px;
+            font-size: 13px;
+            color: #86efac;
+        }
+
+        .tab-button {
+            padding: 12px 24px;
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            border-radius: 12px;
+            color: #ffd700;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button:hover {
+            background: rgba(255, 215, 0, 0.2);
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #0f0c29;
+            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+        }
+
+        .prediction-section {
+            display: none;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        .prediction-section.active {
+            display: block;
+        }
+
+        .planet-status {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+
+        .planet-status.direct {
+            background-color: #10b981;
+        }
+
+        .planet-status.retrograde {
+            background-color: #ef4444;
+        }
+
+        .info-tooltip {
+            position: relative;
+            cursor: help;
+        }
+
+        .info-tooltip:hover::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 100;
+            border: 1px solid #ffd700;
+        }
     </style>
 </head>
 <body>
@@ -235,14 +359,45 @@
                 <h1 class="display-font text-5xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 mb-4 tracking-wider" style="animation: glow 3s infinite;">
                     नाड़ी ज्योतिष
                 </h1>
-                <p class="serif-font text-xl md:text-2xl text-yellow-100/80 mb-2 italic">Nadi Jyotish by Astrologer Sudeep</p>
+                <p class="serif-font text-xl md:text-2xl text-yellow-100/80 mb-2 italic">Advanced Nadi Jyotish by Astrologer Sudeep</p>
                 <p class="text-sm md:text-base text-gray-400 tracking-widest uppercase">Astrologer Sudeep | +919590675753 </p>
                 <div class="w-24 h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent mx-auto mt-6"></div>
             </header>
 
+            <!-- Prediction Type Selection -->
+            <div class="glass-card golden-border rounded-3xl p-6 mb-8 animate-slideUp">
+                <h2 class="serif-font text-2xl text-yellow-300 mb-6 text-center">Choose Your Prediction Type</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="feature-card glass-card rounded-2xl p-6 text-center border border-yellow-900/30" data-type="general">
+                        <div class="text-4xl text-yellow-400 mb-4">🌙</div>
+                        <h3 class="text-xl font-bold text-yellow-200 mb-2">General Prediction</h3>
+                        <p class="text-gray-300 text-sm">Complete life analysis with all aspects</p>
+                        <div class="mt-4 text-xs text-yellow-400">
+                            <i class="fas fa-star"></i> Includes Career & Child Insights
+                        </div>
+                    </div>
+                    <div class="feature-card glass-card rounded-2xl p-6 text-center border border-yellow-900/30" data-type="career">
+                        <div class="text-4xl text-blue-400 mb-4">💼</div>
+                        <h3 class="text-xl font-bold text-blue-200 mb-2">Career Guidance</h3>
+                        <p class="text-gray-300 text-sm">Professional path & success timing</p>
+                        <div class="mt-4 text-xs text-blue-400">
+                            <i class="fas fa-briefcase"></i> 10th House Analysis
+                        </div>
+                    </div>
+                    <div class="feature-card glass-card rounded-2xl p-6 text-center border border-yellow-900/30" data-type="child">
+                        <div class="text-4xl text-pink-400 mb-4">👶</div>
+                        <h3 class="text-xl font-bold text-pink-200 mb-2">Child Prediction</h3>
+                        <p class="text-gray-300 text-sm">Fertility & children insights</p>
+                        <div class="mt-4 text-xs text-pink-400">
+                            <i class="fas fa-child"></i> 5th House Analysis
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Main Form Card -->
             <div class="glass-card golden-border rounded-3xl p-8 md:p-12 mb-12 animate-slideUp">
-                <h2 class="serif-font text-3xl text-yellow-300 mb-8 text-center">Enter Your Birth Details</h2>
+                <h2 class="serif-font text-3xl text-yellow-300 mb-8 text-center" id="formTitle">Enter Your Birth Details</h2>
                 
                 <form id="nadiForm" class="space-y-6">
                     <!-- Name and Language -->
@@ -266,6 +421,9 @@
                             </select>
                         </div>
                     </div>
+
+                    <!-- Hidden Prediction Type -->
+                    <input type="hidden" id="predictionType" value="general">
 
                     <!-- Date Input - Mobile Friendly -->
                     <div>
@@ -296,7 +454,7 @@
                                 </select>
                             </div>
                             <div>
-                                <input type="number" id="year" required min="1900" max="Astrologer Sudeep " placeholder="Year"
+                                <input type="number" id="year" required min="1900" max="2024" placeholder="Year"
                                     class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white placeholder-gray-500 text-center">
                             </div>
                         </div>
@@ -306,6 +464,9 @@
                     <div>
                         <label class="block text-sm font-semibold text-yellow-200 mb-2 tracking-wide">
                             Birth Time <span class="text-red-400">*</span>
+                            <span class="info-tooltip ml-2 text-yellow-400" data-tooltip="For best accuracy, use exact birth time">
+                                <i class="fas fa-info-circle"></i>
+                            </span>
                         </label>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
@@ -343,9 +504,17 @@
                                     class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white">
                                     <option value="">Minute</option>
                                     <option value="00">00</option>
+                                    <option value="05">05</option>
+                                    <option value="10">10</option>
                                     <option value="15">15</option>
+                                    <option value="20">20</option>
+                                    <option value="25">25</option>
                                     <option value="30">30</option>
+                                    <option value="35">35</option>
+                                    <option value="40">40</option>
                                     <option value="45">45</option>
+                                    <option value="50">50</option>
+                                    <option value="55">55</option>
                                 </select>
                             </div>
                         </div>
@@ -364,7 +533,7 @@
 
                     <!-- Submit Button -->
                     <button type="submit" id="submitBtn"
-                        class="w-full bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-gray-900 font-bold py-4 px-8 rounded-xl text-lg tracking-wide shadow-lg">
+                        class="w-full bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-gray-900 font-bold py-4 px-8 rounded-xl text-lg tracking-wide shadow-lg animate-pulse">
                         <span id="submitText">✨ Unveil Your Cosmic Destiny</span>
                     </button>
                 </form>
@@ -383,38 +552,121 @@
             <div id="predictionResult" class="hidden prediction-card glass-card golden-border rounded-3xl p-8 md:p-12 mb-12">
                 <!-- Header -->
                 <div class="text-center mb-10">
-                    <div class="inline-block language-badge mb-4" id="languageBadge"></div>
+                    <div class="flex flex-wrap justify-center gap-3 mb-4">
+                        <div class="language-badge" id="languageBadge"></div>
+                        <div class="prediction-type-badge" id="predictionTypeBadge"></div>
+                    </div>
                     <h2 class="serif-font text-4xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-400 mb-2">
                         Your Nadi Prediction
                     </h2>
                     <p class="text-gray-400 text-sm">Revealed from the Ancient Palm Leaves</p>
                 </div>
 
+                <!-- Yogas and Dasha -->
+                <div class="mb-8">
+                    <div class="flex flex-wrap justify-center gap-4 mb-4">
+                        <div id="yogasContainer" class="text-center"></div>
+                        <div id="dashaContainer" class="text-center"></div>
+                    </div>
+                </div>
+
                 <!-- Astrological Info Cards -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
                     <div class="planet-card bg-gradient-to-br from-yellow-900/20 to-yellow-800/10 border border-yellow-700/30 rounded-xl p-4 text-center">
                         <div class="text-yellow-500 text-sm font-semibold mb-2 uppercase tracking-wider">Ascendant</div>
                         <div id="ascendant" class="text-yellow-100 text-xl font-bold serif-font">--</div>
+                        <div class="text-yellow-400/70 text-xs mt-1" id="ascendantDegree">--°</div>
                     </div>
                     <div class="planet-card bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-700/30 rounded-xl p-4 text-center">
                         <div class="text-blue-400 text-sm font-semibold mb-2 uppercase tracking-wider">Moon Sign</div>
                         <div id="moonSign" class="text-blue-100 text-xl font-bold serif-font">--</div>
+                        <div class="text-blue-400/70 text-xs mt-1" id="moonNakshatra">--</div>
                     </div>
                     <div class="planet-card bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-700/30 rounded-xl p-4 text-center">
-                        <div class="text-purple-400 text-sm font-semibold mb-2 uppercase tracking-wider">Nakshatra</div>
-                        <div id="nakshatra" class="text-purple-100 text-xl font-bold serif-font">--</div>
+                        <div class="text-purple-400 text-sm font-semibold mb-2 uppercase tracking-wider">Sun Sign</div>
+                        <div id="sunSign" class="text-purple-100 text-xl font-bold serif-font">--</div>
+                        <div class="text-purple-400/70 text-xs mt-1" id="sunDegree">--°</div>
+                    </div>
+                    <div class="planet-card bg-gradient-to-br from-green-900/20 to-green-800/10 border border-green-700/30 rounded-xl p-4 text-center">
+                        <div class="text-green-400 text-sm font-semibold mb-2 uppercase tracking-wider">Dasha</div>
+                        <div id="dasha" class="text-green-100 text-xl font-bold serif-font">--</div>
+                        <div class="text-green-400/70 text-xs mt-1">Current Period</div>
                     </div>
                 </div>
 
-                <!-- Prediction Text -->
-                <div class="bg-black/30 border border-yellow-900/20 rounded-xl p-8">
-                    <div id="predictionText" class="text-gray-200 text-lg leading-relaxed serif-font whitespace-pre-line"></div>
-                </div>
+                <!-- Prediction Tabs -->
+                <div class="mb-8">
+                    <div class="flex flex-wrap gap-2 justify-center mb-6">
+                        <button class="tab-button active" data-tab="general">
+                            <i class="fas fa-star mr-2"></i>General
+                        </button>
+                        <button class="tab-button" data-tab="career">
+                            <i class="fas fa-briefcase mr-2"></i>Career
+                        </button>
+                        <button class="tab-button" data-tab="child">
+                            <i class="fas fa-child mr-2"></i>Child
+                        </button>
+                        <button class="tab-button" data-tab="planets">
+                            <i class="fas fa-globe mr-2"></i>Planets
+                        </button>
+                    </div>
 
-                <!-- Planetary Positions -->
-                <div id="planetaryPositions" class="mt-10">
-                    <h3 class="text-2xl text-yellow-300 mb-6 text-center serif-font">Planetary Positions</h3>
-                    <div id="planetsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+                    <!-- Tab Content -->
+                    <div id="tabContent" class="min-h-[400px]">
+                        <!-- General Prediction -->
+                        <div id="generalTab" class="prediction-section active">
+                            <div class="bg-black/30 border border-yellow-900/20 rounded-xl p-8">
+                                <div id="generalPrediction" class="text-gray-200 text-lg leading-relaxed serif-font whitespace-pre-line"></div>
+                            </div>
+                        </div>
+
+                        <!-- Career Prediction -->
+                        <div id="careerTab" class="prediction-section">
+                            <div class="bg-black/30 border border-blue-900/20 rounded-xl p-8">
+                                <div id="careerPrediction" class="text-gray-200 text-lg leading-relaxed serif-font whitespace-pre-line"></div>
+                            </div>
+                        </div>
+
+                        <!-- Child Prediction -->
+                        <div id="childTab" class="prediction-section">
+                            <div class="bg-black/30 border border-pink-900/20 rounded-xl p-8">
+                                <div id="childPrediction" class="text-gray-200 text-lg leading-relaxed serif-font whitespace-pre-line"></div>
+                            </div>
+                        </div>
+
+                        <!-- Planetary Positions -->
+                        <div id="planetsTab" class="prediction-section">
+                            <div class="bg-black/30 border border-green-900/20 rounded-xl p-8">
+                                <h3 class="text-2xl text-yellow-300 mb-6 text-center serif-font">Planetary Positions</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full text-sm text-gray-300">
+                                        <thead>
+                                            <tr class="border-b border-gray-700">
+                                                <th class="py-3 px-4 text-left">Planet</th>
+                                                <th class="py-3 px-4 text-left">Sign</th>
+                                                <th class="py-3 px-4 text-left">House</th>
+                                                <th class="py-3 px-4 text-left">Degree</th>
+                                                <th class="py-3 px-4 text-left">Nakshatra</th>
+                                                <th class="py-3 px-4 text-left">Pada</th>
+                                                <th class="py-3 px-4 text-left">Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="planetaryTable"></tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-6 text-sm text-gray-400">
+                                    <div class="flex items-center gap-4">
+                                        <div class="flex items-center">
+                                            <span class="planet-status direct"></span> Direct
+                                        </div>
+                                        <div class="flex items-center">
+                                            <span class="planet-status retrograde"></span> Retrograde
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Timestamp -->
@@ -427,36 +679,43 @@
             <footer class="text-center py-8 animate-fadeIn">
                 <div class="glass-card rounded-2xl p-6 mb-4">
                     <p class="text-2xl md:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 mb-3" style="text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);">
-                        🌟 Discover Your Destiny • Transform Your Life 🌟
+                        🌟 Advanced Nadi Predictions • Accurate & Personalized 🌟
                     </p>
                     <p class="text-lg font-semibold text-yellow-200 mb-2">
-                        Get Personalized Nadi Astrology Predictions
+                        Get Detailed Astrological Insights with Enhanced Calculations
                     </p>
                     <p class="text-base text-yellow-300/90 font-medium">
-                        ✨ 100% Free • Instant Results • Hindi & English Support ✨
+                        ✨ Free Forever • Yogas & Dasha • Career & Child Insights ✨
                     </p>
                     <div class="mt-4 flex flex-wrap justify-center gap-4 text-sm font-bold text-yellow-100">
                         <span class="bg-gradient-to-r from-yellow-600/30 to-orange-600/30 px-4 py-2 rounded-full border border-yellow-500/40">
-                            📅 Career Guidance
+                            <i class="fas fa-chart-line mr-2"></i>Advanced Calculations
                         </span>
-                        <span class="bg-gradient-to-r from-yellow-600/30 to-orange-600/30 px-4 py-2 rounded-full border border-yellow-500/40">
-                            💑 Relationship Insights
+                        <span class="bg-gradient-to-r from-blue-600/30 to-purple-600/30 px-4 py-2 rounded-full border border-blue-500/40">
+                            <i class="fas fa-briefcase mr-2"></i>Career Analysis
                         </span>
-                        <span class="bg-gradient-to-r from-yellow-600/30 to-orange-600/30 px-4 py-2 rounded-full border border-yellow-500/40">
-                            🏥 Health & Wellness
+                        <span class="bg-gradient-to-r from-pink-600/30 to-red-600/30 px-4 py-2 rounded-full border border-pink-500/40">
+                            <i class="fas fa-child mr-2"></i>Child Predictions
+                        </span>
+                        <span class="bg-gradient-to-r from-green-600/30 to-teal-600/30 px-4 py-2 rounded-full border border-green-500/40">
+                            <i class="fas fa-star-and-crescent mr-2"></i>Yoga Detection
                         </span>
                     </div>
                 </div>
-                <p class="text-gray-500 text-sm mb-1">© Astrologer Sudeep | +919590675753 • Ancient Wisdom Meets Modern Technology</p>
-                <p class="text-xs text-gray-700">For all your spritual and personal Problems </p>
+                <p class="text-gray-500 text-sm mb-1">© Astrologer Sudeep | +919590675753 • Advanced Vedic Astrology</p>
+                <p class="text-xs text-gray-700">For all your spiritual and personal guidance needs</p>
             </footer>
 
         </div>
     </div>
 
     <script>
-        // ⚙️ BACKEND CONFIGURATION - REPLACE WITH YOUR RAILWAY URL
+        // ⚙️ BACKEND CONFIGURATION
         const BACKEND_URL = 'https://web-production-7266a.up.railway.app';
+
+        // Initialize
+        createStars();
+        setupEventListeners();
 
         // Generate cosmic background stars
         function createStars() {
@@ -479,8 +738,66 @@
             }
         }
 
-        // Initialize
-        createStars();
+        // Setup event listeners
+        function setupEventListeners() {
+            // Prediction type selection
+            document.querySelectorAll('.feature-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    const type = this.dataset.type;
+                    selectPredictionType(type);
+                });
+            });
+
+            // Tab switching
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const tab = this.dataset.tab;
+                    switchTab(tab);
+                });
+            });
+
+            // Form submission
+            document.getElementById('nadiForm').addEventListener('submit', handleFormSubmit);
+        }
+
+        // Select prediction type
+        function selectPredictionType(type) {
+            // Update UI
+            document.querySelectorAll('.feature-card').forEach(card => {
+                card.classList.remove('active');
+                if (card.dataset.type === type) {
+                    card.classList.add('active');
+                }
+            });
+
+            // Update hidden field
+            document.getElementById('predictionType').value = type;
+
+            // Update form title
+            const titles = {
+                general: 'Enter Birth Details for Complete Prediction',
+                career: 'Enter Birth Details for Career Guidance',
+                child: 'Enter Birth Details for Child Prediction'
+            };
+            document.getElementById('formTitle').textContent = titles[type] || titles.general;
+        }
+
+        // Switch between tabs
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+                if (button.dataset.tab === tabName) {
+                    button.classList.add('active');
+                }
+            });
+
+            // Show selected tab content
+            document.querySelectorAll('.prediction-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+        }
 
         // Test backend connection on load
         window.addEventListener('load', async () => {
@@ -499,8 +816,8 @@
             }
         });
 
-        // Form submission
-        document.getElementById('nadiForm').addEventListener('submit', async (e) => {
+        // Handle form submission
+        async function handleFormSubmit(e) {
             e.preventDefault();
             
             const submitBtn = document.getElementById('submitBtn');
@@ -542,10 +859,11 @@
             
             const formData = {
                 name: document.getElementById('name').value,
-                date: `${year}-${month}-${day}`,  // YYYY-MM-DD format
-                time: `${hour}:${minute}`,         // HH:MM format
+                date: `${year}-${month}-${day}`,
+                time: `${hour}:${minute}`,
                 location: document.getElementById('location').value,
-                language: document.getElementById('language').value
+                language: document.getElementById('language').value,
+                prediction_type: document.getElementById('predictionType').value
             };
             
             console.log('Submitting form data:', formData);
@@ -571,45 +889,8 @@
                 const data = await response.json();
                 console.log('Received data:', data);
                 
-                // Display language badge
-                const languageBadge = document.getElementById('languageBadge');
-                languageBadge.textContent = data.birth_details.language === 'Hindi' ? '🇮🇳 हिन्दी' : '🇬🇧 English';
-                
-                // Display astrological data
-                document.getElementById('ascendant').textContent = 
-                    data.birth_details.language === 'Hindi' ? data.ascendant_hindi : data.ascendant;
-                document.getElementById('moonSign').textContent = 
-                    data.birth_details.language === 'Hindi' ? data.moon_sign_hindi : data.moon_sign;
-                
-                // Get Moon nakshatra
-                const moonData = data.planetary_positions.find(p => p.planet === 'Moon');
-                document.getElementById('nakshatra').textContent = 
-                    data.birth_details.language === 'Hindi' ? moonData.nakshatra_hindi : moonData.nakshatra;
-                
                 // Display prediction
-                document.getElementById('predictionText').textContent = data.prediction;
-                
-                // Display planetary positions
-                const planetsGrid = document.getElementById('planetsGrid');
-                planetsGrid.innerHTML = '';
-                
-                data.planetary_positions.forEach(planet => {
-                    const planetCard = document.createElement('div');
-                    planetCard.className = 'planet-card bg-black/30 border border-yellow-900/20 rounded-lg p-3 text-center';
-                    planetCard.innerHTML = `
-                        <div class="text-yellow-500 text-xs font-semibold mb-1">${
-                            data.birth_details.language === 'Hindi' ? planet.planet_hindi : planet.planet
-                        }</div>
-                        <div class="text-gray-300 text-sm">${
-                            data.birth_details.language === 'Hindi' ? planet.sign_hindi : planet.sign
-                        }</div>
-                    `;
-                    planetsGrid.appendChild(planetCard);
-                });
-                
-                // Timestamp
-                document.getElementById('timestamp').textContent = 
-                    `Generated on ${new Date().toLocaleString()}`;
+                displayPrediction(data, formData);
                 
                 // Show result
                 resultDiv.classList.remove('hidden');
@@ -624,9 +905,128 @@
                 errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } finally {
                 submitBtn.disabled = false;
-                submitText.textContent = '✨ Unveil Your Cosmic Destiny by Astrologer Sudeep ';
+                submitText.textContent = '✨ Unveil Your Cosmic Destiny';
             }
-        });
+        }
+
+        // Display prediction data
+        function displayPrediction(data, formData) {
+            // Display language badge
+            const languageBadge = document.getElementById('languageBadge');
+            languageBadge.textContent = data.birth_details.language === 'Hindi' ? '🇮🇳 हिन्दी' : '🇬🇧 English';
+            
+            // Display prediction type badge
+            const typeBadge = document.getElementById('predictionTypeBadge');
+            const typeText = {
+                general: '🌙 General Prediction',
+                career: '💼 Career Guidance',
+                child: '👶 Child Prediction'
+            };
+            typeBadge.textContent = typeText[data.birth_details.prediction_type] || typeText.general;
+            
+            // Display astrological data
+            document.getElementById('ascendant').textContent = 
+                data.birth_details.language === 'Hindi' ? data.ascendant_hindi : data.ascendant;
+            
+            // Get ascendant degree
+            const ascendantPlanet = data.planetary_positions.find(p => p.house === 1);
+            if (ascendantPlanet) {
+                document.getElementById('ascendantDegree').textContent = 
+                    `${ascendantPlanet.degree_in_sign.toFixed(1)}°`;
+            }
+            
+            // Get Moon data
+            const moonData = data.planetary_positions.find(p => p.planet === 'Moon');
+            if (moonData) {
+                document.getElementById('moonSign').textContent = 
+                    data.birth_details.language === 'Hindi' ? moonData.sign_hindi : moonData.sign;
+                document.getElementById('moonNakshatra').textContent = 
+                    data.birth_details.language === 'Hindi' ? 
+                    `${moonData.nakshatra_hindi} (${moonData.nakshatra_pada} पाद)` :
+                    `${moonData.nakshatra} (Pada ${moonData.nakshatra_pada})`;
+            }
+            
+            // Get Sun data
+            const sunData = data.planetary_positions.find(p => p.planet === 'Sun');
+            if (sunData) {
+                document.getElementById('sunSign').textContent = 
+                    data.birth_details.language === 'Hindi' ? sunData.sign_hindi : sunData.sign;
+                document.getElementById('sunDegree').textContent = 
+                    `${sunData.degree_in_sign.toFixed(1)}°`;
+            }
+            
+            // Display dasha
+            if (data.dasha_period) {
+                document.getElementById('dasha').textContent = data.dasha_period;
+            }
+            
+            // Display yogas
+            const yogasContainer = document.getElementById('yogasContainer');
+            if (data.yogas && data.yogas.length > 0) {
+                yogasContainer.innerHTML = '<div class="text-yellow-300 text-sm font-semibold mb-2">Special Yogas:</div>';
+                data.yogas.forEach(yoga => {
+                    const badge = document.createElement('span');
+                    badge.className = 'yoga-badge';
+                    badge.textContent = yoga;
+                    yogasContainer.appendChild(badge);
+                });
+            } else {
+                yogasContainer.innerHTML = '<div class="text-gray-500 text-sm">No special yogas detected</div>';
+            }
+            
+            // Display dasha info
+            const dashaContainer = document.getElementById('dashaContainer');
+            if (data.dasha_period) {
+                dashaContainer.innerHTML = `
+                    <div class="dasha-badge">
+                        <i class="fas fa-clock mr-2"></i>Current Dasha: ${data.dasha_period}
+                    </div>
+                `;
+            }
+            
+            // Display predictions
+            document.getElementById('generalPrediction').textContent = data.prediction;
+            
+            if (data.career_prediction) {
+                document.getElementById('careerPrediction').textContent = data.career_prediction;
+            }
+            
+            if (data.child_prediction) {
+                document.getElementById('childPrediction').textContent = data.child_prediction;
+            }
+            
+            // Display planetary positions table
+            const planetaryTable = document.getElementById('planetaryTable');
+            planetaryTable.innerHTML = '';
+            
+            data.planetary_positions.forEach(planet => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-gray-800 hover:bg-gray-800/30';
+                
+                const statusClass = planet.is_retrograde ? 'retrograde' : 'direct';
+                const statusText = planet.is_retrograde ? 'Retrograde' : 'Direct';
+                
+                row.innerHTML = `
+                    <td class="py-3 px-4">
+                        <div class="flex items-center">
+                            <span class="planet-status ${statusClass}"></span>
+                            ${data.birth_details.language === 'Hindi' ? planet.planet_hindi : planet.planet}
+                        </div>
+                    </td>
+                    <td class="py-3 px-4">${data.birth_details.language === 'Hindi' ? planet.sign_hindi : planet.sign}</td>
+                    <td class="py-3 px-4">${planet.house}</td>
+                    <td class="py-3 px-4">${planet.degree_in_sign.toFixed(1)}°</td>
+                    <td class="py-3 px-4">${data.birth_details.language === 'Hindi' ? planet.nakshatra_hindi : planet.nakshatra}</td>
+                    <td class="py-3 px-4">${planet.nakshatra_pada}</td>
+                    <td class="py-3 px-4">${statusText}</td>
+                `;
+                planetaryTable.appendChild(row);
+            });
+            
+            // Timestamp
+            document.getElementById('timestamp').textContent = 
+                `Generated on ${new Date().toLocaleString()}`;
+        }
     </script>
 </body>
 </html>
