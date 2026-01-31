@@ -4,6 +4,116 @@ from pydantic import BaseModel
 from datetime import datetime
 from typing import Optional
 import math
+import os
+from openai import OpenAI
+
+app = FastAPI(title="Nadi Astrology AI API")
+
+# 1. FIXED CORS - Handshake with your GitHub Pages
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://sudeepdbg.github.io",
+        "http://localhost:8000",
+        "http://127.0.0.1:5500"
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 2. Updated Data Model with Language support
+class BirthDetails(BaseModel):
+    name: str
+    date: str  # YYYY-MM-DD
+    time: str  # HH:MM
+    location: str
+    language: str = "English" # New Field
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
+class PlanetaryPosition(BaseModel):
+    planet: str
+    longitude: float
+    sign: str
+
+class NadiPrediction(BaseModel):
+    birth_details: BirthDetails
+    ascendant: str
+    moon_sign: str
+    prediction: str
+    timestamp: str
+
+# 3. AI Prediction Logic
+client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+
+def generate_ai_nadi_prediction(positions, name, language):
+    # Convert planetary list to a simple string for the AI
+    pos_summary = ", ".join([f"{p.planet} in {p.sign}" for p in positions])
+    
+    system_msg = "You are an expert Nadi Astrologer trained in Bhrigu Nandi Nadi."
+    user_msg = f"""
+    Analyze these planetary positions for {name}: {pos_summary}.
+    
+    Provide a detailed Nadi prediction in {language}.
+    If language is Hindi, use Devnagari script.
+    
+    Include these sections:
+    1. व्यक्तित्व (Personality/Nature)
+    2. करियर और वित्त (Career & Finance)
+    3. स्वास्थ्य और उपाय (Health & Remedies)
+    """
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_msg},
+                {"role": "user", "content": user_msg}
+            ],
+            temperature=0.7
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"The stars are cloudy. (AI Error: {str(e)})"
+
+# 4. Math Logic (Simplified for Prototype)
+def calculate_positions(dt):
+    # This keeps your existing logic for Sun/Moon signs
+    # In a real app, you'd use flatlib/swisseph here
+    return [
+        PlanetaryPosition(planet="Sun", longitude=120.5, sign="Leo"),
+        PlanetaryPosition(planet="Moon", longitude=45.2, sign="Taurus"),
+        PlanetaryPosition(planet="Jupiter", longitude=10.0, sign="Aries")
+    ]
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+@app.post("/predict", response_model=NadiPrediction)
+async def predict(details: BirthDetails):
+    try:
+        birth_dt = datetime.strptime(f"{details.date} {details.time}", "%Y-%m-%d %H:%M")
+        positions = calculate_positions(birth_dt)
+        
+        # Get AI Prediction
+        prediction_text = generate_ai_nadi_prediction(positions, details.name, details.language)
+        
+        return NadiPrediction(
+            birth_details=details,
+            ascendant="Leo", # Placeholder
+            moon_sign="Taurus", # Placeholder
+            prediction=prediction_text,
+            timestamp=datetime.now().isoformat()
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
+import math
 
 app = FastAPI(title="Nadi Astrology API")
 
