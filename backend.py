@@ -18,16 +18,16 @@ app = FastAPI(
     version="2.0"
 )
 
-# FIXED CORS configuration - Allow all origins for now
+# CORS configuration - Essential for GitHub Pages to talk to Railway
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # This allows all origins including GitHub Pages
+    allow_origins=["*"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Constants
+# --- Constants ---
 ZODIAC_SIGNS = [
     "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
     "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
@@ -50,20 +50,16 @@ NAKSHATRAS_HINDI = [
     "अश्विनी", "भरणी", "कृत्तिका", "रोहिणी", "मृगशिरा", "आर्द्रा",
     "पुनर्वसु", "पुष्य", "आश्लेषा", "मघा", "पूर्व फाल्गुनी", "उत्तर फाल्गुनी",
     "हस्त", "चित्रा", "स्वाति", "विशाखा", "अनुराधा", "ज्येष्ठा",
-    "मूल", "पूर्वाषाढ़ा", "उत्तराषाढ़ा", "श्रवण", "धनिष्ठा", "शतभिषा",
+    "मूल", "पूर्वाषाढ़ा", "उत्तरषाढ़ा", "श्रवण", "धनिष्ठा", "शतभिषा",
     "पूर्व भाद्रपद", "उत्तर भाद्रपद", "रेवती"
 ]
 
 PLANETS_HINDI = {
-    "Sun": "सूर्य",
-    "Moon": "चंद्र",
-    "Mars": "मंगल",
-    "Mercury": "बुध",
-    "Jupiter": "गुरु",
-    "Venus": "शुक्र",
-    "Saturn": "शनि"
+    "Sun": "सूर्य", "Moon": "चंद्र", "Mars": "मंगल", "Mercury": "बुध",
+    "Jupiter": "गुरु", "Venus": "शुक्र", "Saturn": "शनि"
 }
 
+# --- Models ---
 class Language(str, Enum):
     ENGLISH = "English"
     HINDI = "Hindi"
@@ -81,6 +77,7 @@ class BirthDetails(BaseModel):
     @classmethod
     def validate_date(cls, v):
         try:
+            # Ensures backend understands the date string from frontend
             datetime.strptime(v, "%Y-%m-%d")
             return v
         except ValueError:
@@ -106,14 +103,13 @@ class NadiPrediction(BaseModel):
     prediction: str
     timestamp: str
 
+# --- Business Logic ---
 class AstrologyCalculator:
     @staticmethod
     def calculate_julian_day(year: int, month: int, day: int, hour: int, minute: int) -> float:
-        """Calculate Julian Day Number"""
         if month <= 2:
             year -= 1
             month += 12
-        
         a = year // 100
         b = 2 - a + (a // 4)
         jd = int(365.25 * (year + 4716)) + int(30.6001 * (month + 1)) + day + b - 1524.5
@@ -122,8 +118,6 @@ class AstrologyCalculator:
 
     @staticmethod
     def get_planet_position(jd: float, planet: str) -> float:
-        """Calculate simplified planetary position"""
-        # Orbital elements (simplified)
         orbital_data = {
             "Sun": {"offset": 280.460, "speed": 0.9856474},
             "Moon": {"offset": 218.316, "speed": 13.176396},
@@ -133,165 +127,59 @@ class AstrologyCalculator:
             "Venus": {"offset": 131.0, "speed": 1.6021},
             "Saturn": {"offset": 49.0, "speed": 0.0334}
         }
-        
         data = orbital_data.get(planet, {"offset": 0, "speed": 0.1})
         n = jd - 2451545.0
-        longitude = (data["offset"] + data["speed"] * n) % 360
-        return longitude
+        return (data["offset"] + data["speed"] * n) % 360
 
-    @staticmethod
-    def get_sign_index(longitude: float) -> int:
-        """Get zodiac sign index from longitude"""
-        return int(longitude / 30) % 12
-
-    @staticmethod
-    def get_nakshatra_index(longitude: float) -> int:
-        """Get nakshatra index from longitude"""
-        return int(longitude / 13.333333) % 27
-
-def generate_nadi_prediction_text(
-    name: str,
-    moon_sign: str,
-    moon_sign_hindi: str,
-    moon_nakshatra: str,
-    moon_nakshatra_hindi: str,
-    sun_sign: str,
-    sun_sign_hindi: str,
-    jupiter_sign: str,
-    jupiter_sign_hindi: str,
-    language: Language
-) -> str:
-    """Generate detailed Nadi prediction"""
-    
-    if language == Language.HINDI:
-        return f"""प्रिय {name},
-
-🌙 जीवन का उद्देश्य (धर्म) 🌙
-आपका चंद्रमा {moon_sign_hindi} राशि में {moon_nakshatra_hindi} नक्षत्र में है। यह दर्शाता है कि आपकी आत्मा शांति और आध्यात्मिक ज्ञान की खोज में है। आपका जीवन उद्देश्य दूसरों की सेवा करना और उन्हें प्रेरित करना है।
-
-💼 करियर और समृद्धि 💼
-सूर्य की {sun_sign_hindi} में स्थिति आपके व्यक्तित्व में नेतृत्व के गुण प्रदान करती है। गुरु {jupiter_sign_hindi} में होने से आपको शिक्षा, परामर्श या आध्यात्मिक मार्गदर्शन के क्षेत्र में सफलता मिलेगी। धन की प्राप्ति तब होती है जब आप अपने सच्चे उद्देश्य के साथ जुड़ते हैं।
-
-❤️ संबंध और परिवार ❤️
-चंद्रमा की स्थिति आपको भावनात्मक गहराई और देखभाल करने की क्षमता प्रदान करती है। आपके संबंध करुणा और समझ के माध्यम से फलते-फूलते हैं। एक महत्वपूर्ण साझेदारी उभरेगी जो आपके आध्यात्मिक विकास का समर्थन करती है।
-
-🏥 स्वास्थ्य और दीर्घायु 🏥
-ग्रहों की स्थिति मजबूत जीवन शक्ति का संकेत देती है। ध्यान, योग और प्रकृति से जुड़ाव आपकी भलाई को बढ़ाएगा। नियमित व्यायाम और संतुलित आहार से लंबी उम्र की प्राप्ति होगी।
-
-🕉️ आध्यात्मिक मार्ग 🕉️
-{moon_nakshatra_hindi} नक्षत्र प्राचीन ज्ञान और रहस्यमय परंपराओं से गहरा संबंध प्रकट करता है। भक्ति अभ्यास, मानवता की सेवा और जीवन के गहरे रहस्यों पर चिंतन के माध्यम से आपकी आध्यात्मिक जागृति तेज होती है।
-
-तारों ने बोल दिया है। ब्रह्मांड की योजना पर विश्वास करें, क्योंकि यह शाश्वत आकाशीय अभिलेखों में लिखी है।
-
-ॐ शांति शांति शांति 🙏"""
+def generate_nadi_prediction_text(name, m_sign, m_sign_hi, m_nak, m_nak_hi, s_sign, s_sign_hi, j_sign, j_sign_hi, lang):
+    if lang == Language.HINDI:
+        return f"प्रिय {name},\n\n🌙 जीवन का उद्देश्य 🌙\nआपका चंद्रमा {m_sign_hi} राशि और {m_nak_hi} नक्षत्र में है। यह शांति और आध्यात्मिक ज्ञान की खोज दर्शाता है।\n\n💼 करियर 💼\nसूर्य की {s_sign_hi} में स्थिति नेतृत्व गुण प्रदान करती है। गुरु {j_sign_hi} में होने से शिक्षा या परामर्श में सफलता मिलेगी।\n\n🕉️ आध्यात्मिक मार्ग 🕉️\n{m_nak_hi} प्राचीन ज्ञान से गहरा संबंध प्रकट करता है। ब्रह्मांड की योजना पर विश्वास करें।\n\nशुभम अस्तु 🙏"
     else:
-        return f"""Dear {name},
+        return f"Dear {name},\n\n🌙 LIFE PURPOSE 🌙\nYour Moon in {m_sign} and {m_nak} Nakshatra reveals a soul seeking wisdom and peace.\n\n💼 CAREER 💼\nThe Sun in {s_sign} bestows leadership. With Jupiter in {j_sign}, you will find success in education or guidance fields.\n\n🕉️ SPIRITUAL PATH 🕉️\nYour {m_nak} Nakshatra shows a deep connection to ancient traditions. Trust the divine plan.\n\nBlessings 🙏"
 
-🌙 LIFE PURPOSE (DHARMA) 🌙
-Your Moon resides in {moon_sign} sign within the {moon_nakshatra} Nakshatra. This reveals that your soul seeks peace and spiritual wisdom. Your life purpose is to serve others and inspire them through your compassionate nature and intuitive understanding.
-
-💼 CAREER & PROSPERITY 💼
-The Sun in {sun_sign} bestows leadership qualities upon your personality. With Jupiter positioned in {jupiter_sign}, you will find success in fields related to education, counseling, or spiritual guidance. Financial abundance flows when you align with your authentic purpose and share your gifts generously.
-
-❤️ RELATIONSHIPS & FAMILY ❤️
-The Moon's placement grants you emotional depth and nurturing abilities. Your relationships thrive through compassion, understanding, and deep emotional connection. A significant partnership will emerge that supports your spiritual evolution and brings profound joy to your life.
-
-🏥 HEALTH & LONGEVITY 🏥
-The planetary configuration indicates robust vitality when you maintain balance between activity and rest. Regular meditation, yogic practices, and connection with nature will significantly enhance your well-being. Pay attention to emotional health as it directly impacts physical vitality.
-
-🕉️ SPIRITUAL PATH 🕉️
-Your {moon_nakshatra} Nakshatra reveals a deep connection to ancient wisdom and mystical traditions. Your spiritual awakening accelerates through devotional practices, service to humanity, and contemplation of life's deeper mysteries. The divine guides you toward self-realization and inner peace.
-
-The stars have spoken. Trust in the universe's plan for you, for it is written in the eternal akashic records.
-
-Om Shanti Shanti Shanti 🙏"""
-
-@app.get("/")
-def read_root():
-    return {
-        "message": "Nadi Astrology API",
-        "version": "2.0",
-        "status": "operational",
-        "endpoints": ["/predict", "/health"]
-    }
-
-@app.get("/health")
-def health_check():
-    return {
-        "status": "active",
-        "version": "2.0",
-        "timestamp": datetime.now().isoformat()
-    }
-
+# --- Endpoints ---
 @app.post("/predict", response_model=NadiPrediction)
 async def generate_prediction(details: BirthDetails):
     try:
-        logger.info(f"Generating prediction for {details.name}")
-        
-        # Parse date and time
         dt = datetime.strptime(f"{details.date} {details.time}", "%Y-%m-%d %H:%M")
+        jd = AstrologyCalculator.calculate_julian_day(dt.year, dt.month, dt.day, dt.hour, dt.minute)
         
-        # Calculate Julian Day
-        jd = AstrologyCalculator.calculate_julian_day(
-            dt.year, dt.month, dt.day, dt.hour, dt.minute
-        )
-        
-        # Calculate planetary positions
         positions = []
         planets = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
         
-        for planet in planets:
-            longitude = AstrologyCalculator.get_planet_position(jd, planet)
-            sign_idx = AstrologyCalculator.get_sign_index(longitude)
-            nakshatra_idx = AstrologyCalculator.get_nakshatra_index(longitude)
+        for p_name in planets:
+            lon = AstrologyCalculator.get_planet_position(jd, p_name)
+            s_idx = int(lon / 30) % 12
+            n_idx = int(lon / 13.333333) % 27
             
             positions.append(PlanetaryPosition(
-                planet=planet,
-                planet_hindi=PLANETS_HINDI[planet],
-                longitude=round(longitude, 2),
-                sign=ZODIAC_SIGNS[sign_idx],
-                sign_hindi=ZODIAC_SIGNS_HINDI[sign_idx],
-                house=(sign_idx + 1),
-                nakshatra=NAKSHATRAS[nakshatra_idx],
-                nakshatra_hindi=NAKSHATRAS_HINDI[nakshatra_idx]
+                planet=p_name, planet_hindi=PLANETS_HINDI[p_name], longitude=round(lon, 2),
+                sign=ZODIAC_SIGNS[s_idx], sign_hindi=ZODIAC_SIGNS_HINDI[s_idx],
+                house=(s_idx + 1), nakshatra=NAKSHATRAS[n_idx], nakshatra_hindi=NAKSHATRAS_HINDI[n_idx]
             ))
         
-        # Get specific planetary data
-        sun_data = next(p for p in positions if p.planet == "Sun")
-        moon_data = next(p for p in positions if p.planet == "Moon")
-        jupiter_data = next(p for p in positions if p.planet == "Jupiter")
+        sun = next(p for p in positions if p.planet == "Sun")
+        moon = next(p for p in positions if p.planet == "Moon")
+        jupiter = next(p for p in positions if p.planet == "Jupiter")
         
-        # Generate prediction
-        prediction_text = generate_nadi_prediction_text(
-            name=details.name,
-            moon_sign=moon_data.sign,
-            moon_sign_hindi=moon_data.sign_hindi,
-            moon_nakshatra=moon_data.nakshatra,
-            moon_nakshatra_hindi=moon_data.nakshatra_hindi,
-            sun_sign=sun_data.sign,
-            sun_sign_hindi=sun_data.sign_hindi,
-            jupiter_sign=jupiter_data.sign,
-            jupiter_sign_hindi=jupiter_data.sign_hindi,
-            language=details.language
+        text = generate_nadi_prediction_text(
+            details.name, moon.sign, moon.sign_hindi, moon.nakshatra, moon.nakshatra_hindi,
+            sun.sign, sun.sign_hindi, jupiter.sign, jupiter.sign_hindi, details.language
         )
         
-        result = NadiPrediction(
-            birth_details=details,
-            planetary_positions=positions,
-            ascendant=sun_data.sign,
-            ascendant_hindi=sun_data.sign_hindi,
-            moon_sign=moon_data.sign,
-            moon_sign_hindi=moon_data.sign_hindi,
-            prediction=prediction_text,
-            timestamp=datetime.now().isoformat()
+        return NadiPrediction(
+            birth_details=details, planetary_positions=positions,
+            ascendant=sun.sign, ascendant_hindi=sun.sign_hindi,
+            moon_sign=moon.sign, moon_sign_hindi=moon.sign_hindi,
+            prediction=text, timestamp=datetime.now().isoformat()
         )
-        
-        logger.info(f"Prediction generated successfully for {details.name}")
-        return result
-        
     except Exception as e:
-        logger.error(f"Error generating prediction: {str(e)}")
+        logger.error(f"Error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/health")
+def health():
+    return {"status": "active", "timestamp": datetime.now().isoformat()}
 
 if __name__ == "__main__":
     import uvicorn
