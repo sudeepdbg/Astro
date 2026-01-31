@@ -1,5 +1,14 @@
+# Core Framework
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.6
+
+# Enhanced Astrology
 python-dateutil==2.9.0.post0
 pytz==2024.1
+
+# Ollama Integration
+httpx==0.27.0
+
+# Optional for file uploads
+python-multipart==0.0.20
