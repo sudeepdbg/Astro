@@ -1,1 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nadi Jyotish • Ancient Celestial Wisdom</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Cinzel+Decorative:wght@400;700;900&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: 'Montserrat', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #e8e2d5;
+            overflow-x: hidden;
+        }
+
+        .display-font {
+            font-family: 'Cinzel Decorative', cursive;
+        }
+
+        .serif-font {
+            font-family: 'Cormorant Garamond', serif;
+        }
+
+        /* Animated cosmic background */
+        .cosmic-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite ease-in-out;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.4); }
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes scaleIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .animate-slideUp {
+            animation: slideUp 0.6s ease-out forwards;
+        }
+
+        .animate-fadeIn {
+            animation: fadeIn 1s ease-out forwards;
+        }
+
+        .animate-scaleIn {
+            animation: scaleIn 0.5s ease-out forwards;
+        }
+
+        .glass-card {
+            background: rgba(15, 12, 41, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .golden-border {
+            border: 2px solid transparent;
+            background-image: 
+                linear-gradient(rgba(15, 12, 41, 0.7), rgba(15, 12, 41, 0.7)),
+                linear-gradient(135deg, #ffd700, #ffed4e, #ffd700);
+            background-origin: border-box;
+            background-clip: padding-box, border-box;
+        }
+
+        .mandala {
+            position: absolute;
+            opacity: 0.05;
+            width: 600px;
+            height: 600px;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><circle cx="100" cy="100" r="80" fill="none" stroke="%23ffd700" stroke-width="0.5"/><circle cx="100" cy="100" r="60" fill="none" stroke="%23ffd700" stroke-width="0.5"/><circle cx="100" cy="100" r="40" fill="none" stroke="%23ffd700" stroke-width="0.5"/><circle cx="100" cy="100" r="20" fill="none" stroke="%23ffd700" stroke-width="0.5"/></svg>');
+            animation: float 20s infinite ease-in-out;
+        }
+
+        input, select, button {
+            transition: all 0.3s ease;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 215, 0, 0.3);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .prediction-card {
+            animation: scaleIn 0.6s ease-out;
+        }
+
+        .planet-card {
+            transition: all 0.3s ease;
+        }
+
+        .planet-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 12, 41, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #ffd700, #ffed4e);
+            border-radius: 5px;
+        }
+
+        .loading-spinner {
+            border: 3px solid rgba(255, 215, 0, 0.3);
+            border-top: 3px solid #ffd700;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .language-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #ffd700;
+        }
+    </style>
+</head>
+<body>
+    <!-- Cosmic Background -->
+    <div class="cosmic-bg" id="cosmicBg"></div>
+    <div class="mandala" style="top: -100px; right: -100px;"></div>
+    <div class="mandala" style="bottom: -100px; left: -100px; animation-delay: -10s;"></div>
+
+    <!-- Main Content -->
+    <div class="relative z-10 min-h-screen py-12 px-4">
+        <div class="max-w-5xl mx-auto">
+            
+            <!-- Header -->
+            <header class="text-center mb-16 animate-fadeIn">
+                <div class="inline-block mb-6">
+                    <svg width="80" height="80" viewBox="0 0 100 100" class="mx-auto" style="animation: float 3s infinite ease-in-out;">
+                        <circle cx="50" cy="50" r="45" fill="none" stroke="url(#goldGradient)" stroke-width="2"/>
+                        <circle cx="50" cy="50" r="35" fill="none" stroke="url(#goldGradient)" stroke-width="1"/>
+                        <circle cx="50" cy="50" r="25" fill="none" stroke="url(#goldGradient)" stroke-width="1"/>
+                        <path d="M 50 10 L 55 25 L 70 25 L 58 35 L 63 50 L 50 40 L 37 50 L 42 35 L 30 25 L 45 25 Z" fill="#ffd700" opacity="0.8"/>
+                        <defs>
+                            <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#ffed4e;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h1 class="display-font text-5xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 mb-4 tracking-wider" style="animation: glow 3s infinite;">
+                    नाड़ी ज्योतिष
+                </h1>
+                <p class="serif-font text-xl md:text-2xl text-yellow-100/80 mb-2 italic">Nadi Jyotish</p>
+                <p class="text-sm md:text-base text-gray-400 tracking-widest uppercase">Ancient Celestial Wisdom • Written in the Stars</p>
+                <div class="w-24 h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent mx-auto mt-6"></div>
+            </header>
+
+            <!-- Main Form Card -->
+            <div class="glass-card golden-border rounded-3xl p-8 md:p-12 mb-12 animate-slideUp">
+                <h2 class="serif-font text-3xl text-yellow-300 mb-8 text-center">Enter Your Birth Details</h2>
+                
+                <form id="nadiForm" class="space-y-6">
+                    <!-- Name and Language -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-yellow-200 mb-2 tracking-wide">
+                                Your Name <span class="text-red-400">*</span>
+                            </label>
+                            <input type="text" id="name" required 
+                                class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white placeholder-gray-500"
+                                placeholder="Enter your full name">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-yellow-200 mb-2 tracking-wide">
+                                Prediction Language
+                            </label>
+                            <select id="language" 
+                                class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white">
+                                <option value="English">English</option>
+                                <option value="Hindi">हिन्दी (Hindi)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Date and Time -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-yellow-200 mb-2 tracking-wide">
+                                Birth Date <span class="text-red-400">*</span>
+                            </label>
+                            <input type="date" id="date" required 
+                                class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-yellow-200 mb-2 tracking-wide">
+                                Birth Time <span class="text-red-400">*</span>
+                            </label>
+                            <input type="time" id="time" required 
+                                class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white">
+                        </div>
+                    </div>
+
+                    <!-- Location -->
+                    <div>
+                        <label class="block text-sm font-semibold text-yellow-200 mb-2 tracking-wide">
+                            Birth Location <span class="text-red-400">*</span>
+                        </label>
+                        <input type="text" id="location" required 
+                            class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white placeholder-gray-500"
+                            placeholder="City, State, Country">
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button type="submit" id="submitBtn"
+                        class="w-full bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-gray-900 font-bold py-4 px-8 rounded-xl text-lg tracking-wide shadow-lg">
+                        <span id="submitText">✨ Unveil Your Cosmic Destiny</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorMsg" class="hidden glass-card border-red-500/50 rounded-xl p-6 mb-8 text-center animate-scaleIn">
+                <svg class="w-12 h-12 text-red-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                <p class="text-red-300 text-lg" id="errorText">Unable to connect to the celestial servers.</p>
+                <p class="text-red-400/70 text-sm mt-2">Please check your connection and try again.</p>
+            </div>
+
+            <!-- Prediction Result -->
+            <div id="predictionResult" class="hidden prediction-card glass-card golden-border rounded-3xl p-8 md:p-12 mb-12">
+                <!-- Header -->
+                <div class="text-center mb-10">
+                    <div class="inline-block language-badge mb-4" id="languageBadge"></div>
+                    <h2 class="serif-font text-4xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-400 mb-2">
+                        Your Nadi Prediction
+                    </h2>
+                    <p class="text-gray-400 text-sm">Revealed from the Ancient Palm Leaves</p>
+                </div>
+
+                <!-- Astrological Info Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div class="planet-card bg-gradient-to-br from-yellow-900/20 to-yellow-800/10 border border-yellow-700/30 rounded-xl p-4 text-center">
+                        <div class="text-yellow-500 text-sm font-semibold mb-2 uppercase tracking-wider">Ascendant</div>
+                        <div id="ascendant" class="text-yellow-100 text-xl font-bold serif-font">--</div>
+                    </div>
+                    <div class="planet-card bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-700/30 rounded-xl p-4 text-center">
+                        <div class="text-blue-400 text-sm font-semibold mb-2 uppercase tracking-wider">Moon Sign</div>
+                        <div id="moonSign" class="text-blue-100 text-xl font-bold serif-font">--</div>
+                    </div>
+                    <div class="planet-card bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-700/30 rounded-xl p-4 text-center">
+                        <div class="text-purple-400 text-sm font-semibold mb-2 uppercase tracking-wider">Nakshatra</div>
+                        <div id="nakshatra" class="text-purple-100 text-xl font-bold serif-font">--</div>
+                    </div>
+                </div>
+
+                <!-- Prediction Text -->
+                <div class="bg-black/30 border border-yellow-900/20 rounded-xl p-8">
+                    <div id="predictionText" class="text-gray-200 text-lg leading-relaxed serif-font whitespace-pre-line"></div>
+                </div>
+
+                <!-- Planetary Positions -->
+                <div id="planetaryPositions" class="mt-10">
+                    <h3 class="text-2xl text-yellow-300 mb-6 text-center serif-font">Planetary Positions</h3>
+                    <div id="planetsGrid" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+                </div>
+
+                <!-- Timestamp -->
+                <div class="mt-8 pt-6 border-t border-yellow-900/30 text-center">
+                    <p class="text-gray-500 text-sm" id="timestamp"></p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="text-center text-gray-600 text-sm py-8 animate-fadeIn">
+                <p class="mb-2">© 2026 Nadi Jyotish • Divine Wisdom from the Ages</p>
+                <p class="text-xs text-gray-700">For Entertainment and Spiritual Guidance Purposes</p>
+            </footer>
+
+        </div>
+    </div>
+
+    <script>
+        // ⚙️ BACKEND CONFIGURATION - REPLACE WITH YOUR RAILWAY URL
+        const BACKEND_URL = 'https://web-production-7266a.up.railway.app';
+
+        // Generate cosmic background stars
+        function createStars() {
+            const cosmicBg = document.getElementById('cosmicBg');
+            const starCount = 150;
+            
+            for (let i = 0; i < starCount; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                
+                const size = Math.random() * 3 + 1;
+                star.style.width = `${size}px`;
+                star.style.height = `${size}px`;
+                star.style.left = `${Math.random() * 100}%`;
+                star.style.top = `${Math.random() * 100}%`;
+                star.style.animationDelay = `${Math.random() * 3}s`;
+                star.style.animationDuration = `${Math.random() * 2 + 2}s`;
+                
+                cosmicBg.appendChild(star);
+            }
+        }
+
+        // Initialize
+        createStars();
+
+        // Test backend connection on load
+        window.addEventListener('load', async () => {
+            try {
+                console.log('Testing backend connection...');
+                const response = await fetch(`${BACKEND_URL}/health`);
+                const data = await response.json();
+                if (response.ok) {
+                    console.log('✅ Backend connected successfully!', data);
+                } else {
+                    console.warn('⚠️ Backend responded with status:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Backend connection failed:', error);
+                console.log('Make sure your Railway app is running at:', BACKEND_URL);
+            }
+        });
+
+        // Form submission
+        document.getElementById('nadiForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const errorDiv = document.getElementById('errorMsg');
+            const errorText = document.getElementById('errorText');
+            const resultDiv = document.getElementById('predictionResult');
+            
+            // Disable button and show loading
+            submitBtn.disabled = true;
+            submitText.innerHTML = '<div class="loading-spinner"></div> Consulting the Ancient Leaves...';
+            errorDiv.classList.add('hidden');
+            resultDiv.classList.add('hidden');
+            
+            const formData = {
+                name: document.getElementById('name').value,
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                location: document.getElementById('location').value,
+                language: document.getElementById('language').value
+            };
+            
+            console.log('Submitting form data:', formData);
+            
+            try {
+                console.log('Calling backend:', `${BACKEND_URL}/predict`);
+                
+                const response = await fetch(`${BACKEND_URL}/predict`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || `Server error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                console.log('Received data:', data);
+                
+                // Display language badge
+                const languageBadge = document.getElementById('languageBadge');
+                languageBadge.textContent = data.birth_details.language === 'Hindi' ? '🇮🇳 हिन्दी' : '🇬🇧 English';
+                
+                // Display astrological data
+                document.getElementById('ascendant').textContent = 
+                    data.birth_details.language === 'Hindi' ? data.ascendant_hindi : data.ascendant;
+                document.getElementById('moonSign').textContent = 
+                    data.birth_details.language === 'Hindi' ? data.moon_sign_hindi : data.moon_sign;
+                
+                // Get Moon nakshatra
+                const moonData = data.planetary_positions.find(p => p.planet === 'Moon');
+                document.getElementById('nakshatra').textContent = 
+                    data.birth_details.language === 'Hindi' ? moonData.nakshatra_hindi : moonData.nakshatra;
+                
+                // Display prediction
+                document.getElementById('predictionText').textContent = data.prediction;
+                
+                // Display planetary positions
+                const planetsGrid = document.getElementById('planetsGrid');
+                planetsGrid.innerHTML = '';
+                
+                data.planetary_positions.forEach(planet => {
+                    const planetCard = document.createElement('div');
+                    planetCard.className = 'planet-card bg-black/30 border border-yellow-900/20 rounded-lg p-3 text-center';
+                    planetCard.innerHTML = `
+                        <div class="text-yellow-500 text-xs font-semibold mb-1">${
+                            data.birth_details.language === 'Hindi' ? planet.planet_hindi : planet.planet
+                        }</div>
+                        <div class="text-gray-300 text-sm">${
+                            data.birth_details.language === 'Hindi' ? planet.sign_hindi : planet.sign
+                        }</div>
+                    `;
+                    planetsGrid.appendChild(planetCard);
+                });
+                
+                // Timestamp
+                document.getElementById('timestamp').textContent = 
+                    `Generated on ${new Date().toLocaleString()}`;
+                
+                // Show result
+                resultDiv.classList.remove('hidden');
+                setTimeout(() => {
+                    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                errorText.textContent = error.message || 'Unable to connect to the celestial servers.';
+                errorDiv.classList.remove('hidden');
+                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } finally {
+                submitBtn.disabled = false;
+                submitText.textContent = '✨ Unveil Your Cosmic Destiny';
+            }
+        });
+    </script>
+</body>
+</html>
