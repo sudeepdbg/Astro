@@ -2,112 +2,533 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Nadi Jyotish • AI Astrology by Sudeep | +919590675753</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <meta name="description" content="Professional Nadi astrology predictions. Free, accurate, instant results in Hindi & English.">
+    <title>Nadi Jyotish • AI-Powered Celestial Insights</title>
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600;700&family=Cinzel+Decorative:wght@400;700;900&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    
     <style>
+        :root {
+            --bg: #0a0a0f;
+            --bg-card: #12121a;
+            --bg-input: #1a1a24;
+            --accent: #00d9ff;
+            --accent-2: #7000ff;
+            --gold: #ffd700;
+            --text: #ffffff;
+            --text-dim: #b4b4c8;
+            --text-muted: #6e6e84;
+            --border: rgba(255, 255, 255, 0.08);
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
+        html {
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+        }
+
         body {
-            font-family: 'Montserrat', sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-            color: #e8e2d5;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
             overflow-x: hidden;
-            -webkit-tap-highlight-color: transparent;
         }
 
-        .display-font {
-            font-family: 'Cinzel Decorative', cursive;
-        }
-
-        .serif-font {
-            font-family: 'Cormorant Garamond', serif;
-        }
-
-        /* Mobile optimizations */
-        @media (max-width: 640px) {
-            .mobile-stack {
-                display: flex;
-                flex-direction: column;
-            }
-            
-            .mobile-padding {
-                padding-left: 1rem;
-                padding-right: 1rem;
-            }
-            
-            .mobile-text-lg {
-                font-size: 1.125rem;
-            }
-            
-            .mobile-text-xl {
-                font-size: 1.25rem;
-            }
-            
-            .mobile-text-2xl {
-                font-size: 1.5rem;
-            }
-            
-            .mobile-text-3xl {
-                font-size: 1.875rem;
-            }
-            
-            .mobile-text-4xl {
-                font-size: 2.25rem;
-            }
-        }
-
-        /* Touch-friendly buttons */
-        button, 
-        input[type="submit"],
-        .clickable {
-            min-height: 44px;
-            min-width: 44px;
-        }
-
-        /* Animated cosmic background */
-        .cosmic-bg {
+        .bg-effects {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            inset: 0;
             z-index: 0;
             overflow: hidden;
+            opacity: 0.5;
         }
 
-        .star {
+        .gradient-orb {
             position: absolute;
-            background: white;
             border-radius: 50%;
-            animation: twinkle 3s infinite ease-in-out;
+            filter: blur(80px);
+            animation: float 20s ease-in-out infinite;
         }
 
-        @keyframes twinkle {
-            0%, 100% { opacity: 0.3; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.2); }
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(0, 217, 255, 0.15), transparent 70%);
+            top: -200px;
+            right: -200px;
+        }
+
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(112, 0, 255, 0.1), transparent 70%);
+            bottom: -150px;
+            left: -150px;
+            animation-delay: -10s;
         }
 
         @keyframes float {
-            0%, 100% { transform: translateY(0px) rotate(0deg); }
-            50% { transform: translateY(-20px) rotate(5deg); }
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(50px, 50px); }
         }
 
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.3); }
-            50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.4); }
+        .grid {
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 1;
+            pointer-events: none;
+            opacity: 0.3;
         }
 
-        @keyframes slideUp {
+        .content {
+            position: relative;
+            z-index: 10;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        .header {
+            padding: 80px 0 60px;
+            text-align: center;
+        }
+
+        .header::before {
+            content: '';
+            display: block;
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            margin: 0 auto 40px;
+        }
+
+        .logo {
+            font-size: 64px;
+            margin-bottom: 20px;
+            animation: pulse 3s ease-in-out infinite;
+            filter: drop-shadow(0 0 20px rgba(0, 217, 255, 0.4));
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .title {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(36px, 6vw, 64px);
+            font-weight: 700;
+            letter-spacing: -0.03em;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 50%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 18px;
+            color: var(--text-dim);
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px;
+            margin-bottom: 32px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--gold));
+        }
+
+        .card:hover {
+            border-color: rgba(0, 217, 255, 0.3);
+            box-shadow: 0 8px 40px rgba(0, 217, 255, 0.1);
+        }
+
+        .form-header {
+            margin-bottom: 32px;
+        }
+
+        .form-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .form-description {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        @media (min-width: 768px) {
+            .form-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .input-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 10px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+
+        .input-field, .select-field {
+            width: 100%;
+            padding: 14px 16px;
+            font-size: 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+
+        .input-field:focus, .select-field:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(0, 217, 255, 0.1);
+            background: var(--bg-card);
+        }
+
+        .input-field::placeholder {
+            color: var(--text-muted);
+        }
+
+        .date-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .time-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .helper-text {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 8px;
+            font-style: italic;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 18px 36px;
+            margin-top: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: 'Space Mono', monospace;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0, 217, 255, 0.3);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover:not(:disabled)::before {
+            left: 100%;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 30px rgba(0, 217, 255, 0.5);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(0, 217, 255, 0.1);
+            border: 1px solid rgba(0, 217, 255, 0.3);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--accent);
+            margin-bottom: 16px;
+            letter-spacing: 0.05em;
+        }
+
+        .result-title {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(28px, 4vw, 42px);
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--accent), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .result-subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .info-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2));
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(0, 217, 255, 0.4);
+        }
+
+        .info-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .info-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .info-value {
+            font-family: 'Space Mono', monospace;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .prediction-box {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: 12px;
+            padding: 32px;
+            line-height: 1.8;
+            font-size: 15px;
+            color: var(--text-dim);
+            white-space: pre-line;
+        }
+
+        .planets-title {
+            font-family: 'Space Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .planets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 12px;
+        }
+
+        .planet-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+
+        .planet-card:hover {
+            border-color: var(--accent);
+            transform: scale(1.05);
+        }
+
+        .planet-name {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .planet-sign {
+            font-family: 'Space Mono', monospace;
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--gold);
+        }
+
+        .error-box {
+            background: rgba(255, 0, 100, 0.1);
+            border: 1px solid rgba(255, 0, 100, 0.3);
+            border-radius: 12px;
+            padding: 24px;
+            text-align: center;
+            margin: 24px 0;
+        }
+
+        .footer {
+            padding: 80px 0 40px;
+            text-align: center;
+            border-top: 1px solid var(--border);
+            margin-top: 80px;
+        }
+
+        .footer-cta {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 48px 32px;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .footer-cta::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent), var(--accent-2), var(--gold));
+        }
+
+        .footer-title {
+            font-family: 'Space Mono', monospace;
+            font-size: clamp(24px, 4vw, 38px);
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, var(--accent), var(--gold));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .feature {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-dim);
+            transition: all 0.2s ease;
+        }
+
+        .feature:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        .copyright {
+            font-size: 13px;
+            color: var(--text-muted);
+            font-family: 'Space Mono', monospace;
+        }
+
+        @keyframes fadeInUp {
             from {
                 opacity: 0;
                 transform: translateY(30px);
@@ -116,11 +537,6 @@
                 opacity: 1;
                 transform: translateY(0);
             }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
         }
 
         @keyframes scaleIn {
@@ -134,1646 +550,311 @@
             }
         }
 
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.7; }
+        .animate-in {
+            animation: fadeInUp 0.6s ease-out forwards;
         }
 
-        @keyframes typing {
-            from { width: 0 }
-            to { width: 100% }
+        .scale-in {
+            animation: scaleIn 0.4s ease-out forwards;
         }
 
-        @keyframes blink {
-            50% { border-color: transparent }
+        .hidden {
+            display: none !important;
         }
 
-        .animate-slideUp {
-            animation: slideUp 0.6s ease-out forwards;
-        }
-
-        .animate-fadeIn {
-            animation: fadeIn 1s ease-out forwards;
-        }
-
-        .animate-scaleIn {
-            animation: scaleIn 0.5s ease-out forwards;
-        }
-
-        .animate-pulse {
-            animation: pulse 2s infinite;
-        }
-
-        .glass-card {
-            background: rgba(15, 12, 41, 0.7);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 215, 0, 0.15);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-        }
-
-        .golden-border {
-            border: 2px solid transparent;
-            background-image: 
-                linear-gradient(rgba(15, 12, 41, 0.7), rgba(15, 12, 41, 0.7)),
-                linear-gradient(135deg, #ffd700, #ffed4e, #ffd700);
-            background-origin: border-box;
-            background-clip: padding-box, border-box;
-        }
-
-        .mandala {
-            position: absolute;
-            opacity: 0.05;
-            width: 600px;
-            height: 600px;
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><circle cx="100" cy="100" r="80" fill="none" stroke="%23ffd700" stroke-width="0.5"/><circle cx="100" cy="100" r="60" fill="none" stroke="%23ffd700" stroke-width="0.5"/><circle cx="100" cy="100" r="40" fill="none" stroke="%23ffd700" stroke-width="0.5"/><circle cx="100" cy="100" r="20" fill="none" stroke="%23ffd700" stroke-width="0.5"/></svg>');
-            animation: float 20s infinite ease-in-out;
-        }
-
-        input, select, button, textarea {
-            transition: all 0.3s ease;
-            font-size: 16px; /* Prevent zoom on mobile */
-        }
-
-        input:focus, select:focus, textarea:focus {
-            outline: none;
-            border-color: #ffd700;
-            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.1);
-        }
-
-        button:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px rgba(255, 215, 0, 0.3);
-        }
-
-        button:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        button:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        .prediction-card {
-            animation: scaleIn 0.6s ease-out;
-        }
-
-        .planet-card {
-            transition: all 0.3s ease;
-        }
-
-        .planet-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.2);
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: rgba(15, 12, 41, 0.5);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, #ffd700, #ffed4e);
-            border-radius: 4px;
-        }
-
-        .loading-spinner {
-            border: 3px solid rgba(255, 215, 0, 0.3);
-            border-top: 3px solid #ffd700;
-            border-radius: 50%;
-            width: 24px;
-            height: 24px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-right: 10px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .language-badge {
-            display: inline-block;
-            padding: 6px 14px;
-            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #ffd700;
-        }
-
-        .prediction-type-badge {
-            display: inline-block;
-            padding: 8px 18px;
-            background: linear-gradient(135deg, rgba(86, 98, 246, 0.2), rgba(86, 98, 246, 0.1));
-            border: 1px solid rgba(86, 98, 246, 0.3);
-            border-radius: 20px;
-            font-size: 15px;
-            font-weight: 600;
-            color: #5662f6;
-        }
-
-        .ai-badge {
-            display: inline-block;
-            padding: 8px 18px;
-            background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(147, 51, 234, 0.1));
-            border: 1px solid rgba(147, 51, 234, 0.3);
-            border-radius: 20px;
-            font-size: 15px;
-            font-weight: 600;
-            color: #d8b4fe;
-        }
-
-        .feature-card {
-            transition: all 0.3s ease;
-            cursor: pointer;
-            min-height: 180px;
-        }
-
-        .feature-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255, 215, 0, 0.1);
-        }
-
-        .feature-card.active {
-            background: rgba(255, 215, 0, 0.2);
-            border-color: #ffd700;
-        }
-
-        .yoga-badge {
-            display: inline-block;
-            padding: 5px 12px;
-            background: linear-gradient(135deg, rgba(147, 51, 234, 0.2), rgba(147, 51, 234, 0.1));
-            border: 1px solid rgba(147, 51, 234, 0.3);
-            border-radius: 12px;
-            font-size: 12px;
-            color: #d8b4fe;
-            margin: 3px;
-        }
-
-        .dasha-badge {
-            display: inline-block;
-            padding: 8px 16px;
-            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
-            border: 1px solid rgba(34, 197, 94, 0.3);
-            border-radius: 16px;
-            font-size: 14px;
-            color: #86efac;
-        }
-
-        .tab-button {
-            padding: 12px 20px;
-            background: rgba(255, 215, 0, 0.1);
-            border: 1px solid rgba(255, 215, 0, 0.2);
-            border-radius: 12px;
-            color: #ffd700;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            flex: 1;
-            text-align: center;
-            min-width: 80px;
-        }
-
-        @media (max-width: 640px) {
-            .tab-button {
-                padding: 10px 12px;
-                font-size: 14px;
+        @media (max-width: 767px) {
+            .card {
+                padding: 28px;
             }
-        }
-
-        .tab-button:hover {
-            background: rgba(255, 215, 0, 0.2);
-        }
-
-        .tab-button.active {
-            background: linear-gradient(135deg, #ffd700, #ffed4e);
-            color: #0f0c29;
-            box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
-        }
-
-        .prediction-section {
-            display: none;
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        .prediction-section.active {
-            display: block;
-        }
-
-        .planet-status {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-
-        .planet-status.direct {
-            background-color: #10b981;
-        }
-
-        .planet-status.retrograde {
-            background-color: #ef4444;
-        }
-
-        .info-tooltip {
-            position: relative;
-            cursor: help;
-        }
-
-        .info-tooltip:hover::after {
-            content: attr(data-tooltip);
-            position: absolute;
-            bottom: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            white-space: nowrap;
-            z-index: 100;
-            border: 1px solid #ffd700;
-        }
-
-        /* Chat Interface Styles */
-        .chat-message {
-            max-width: 85%;
-            margin-bottom: 12px;
-            padding: 12px 16px;
-            border-radius: 18px;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        .user-message {
-            background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.1));
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            margin-left: auto;
-            border-bottom-right-radius: 4px;
-        }
-
-        .bot-message {
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            margin-right: auto;
-            border-bottom-left-radius: 4px;
-        }
-
-        .chat-input-container {
-            position: sticky;
-            bottom: 0;
-            background: rgba(15, 12, 41, 0.9);
-            backdrop-filter: blur(20px);
-            padding: 12px;
-            border-top: 1px solid rgba(255, 215, 0, 0.2);
-        }
-
-        /* Mobile drawer for chat */
-        .chat-drawer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(15, 12, 41, 0.95);
-            backdrop-filter: blur(20px);
-            border-top: 2px solid rgba(255, 215, 0, 0.3);
-            border-radius: 20px 20px 0 0;
-            z-index: 1000;
-            transform: translateY(100%);
-            transition: transform 0.3s ease-out;
-        }
-
-        .chat-drawer.open {
-            transform: translateY(0);
-        }
-
-        .chat-drawer-handle {
-            width: 60px;
-            height: 5px;
-            background: rgba(255, 215, 0, 0.5);
-            border-radius: 3px;
-            margin: 12px auto;
-            cursor: pointer;
-        }
-
-        /* AI Thinking Animation */
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(30, 41, 59, 0.5);
-            border: 1px solid rgba(100, 116, 139, 0.3);
-            border-radius: 18px;
-            width: fit-content;
-            margin-bottom: 12px;
-            border-bottom-left-radius: 4px;
-        }
-
-        .typing-dot {
-            width: 8px;
-            height: 8px;
-            background: #94a3b8;
-            border-radius: 50%;
-            margin: 0 2px;
-            animation: typing-dot 1.4s infinite ease-in-out both;
-        }
-
-        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        .typing-dot:nth-child(3) { animation-delay: 0s; }
-
-        @keyframes typing-dot {
-            0%, 80%, 100% { transform: scale(0); }
-            40% { transform: scale(1); }
-        }
-
-        /* AI Toggle Switch */
-        .ai-toggle {
-            position: relative;
-            display: inline-block;
-            width: 60px;
-            height: 30px;
-        }
-
-        .ai-toggle input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-
-        .ai-toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255, 215, 0, 0.2);
-            border: 1px solid rgba(255, 215, 0, 0.3);
-            transition: .4s;
-            border-radius: 34px;
-        }
-
-        .ai-toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 22px;
-            width: 22px;
-            left: 4px;
-            bottom: 3px;
-            background-color: #ffd700;
-            transition: .4s;
-            border-radius: 50%;
-        }
-
-        .ai-toggle input:checked + .ai-toggle-slider {
-            background-color: rgba(147, 51, 234, 0.2);
-            border-color: rgba(147, 51, 234, 0.3);
-        }
-
-        .ai-toggle input:checked + .ai-toggle-slider:before {
-            transform: translateX(28px);
-            background-color: #9333ea;
-        }
-
-        /* Mobile bottom navigation */
-        .mobile-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(15, 12, 41, 0.95);
-            backdrop-filter: blur(20px);
-            border-top: 1px solid rgba(255, 215, 0, 0.2);
-            z-index: 100;
-            padding: 8px 0;
-            display: none;
-        }
-
-        @media (max-width: 768px) {
-            .mobile-nav {
-                display: flex;
+            .header {
+                padding: 60px 0 40px;
             }
-        }
-
-        .nav-button {
-            flex: 1;
-            text-align: center;
-            padding: 10px;
-            color: #94a3b8;
-            transition: all 0.3s ease;
-        }
-
-        .nav-button.active {
-            color: #ffd700;
-        }
-
-        .nav-button i {
-            font-size: 20px;
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .nav-button span {
-            font-size: 12px;
-            font-weight: 600;
+            .logo {
+                font-size: 48px;
+            }
+            .info-cards {
+                grid-template-columns: 1fr;
+            }
+            .planets-grid {
+                grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            }
+            .footer-cta {
+                padding: 36px 24px;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Cosmic Background -->
-    <div class="cosmic-bg" id="cosmicBg"></div>
-    <div class="mandala" style="top: -100px; right: -100px;"></div>
-    <div class="mandala" style="bottom: -100px; left: -100px; animation-delay: -10s;"></div>
-
-    <!-- Mobile Navigation -->
-    <div class="mobile-nav">
-        <div class="nav-button active" data-nav="home">
-            <i class="fas fa-star"></i>
-            <span>Home</span>
-        </div>
-        <div class="nav-button" data-nav="predict">
-            <i class="fas fa-chart-line"></i>
-            <span>Predict</span>
-        </div>
-        <div class="nav-button" data-nav="chat">
-            <i class="fas fa-robot"></i>
-            <span>AI Chat</span>
-        </div>
-        <div class="nav-button" data-nav="info">
-            <i class="fas fa-info-circle"></i>
-            <span>Info</span>
-        </div>
+    <div class="bg-effects">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
     </div>
+    <div class="grid"></div>
 
-    <!-- Main Content -->
-    <div class="relative z-10 min-h-screen py-12 px-4 mobile-padding pb-24">
-        <div class="max-w-5xl mx-auto">
-            
-            <!-- Header -->
-            <header class="text-center mb-12 animate-fadeIn">
-                <div class="inline-block mb-6">
-                    <svg width="70" height="70" viewBox="0 0 100 100" class="mx-auto" style="animation: float 3s infinite ease-in-out;">
-                        <circle cx="50" cy="50" r="45" fill="none" stroke="url(#goldGradient)" stroke-width="2"/>
-                        <circle cx="50" cy="50" r="35" fill="none" stroke="url(#goldGradient)" stroke-width="1"/>
-                        <circle cx="50" cy="50" r="25" fill="none" stroke="url(#goldGradient)" stroke-width="1"/>
-                        <path d="M 50 10 L 55 25 L 70 25 L 58 35 L 63 50 L 50 40 L 37 50 L 42 35 L 30 25 L 45 25 Z" fill="#ffd700" opacity="0.8"/>
-                        <path d="M 50 60 L 55 70 L 50 80 L 45 70 Z" fill="#9333ea" opacity="0.6"/>
-                        <defs>
-                            <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                <stop offset="0%" style="stop-color:#ffd700;stop-opacity:1" />
-                                <stop offset="100%" style="stop-color:#ffed4e;stop-opacity:1" />
-                            </linearGradient>
-                        </defs>
-                    </svg>
-                </div>
-                <h1 class="display-font text-4xl md:text-7xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 mb-4 tracking-wider" style="animation: glow 3s infinite;">
-                    नाड़ी ज्योतिष
-                </h1>
-                <p class="serif-font text-lg md:text-2xl text-yellow-100/80 mb-2 italic">AI-Powered Nadi Jyotish by Astrologer Sudeep</p>
-                <p class="text-sm md:text-base text-gray-400 tracking-widest uppercase">Astrologer Sudeep | +919590675753</p>
-                <div class="w-24 h-1 bg-gradient-to-r from-transparent via-yellow-500 to-transparent mx-auto mt-6"></div>
-            </header>
-
-            <!-- Main Sections -->
-            <div id="homeSection" class="section active">
-                <!-- Welcome Card -->
-                <div class="glass-card golden-border rounded-3xl p-6 mb-8 animate-slideUp">
-                    <h2 class="serif-font text-2xl md:text-3xl text-yellow-300 mb-4 text-center">Welcome to AI-Powered Nadi Astrology</h2>
-                    <p class="text-gray-300 text-center mb-6">Get personalized predictions using advanced AI and ancient Vedic astrology principles</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="text-center">
-                            <div class="text-5xl text-yellow-400 mb-4">🔮</div>
-                            <h3 class="text-xl font-bold text-yellow-200 mb-2">Advanced Calculations</h3>
-                            <p class="text-gray-300 text-sm">Precise planetary positions, houses, yogas, and dasha periods</p>
-                        </div>
-                        <div class="text-center">
-                            <div class="text-5xl text-purple-400 mb-4">🤖</div>
-                            <h3 class="text-xl font-bold text-purple-200 mb-2">AI-Powered Insights</h3>
-                            <p class="text-gray-300 text-sm">Get personalized predictions using Ollama AI integration</p>
-                        </div>
-                    </div>
-                    
-                    <div class="mt-8 text-center">
-                        <button id="getStartedBtn" class="bg-gradient-to-r from-yellow-600 to-yellow-500 text-gray-900 font-bold py-3 px-8 rounded-xl text-lg tracking-wide shadow-lg animate-pulse">
-                            <i class="fas fa-play mr-2"></i>Get Started
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Quick Stats -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                    <div class="glass-card rounded-2xl p-4 text-center">
-                        <div class="text-2xl text-yellow-400 font-bold">100%</div>
-                        <div class="text-sm text-gray-300">Free</div>
-                    </div>
-                    <div class="glass-card rounded-2xl p-4 text-center">
-                        <div class="text-2xl text-blue-400 font-bold">AI</div>
-                        <div class="text-sm text-gray-300">Powered</div>
-                    </div>
-                    <div class="glass-card rounded-2xl p-4 text-center">
-                        <div class="text-2xl text-green-400 font-bold">24/7</div>
-                        <div class="text-sm text-gray-300">Available</div>
-                    </div>
-                    <div class="glass-card rounded-2xl p-4 text-center">
-                        <div class="text-2xl text-purple-400 font-bold">हिन्दी</div>
-                        <div class="text-sm text-gray-300">+ English</div>
-                    </div>
-                </div>
+    <div class="content">
+        <header class="header animate-in">
+            <div class="container">
+                <div class="logo">🌙</div>
+                <h1 class="title">NADI JYOTISH</h1>
+                <p class="subtitle">AI-Powered Celestial Intelligence</p>
             </div>
+        </header>
 
-            <!-- Prediction Type Selection -->
-            <div id="predictSection" class="section hidden">
-                <div class="glass-card golden-border rounded-3xl p-6 mb-8">
-                    <h2 class="serif-font text-2xl md:text-3xl text-yellow-300 mb-6 text-center">Choose Your Prediction Type</h2>
-                    
-                    <div class="mb-8">
-                        <!-- AI Toggle -->
-                        <div class="flex items-center justify-center gap-3 mb-6">
-                            <span class="text-gray-300">Enable AI Enhancement</span>
-                            <label class="ai-toggle">
-                                <input type="checkbox" id="aiToggle">
-                                <span class="ai-toggle-slider"></span>
-                            </label>
-                            <span class="ai-badge" id="aiStatus">AI: Off</span>
-                        </div>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div class="feature-card glass-card rounded-2xl p-6 text-center border border-yellow-900/30" data-type="general">
-                                <div class="text-4xl text-yellow-400 mb-4">🌙</div>
-                                <h3 class="text-xl font-bold text-yellow-200 mb-2">General Prediction</h3>
-                                <p class="text-gray-300 text-sm">Complete life analysis with all aspects</p>
-                                <div class="mt-4 text-xs text-yellow-400">
-                                    <i class="fas fa-star mr-1"></i>Includes Career & Child Insights
-                                </div>
-                            </div>
-                            <div class="feature-card glass-card rounded-2xl p-6 text-center border border-yellow-900/30" data-type="career">
-                                <div class="text-4xl text-blue-400 mb-4">💼</div>
-                                <h3 class="text-xl font-bold text-blue-200 mb-2">Career Guidance</h3>
-                                <p class="text-gray-300 text-sm">Professional path & success timing</p>
-                                <div class="mt-4 text-xs text-blue-400">
-                                    <i class="fas fa-briefcase mr-1"></i>10th House Analysis
-                                </div>
-                            </div>
-                            <div class="feature-card glass-card rounded-2xl p-6 text-center border border-yellow-900/30" data-type="child">
-                                <div class="text-4xl text-pink-400 mb-4">👶</div>
-                                <h3 class="text-xl font-bold text-pink-200 mb-2">Child Prediction</h3>
-                                <p class="text-gray-300 text-sm">Fertility & children insights</p>
-                                <div class="mt-4 text-xs text-pink-400">
-                                    <i class="fas fa-child mr-1"></i>5th House Analysis
-                                </div>
-                            </div>
-                        </div>
+        <main class="container">
+            <section class="animate-in" style="animation-delay: 0.1s; padding: 40px 0;">
+                <div class="card">
+                    <div class="form-header">
+                        <h2 class="form-title">Enter Birth Coordinates</h2>
+                        <p class="form-description">Precise data for accurate cosmic mapping</p>
                     </div>
 
-                    <!-- Main Form Card -->
-                    <div class="glass-card rounded-3xl p-6 md:p-8">
-                        <h2 class="serif-font text-2xl md:text-3xl text-yellow-300 mb-6 text-center" id="formTitle">Enter Your Birth Details</h2>
-                        
-                        <form id="nadiForm" class="space-y-6">
-                            <!-- Name and Language -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                <div>
-                                    <label class="block text-sm font-semibold text-yellow-200 mb-2">
-                                        Your Name <span class="text-red-400">*</span>
-                                    </label>
-                                    <input type="text" id="name" required 
-                                        class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white placeholder-gray-500"
-                                        placeholder="Enter your full name">
-                                </div>
-                                <div>
-                                    <label class="block text-sm font-semibold text-yellow-200 mb-2">
-                                        Prediction Language
-                                    </label>
-                                    <select id="language" 
-                                        class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white">
-                                        <option value="English">English</option>
-                                        <option value="Hindi">हिन्दी (Hindi)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <!-- Hidden Prediction Type -->
-                            <input type="hidden" id="predictionType" value="general">
-                            <input type="hidden" id="useAI" value="false">
-
-                            <!-- Date Input - Mobile Friendly -->
+                    <form id="nadiForm">
+                        <div class="form-grid">
                             <div>
-                                <label class="block text-sm font-semibold text-yellow-200 mb-2">
-                                    Birth Date <span class="text-red-400">*</span>
-                                </label>
-                                <div class="grid grid-cols-3 gap-2 md:gap-3">
-                                    <div>
-                                        <input type="number" id="day" required min="1" max="31" placeholder="Day"
-                                            class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-3 py-3 text-white placeholder-gray-500 text-center">
-                                    </div>
-                                    <div>
-                                        <select id="month" required
-                                            class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-3 py-3 text-white">
-                                            <option value="">Month</option>
-                                            <option value="01">Jan</option>
-                                            <option value="02">Feb</option>
-                                            <option value="03">Mar</option>
-                                            <option value="04">Apr</option>
-                                            <option value="05">May</option>
-                                            <option value="06">Jun</option>
-                                            <option value="07">Jul</option>
-                                            <option value="08">Aug</option>
-                                            <option value="09">Sep</option>
-                                            <option value="10">Oct</option>
-                                            <option value="11">Nov</option>
-                                            <option value="12">Dec</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <input type="number" id="year" required min="1900" max="2024" placeholder="Year"
-                                            class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-3 py-3 text-white placeholder-gray-500 text-center">
-                                    </div>
-                                </div>
+                                <label class="input-label" for="name">Full Name *</label>
+                                <input type="text" id="name" class="input-field" placeholder="Your name" required>
                             </div>
-
-                            <!-- Time Input -->
                             <div>
-                                <label class="block text-sm font-semibold text-yellow-200 mb-2">
-                                    Birth Time <span class="text-red-400">*</span>
-                                    <span class="info-tooltip ml-2 text-yellow-400" data-tooltip="For best accuracy, use exact birth time">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="grid grid-cols-2 gap-2 md:gap-3">
-                                    <div>
-                                        <select id="hour" required
-                                            class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-3 py-3 text-white">
-                                            <option value="">Hour</option>
-                                            <option value="00">00 (12 AM)</option>
-                                            <option value="01">01 (1 AM)</option>
-                                            <option value="02">02 (2 AM)</option>
-                                            <option value="03">03 (3 AM)</option>
-                                            <option value="04">04 (4 AM)</option>
-                                            <option value="05">05 (5 AM)</option>
-                                            <option value="06">06 (6 AM)</option>
-                                            <option value="07">07 (7 AM)</option>
-                                            <option value="08">08 (8 AM)</option>
-                                            <option value="09">09 (9 AM)</option>
-                                            <option value="10">10 (10 AM)</option>
-                                            <option value="11">11 (11 AM)</option>
-                                            <option value="12">12 (12 PM)</option>
-                                            <option value="13">13 (1 PM)</option>
-                                            <option value="14">14 (2 PM)</option>
-                                            <option value="15">15 (3 PM)</option>
-                                            <option value="16">16 (4 PM)</option>
-                                            <option value="17">17 (5 PM)</option>
-                                            <option value="18">18 (6 PM)</option>
-                                            <option value="19">19 (7 PM)</option>
-                                            <option value="20">20 (8 PM)</option>
-                                            <option value="21">21 (9 PM)</option>
-                                            <option value="22">22 (10 PM)</option>
-                                            <option value="23">23 (11 PM)</option>
-                                        </select>
-                                    </div>
-                                    <div>
-                                        <select id="minute" required
-                                            class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-3 py-3 text-white">
-                                            <option value="">Minute</option>
-                                            <option value="00">00</option>
-                                            <option value="15">15</option>
-                                            <option value="30">30</option>
-                                            <option value="45">45</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <p class="text-xs text-gray-500 mt-2">If exact time unknown, select closest estimate</p>
+                                <label class="input-label" for="language">Output Language</label>
+                                <select id="language" class="select-field">
+                                    <option value="English">English</option>
+                                    <option value="Hindi">हिन्दी (Hindi)</option>
+                                </select>
                             </div>
+                        </div>
 
-                            <!-- Location -->
-                            <div>
-                                <label class="block text-sm font-semibold text-yellow-200 mb-2">
-                                    Birth Location <span class="text-red-400">*</span>
-                                </label>
-                                <input type="text" id="location" required 
-                                    class="w-full bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white placeholder-gray-500"
-                                    placeholder="City, State, Country">
+                        <div style="margin-top: 24px;">
+                            <label class="input-label">Birth Date *</label>
+                            <div class="date-grid">
+                                <input type="number" id="day" class="input-field" placeholder="DD" min="1" max="31" required>
+                                <select id="month" class="select-field" required>
+                                    <option value="">Month</option>
+                                    <option value="01">Jan</option>
+                                    <option value="02">Feb</option>
+                                    <option value="03">Mar</option>
+                                    <option value="04">Apr</option>
+                                    <option value="05">May</option>
+                                    <option value="06">Jun</option>
+                                    <option value="07">Jul</option>
+                                    <option value="08">Aug</option>
+                                    <option value="09">Sep</option>
+                                    <option value="10">Oct</option>
+                                    <option value="11">Nov</option>
+                                    <option value="12">Dec</option>
+                                </select>
+                                <input type="number" id="year" class="input-field" placeholder="YYYY" min="1900" max="2026" required>
                             </div>
-
-                            <!-- Submit Button -->
-                            <button type="submit" id="submitBtn"
-                                class="w-full bg-gradient-to-r from-yellow-600 via-yellow-500 to-yellow-600 text-gray-900 font-bold py-4 px-8 rounded-xl text-lg tracking-wide shadow-lg animate-pulse">
-                                <span id="submitText">
-                                    <i class="fas fa-crystal-ball mr-2"></i>Generate Prediction
-                                </span>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Chat Section -->
-            <div id="chatSection" class="section hidden">
-                <div class="glass-card golden-border rounded-3xl p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <h2 class="serif-font text-2xl md:text-3xl text-yellow-300">
-                            <i class="fas fa-robot mr-2"></i>AstroBot AI Assistant
-                        </h2>
-                        <div class="flex items-center gap-2">
-                            <div class="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
-                            <span class="text-green-400 text-sm">Online</span>
                         </div>
-                    </div>
-                    
-                    <!-- Chat Messages Container -->
-                    <div id="chatMessages" class="h-80 md:h-96 overflow-y-auto mb-4 p-4 bg-black/30 rounded-xl">
-                        <!-- Welcome message -->
-                        <div class="chat-message bot-message">
-                            <div class="font-bold text-yellow-300 mb-1">AstroBot</div>
-                            <div>Hello! I'm your AI astrology assistant. Ask me about your birth chart, predictions, or general astrology questions. I can analyze your chart if you provide your birth details.</div>
-                        </div>
-                    </div>
-                    
-                    <!-- Chat Input -->
-                    <div class="chat-input-container rounded-xl">
-                        <div class="flex gap-2">
-                            <input type="text" id="chatInput" 
-                                placeholder="Ask about your predictions..." 
-                                class="flex-1 bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white"
-                                autocomplete="off">
-                            <button id="sendChatBtn" class="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold px-6 rounded-xl">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                        <p class="text-xs text-gray-500 mt-2 text-center">
-                            <i class="fas fa-lightbulb mr-1"></i>Try: "What does my Moon sign mean?" or "Tell me about career prospects"
-                        </p>
-                    </div>
-                </div>
-                
-                <!-- Quick Questions -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-                    <button class="quick-question glass-card rounded-xl p-3 text-center text-sm text-gray-300 hover:bg-yellow-900/20 transition">
-                        Career Advice
-                    </button>
-                    <button class="quick-question glass-card rounded-xl p-3 text-center text-sm text-gray-300 hover:bg-yellow-900/20 transition">
-                        Love Life
-                    </button>
-                    <button class="quick-question glass-card rounded-xl p-3 text-center text-sm text-gray-300 hover:bg-yellow-900/20 transition">
-                        Health Tips
-                    </button>
-                    <button class="quick-question glass-card rounded-xl p-3 text-center text-sm text-gray-300 hover:bg-yellow-900/20 transition">
-                        Spiritual Path
-                    </button>
-                </div>
-            </div>
 
-            <!-- Info Section -->
-            <div id="infoSection" class="section hidden">
-                <div class="glass-card golden-border rounded-3xl p-6">
-                    <h2 class="serif-font text-2xl md:text-3xl text-yellow-300 mb-6 text-center">About This Service</h2>
-                    
-                    <div class="space-y-6">
-                        <div>
-                            <h3 class="text-xl font-bold text-yellow-200 mb-2">🌟 Advanced Technology</h3>
-                            <p class="text-gray-300">This platform combines ancient Vedic astrology with modern AI technology using Ollama for personalized predictions.</p>
+                        <div style="margin-top: 24px;">
+                            <label class="input-label">Birth Time *</label>
+                            <div class="time-grid">
+                                <select id="hour" class="select-field" required>
+                                    <option value="">Hour</option>
+                                    <option value="00">00 (12 AM)</option>
+                                    <option value="01">01 (1 AM)</option>
+                                    <option value="02">02 (2 AM)</option>
+                                    <option value="03">03 (3 AM)</option>
+                                    <option value="04">04 (4 AM)</option>
+                                    <option value="05">05 (5 AM)</option>
+                                    <option value="06">06 (6 AM)</option>
+                                    <option value="07">07 (7 AM)</option>
+                                    <option value="08">08 (8 AM)</option>
+                                    <option value="09">09 (9 AM)</option>
+                                    <option value="10">10 (10 AM)</option>
+                                    <option value="11">11 (11 AM)</option>
+                                    <option value="12">12 (12 PM)</option>
+                                    <option value="13">13 (1 PM)</option>
+                                    <option value="14">14 (2 PM)</option>
+                                    <option value="15">15 (3 PM)</option>
+                                    <option value="16">16 (4 PM)</option>
+                                    <option value="17">17 (5 PM)</option>
+                                    <option value="18">18 (6 PM)</option>
+                                    <option value="19">19 (7 PM)</option>
+                                    <option value="20">20 (8 PM)</option>
+                                    <option value="21">21 (9 PM)</option>
+                                    <option value="22">22 (10 PM)</option>
+                                    <option value="23">23 (11 PM)</option>
+                                </select>
+                                <select id="minute" class="select-field" required>
+                                    <option value="">Min</option>
+                                    <option value="00">00</option>
+                                    <option value="15">15</option>
+                                    <option value="30">30</option>
+                                    <option value="45">45</option>
+                                </select>
+                            </div>
+                            <p class="helper-text">Approximate time works if exact unknown</p>
                         </div>
-                        
-                        <div>
-                            <h3 class="text-xl font-bold text-yellow-200 mb-2">🔮 Features</h3>
-                            <ul class="text-gray-300 space-y-2">
-                                <li><i class="fas fa-check text-green-400 mr-2"></i>AI-powered predictions with Ollama integration</li>
-                                <li><i class="fas fa-check text-green-400 mr-2"></i>Advanced planetary calculations</li>
-                                <li><i class="fas fa-check text-green-400 mr-2"></i>Yoga and Dasha period detection</li>
-                                <li><i class="fas fa-check text-green-400 mr-2"></i>Bilingual support (English & Hindi)</li>
-                                <li><i class="fas fa-check text-green-400 mr-2"></i>Mobile-friendly interface</li>
-                            </ul>
+
+                        <div style="margin-top: 24px;">
+                            <label class="input-label" for="location">Birth Location *</label>
+                            <input type="text" id="location" class="input-field" placeholder="City, Country" required>
                         </div>
-                        
-                        <div>
-                            <h3 class="text-xl font-bold text-yellow-200 mb-2">📞 Contact</h3>
-                            <p class="text-gray-300">
-                                <i class="fas fa-phone mr-2 text-yellow-400"></i>Astrologer Sudeep: +919590675753
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
-            <!-- Prediction Result -->
-            <div id="predictionResult" class="hidden prediction-card glass-card golden-border rounded-3xl p-6 mb-12">
-                <!-- Header -->
-                <div class="text-center mb-8">
-                    <div class="flex flex-wrap justify-center gap-3 mb-4">
-                        <div class="language-badge" id="languageBadge"></div>
-                        <div class="prediction-type-badge" id="predictionTypeBadge"></div>
-                        <div class="ai-badge hidden" id="aiBadge">🤖 AI Enhanced</div>
-                    </div>
-                    <h2 class="serif-font text-3xl text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 to-yellow-400 mb-2">
-                        Your Nadi Prediction
-                    </h2>
-                    <p class="text-gray-400 text-sm">Revealed from the Ancient Palm Leaves</p>
-                </div>
-
-                <!-- Yogas and Dasha -->
-                <div class="mb-6">
-                    <div class="flex flex-wrap justify-center gap-3 mb-4">
-                        <div id="yogasContainer" class="text-center"></div>
-                        <div id="dashaContainer" class="text-center"></div>
-                    </div>
-                </div>
-
-                <!-- Astrological Info Cards -->
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                    <div class="planet-card bg-gradient-to-br from-yellow-900/20 to-yellow-800/10 border border-yellow-700/30 rounded-xl p-3 text-center">
-                        <div class="text-yellow-500 text-xs font-semibold mb-1 uppercase tracking-wider">Ascendant</div>
-                        <div id="ascendant" class="text-yellow-100 text-lg font-bold serif-font">--</div>
-                    </div>
-                    <div class="planet-card bg-gradient-to-br from-blue-900/20 to-blue-800/10 border border-blue-700/30 rounded-xl p-3 text-center">
-                        <div class="text-blue-400 text-xs font-semibold mb-1 uppercase tracking-wider">Moon Sign</div>
-                        <div id="moonSign" class="text-blue-100 text-lg font-bold serif-font">--</div>
-                    </div>
-                    <div class="planet-card bg-gradient-to-br from-purple-900/20 to-purple-800/10 border border-purple-700/30 rounded-xl p-3 text-center">
-                        <div class="text-purple-400 text-xs font-semibold mb-1 uppercase tracking-wider">Sun Sign</div>
-                        <div id="sunSign" class="text-purple-100 text-lg font-bold serif-font">--</div>
-                    </div>
-                    <div class="planet-card bg-gradient-to-br from-green-900/20 to-green-800/10 border border-green-700/30 rounded-xl p-3 text-center">
-                        <div class="text-green-400 text-xs font-semibold mb-1 uppercase tracking-wider">Dasha</div>
-                        <div id="dasha" class="text-green-100 text-lg font-bold serif-font">--</div>
-                    </div>
-                </div>
-
-                <!-- AI Prediction Section -->
-                <div id="aiPredictionSection" class="hidden mb-6">
-                    <div class="bg-gradient-to-r from-purple-900/20 to-purple-800/10 border border-purple-700/30 rounded-xl p-4">
-                        <div class="flex items-center mb-3">
-                            <i class="fas fa-robot text-purple-400 mr-2"></i>
-                            <h3 class="text-lg font-bold text-purple-200">AI-Powered Insights</h3>
-                        </div>
-                        <div id="aiPrediction" class="text-gray-200 leading-relaxed whitespace-pre-line"></div>
-                    </div>
-                </div>
-
-                <!-- Prediction Tabs -->
-                <div class="mb-6">
-                    <div class="flex flex-wrap gap-2 justify-center mb-4">
-                        <button class="tab-button active" data-tab="general">
-                            <i class="fas fa-star mr-2"></i>General
+                        <button type="submit" class="btn" id="submitBtn">
+                            <span id="submitText">GENERATE PREDICTION</span>
                         </button>
-                        <button class="tab-button" data-tab="career">
-                            <i class="fas fa-briefcase mr-2"></i>Career
-                        </button>
-                        <button class="tab-button" data-tab="child">
-                            <i class="fas fa-child mr-2"></i>Child
-                        </button>
-                        <button class="tab-button" data-tab="planets">
-                            <i class="fas fa-globe mr-2"></i>Planets
-                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <div id="errorMsg" class="hidden scale-in">
+                <div class="error-box">
+                    <div style="font-size: 40px; margin-bottom: 12px;">⚠️</div>
+                    <p style="color: #ff6b9d; font-size: 15px;" id="errorText">Connection failed</p>
+                </div>
+            </div>
+
+            <section id="predictionResult" class="hidden" style="padding: 40px 0;">
+                <div style="text-align: center; margin-bottom: 40px;" class="scale-in">
+                    <span class="badge" id="languageBadge"></span>
+                    <h2 class="result-title">COSMIC ANALYSIS</h2>
+                    <p class="result-subtitle">Your Personalized Reading</p>
+                </div>
+
+                <div class="info-cards scale-in" style="animation-delay: 0.1s;">
+                    <div class="info-card">
+                        <div class="info-label">Ascendant</div>
+                        <div class="info-value" id="ascendant">—</div>
                     </div>
-
-                    <!-- Tab Content -->
-                    <div id="tabContent">
-                        <!-- General Prediction -->
-                        <div id="generalTab" class="prediction-section active">
-                            <div class="bg-black/30 border border-yellow-900/20 rounded-xl p-4 md:p-6">
-                                <div id="generalPrediction" class="text-gray-200 leading-relaxed serif-font whitespace-pre-line"></div>
-                            </div>
-                        </div>
-
-                        <!-- Career Prediction -->
-                        <div id="careerTab" class="prediction-section">
-                            <div class="bg-black/30 border border-blue-900/20 rounded-xl p-4 md:p-6">
-                                <div id="careerPrediction" class="text-gray-200 leading-relaxed serif-font whitespace-pre-line"></div>
-                            </div>
-                        </div>
-
-                        <!-- Child Prediction -->
-                        <div id="childTab" class="prediction-section">
-                            <div class="bg-black/30 border border-pink-900/20 rounded-xl p-4 md:p-6">
-                                <div id="childPrediction" class="text-gray-200 leading-relaxed serif-font whitespace-pre-line"></div>
-                            </div>
-                        </div>
-
-                        <!-- Planetary Positions -->
-                        <div id="planetsTab" class="prediction-section">
-                            <div class="bg-black/30 border border-green-900/20 rounded-xl p-4 md:p-6">
-                                <h3 class="text-xl text-yellow-300 mb-4 text-center serif-font">Planetary Positions</h3>
-                                <div class="overflow-x-auto">
-                                    <table class="w-full text-sm text-gray-300">
-                                        <thead>
-                                            <tr class="border-b border-gray-700">
-                                                <th class="py-2 px-2 md:px-4 text-left">Planet</th>
-                                                <th class="py-2 px-2 md:px-4 text-left">Sign</th>
-                                                <th class="py-2 px-2 md:px-4 text-left">House</th>
-                                                <th class="py-2 px-2 md:px-4 text-left">Degree</th>
-                                                <th class="py-2 px-2 md:px-4 text-left">Status</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="planetaryTable"></tbody>
-                                    </table>
-                                </div>
-                                <div class="mt-4 text-sm text-gray-400">
-                                    <div class="flex items-center gap-4">
-                                        <div class="flex items-center">
-                                            <span class="planet-status direct"></span> Direct
-                                        </div>
-                                        <div class="flex items-center">
-                                            <span class="planet-status retrograde"></span> Retrograde
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="info-card">
+                        <div class="info-label">Moon Sign</div>
+                        <div class="info-value" id="moonSign">—</div>
+                    </div>
+                    <div class="info-card">
+                        <div class="info-label">Nakshatra</div>
+                        <div class="info-value" id="nakshatra">—</div>
                     </div>
                 </div>
 
-                <!-- Action Buttons -->
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-                    <button id="shareBtn" class="glass-card rounded-xl p-3 text-center hover:bg-yellow-900/20 transition">
-                        <i class="fas fa-share mr-2"></i>Share
-                    </button>
-                    <button id="saveBtn" class="glass-card rounded-xl p-3 text-center hover:bg-yellow-900/20 transition">
-                        <i class="fas fa-download mr-2"></i>Save
-                    </button>
-                    <button id="askAIBtn" class="glass-card rounded-xl p-3 text-center hover:bg-yellow-900/20 transition">
-                        <i class="fas fa-robot mr-2"></i>Ask AI
-                    </button>
+                <div class="card scale-in" style="animation-delay: 0.2s;">
+                    <div class="prediction-box" id="predictionText"></div>
                 </div>
 
-                <!-- Timestamp -->
-                <div class="pt-4 border-t border-yellow-900/30 text-center">
-                    <p class="text-gray-500 text-sm" id="timestamp"></p>
+                <div class="card scale-in" style="animation-delay: 0.3s;">
+                    <h3 class="planets-title">PLANETARY POSITIONS</h3>
+                    <div class="planets-grid" id="planetsGrid"></div>
                 </div>
-            </div>
 
-            <!-- Error Message -->
-            <div id="errorMsg" class="hidden glass-card border-red-500/50 rounded-xl p-4 mb-8 text-center animate-scaleIn">
-                <svg class="w-10 h-10 text-red-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                </svg>
-                <p class="text-red-300 text-base" id="errorText">Unable to connect to the celestial servers.</p>
-                <p class="text-red-400/70 text-xs mt-1">Please check your connection and try again.</p>
-            </div>
+                <p class="helper-text" style="text-align: center; margin-top: 24px;" id="timestamp"></p>
+            </section>
+        </main>
 
-            <!-- Footer -->
-            <footer class="text-center py-8 animate-fadeIn">
-                <div class="glass-card rounded-2xl p-4 md:p-6 mb-4">
-                    <p class="text-xl md:text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 mb-3">
-                        🌟 AI-Powered Nadi Predictions • Free Forever 🌟
-                    </p>
-                    <p class="text-base font-semibold text-yellow-200 mb-2">
-                        Ancient Wisdom Meets Modern AI Technology
-                    </p>
-                    <div class="mt-3 flex flex-wrap justify-center gap-2 text-xs md:text-sm font-bold text-yellow-100">
-                        <span class="bg-gradient-to-r from-yellow-600/30 to-orange-600/30 px-3 py-1 rounded-full border border-yellow-500/40">
-                            🤖 Ollama AI
-                        </span>
-                        <span class="bg-gradient-to-r from-blue-600/30 to-purple-600/30 px-3 py-1 rounded-full border border-blue-500/40">
-                            🔮 Advanced Calculations
-                        </span>
-                        <span class="bg-gradient-to-r from-pink-600/30 to-red-600/30 px-3 py-1 rounded-full border border-pink-500/40">
-                            💬 AI Chat Assistant
-                        </span>
+        <footer class="footer">
+            <div class="container">
+                <div class="footer-cta animate-in">
+                    <h2 class="footer-title">UNLOCK YOUR DESTINY</h2>
+                    <p style="font-size: 16px; color: var(--text-dim); margin-bottom: 32px;">Free • Instant • Accurate Predictions in Hindi & English</p>
+                    <div class="features">
+                        <span class="feature">📊 Career</span>
+                        <span class="feature">💝 Love</span>
+                        <span class="feature">💰 Wealth</span>
+                        <span class="feature">🏥 Health</span>
                     </div>
                 </div>
-                <p class="text-gray-500 text-xs md:text-sm mb-1">© Astrologer Sudeep | +919590675753 • Vedic Astrology with AI</p>
-                <p class="text-xs text-gray-700">For spiritual guidance and personal consultations</p>
-            </footer>
-
-        </div>
-    </div>
-
-    <!-- Chat Drawer for Mobile -->
-    <div id="chatDrawer" class="chat-drawer">
-        <div class="chat-drawer-handle" id="chatDrawerHandle"></div>
-        <div class="p-4">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-bold text-yellow-300">
-                    <i class="fas fa-robot mr-2"></i>AstroBot
-                </h3>
-                <button id="closeChatDrawer" class="text-gray-400">
-                    <i class="fas fa-times"></i>
-                </button>
+                <p class="copyright">© 2026 NADI JYOTISH • POWERED BY AI</p>
             </div>
-            <div id="mobileChatMessages" class="h-48 overflow-y-auto mb-4 p-3 bg-black/30 rounded-lg">
-                <!-- Mobile chat messages will appear here -->
-            </div>
-            <div class="flex gap-2">
-                <input type="text" id="mobileChatInput" 
-                    placeholder="Type your question..." 
-                    class="flex-1 bg-black/40 border border-yellow-900/30 rounded-xl px-4 py-3 text-white text-sm">
-                <button id="sendMobileChatBtn" class="bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold px-4 rounded-xl">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
-        </div>
+        </footer>
     </div>
 
     <script>
-        // ⚙️ BACKEND CONFIGURATION
         const BACKEND_URL = 'https://web-production-7266a.up.railway.app';
-        
-        // Global variables
-        let currentSessionId = null;
-        let currentChartData = null;
-        
-        // Initialize
-        createStars();
-        setupEventListeners();
-        checkOllamaStatus();
 
-        // Generate cosmic background stars
-        function createStars() {
-            const cosmicBg = document.getElementById('cosmicBg');
-            const starCount = window.innerWidth < 768 ? 80 : 150;
-            
-            cosmicBg.innerHTML = '';
-            for (let i = 0; i < starCount; i++) {
-                const star = document.createElement('div');
-                star.className = 'star';
-                
-                const size = Math.random() * 2 + 1;
-                star.style.width = `${size}px`;
-                star.style.height = `${size}px`;
-                star.style.left = `${Math.random() * 100}%`;
-                star.style.top = `${Math.random() * 100}%`;
-                star.style.animationDelay = `${Math.random() * 3}s`;
-                star.style.animationDuration = `${Math.random() * 2 + 2}s`;
-                
-                cosmicBg.appendChild(star);
-            }
-        }
-
-        // Check Ollama status
-        async function checkOllamaStatus() {
+        window.addEventListener('load', async () => {
             try {
-                const response = await fetch(`${BACKEND_URL}/ollama/status`);
-                const data = await response.json();
-                
-                const aiToggle = document.getElementById('aiToggle');
-                const aiStatus = document.getElementById('aiStatus');
-                
-                if (data.ollama_available && data.llm_enabled) {
-                    aiToggle.disabled = false;
-                    aiStatus.textContent = 'AI: Ready';
-                    aiStatus.classList.add('bg-green-900/20', 'border-green-700/30', 'text-green-400');
-                    aiStatus.classList.remove('bg-gray-900/20', 'border-gray-700/30', 'text-gray-400');
-                } else {
-                    aiToggle.disabled = true;
-                    aiToggle.checked = false;
-                    updateAIToggle();
-                    aiStatus.textContent = 'AI: Offline';
-                    aiStatus.classList.add('bg-gray-900/20', 'border-gray-700/30', 'text-gray-400');
-                    aiStatus.classList.remove('bg-green-900/20', 'border-green-700/30', 'text-green-400');
-                }
-            } catch (error) {
-                console.error('Error checking Ollama status:', error);
+                const r = await fetch(`${BACKEND_URL}/health`);
+                if (r.ok) console.log('✅ Connected');
+            } catch (e) {
+                console.error('❌ Failed');
             }
-        }
+        });
 
-        // Setup event listeners
-        function setupEventListeners() {
-            // Mobile navigation
-            document.querySelectorAll('.nav-button').forEach(button => {
-                button.addEventListener('click', function() {
-                    const nav = this.dataset.nav;
-                    navigateTo(nav);
-                });
-            });
-
-            // Get started button
-            document.getElementById('getStartedBtn').addEventListener('click', () => {
-                navigateTo('predict');
-            });
-
-            // Prediction type selection
-            document.querySelectorAll('.feature-card').forEach(card => {
-                card.addEventListener('click', function() {
-                    const type = this.dataset.type;
-                    selectPredictionType(type);
-                });
-            });
-
-            // AI toggle
-            const aiToggle = document.getElementById('aiToggle');
-            aiToggle.addEventListener('change', updateAIToggle);
-
-            // Form submission
-            document.getElementById('nadiForm').addEventListener('submit', handleFormSubmit);
-
-            // Tab switching
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.addEventListener('click', function() {
-                    const tab = this.dataset.tab;
-                    switchTab(tab);
-                });
-            });
-
-            // Chat functionality
-            document.getElementById('sendChatBtn').addEventListener('click', sendChatMessage);
-            document.getElementById('chatInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') sendChatMessage();
-            });
-
-            // Mobile chat
-            document.getElementById('sendMobileChatBtn').addEventListener('click', sendMobileChatMessage);
-            document.getElementById('mobileChatInput').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') sendMobileChatMessage();
-            });
-
-            // Chat drawer
-            document.getElementById('chatDrawerHandle').addEventListener('click', toggleChatDrawer);
-            document.getElementById('closeChatDrawer').addEventListener('click', closeChatDrawer);
-
-            // Quick questions
-            document.querySelectorAll('.quick-question').forEach(button => {
-                button.addEventListener('click', function() {
-                    const question = this.textContent.trim();
-                    askQuestion(question);
-                });
-            });
-
-            // Action buttons
-            document.getElementById('askAIBtn')?.addEventListener('click', () => {
-                navigateTo('chat');
-                if (currentChartData) {
-                    setTimeout(() => {
-                        const chatInput = window.innerWidth < 768 ? 
-                            document.getElementById('mobileChatInput') : 
-                            document.getElementById('chatInput');
-                        chatInput.value = "Can you analyze my birth chart?";
-                        if (window.innerWidth < 768) {
-                            sendMobileChatMessage();
-                        } else {
-                            sendChatMessage();
-                        }
-                    }, 500);
-                }
-            });
-
-            // Window resize
-            window.addEventListener('resize', createStars);
-        }
-
-        // Navigation functions
-        function navigateTo(section) {
-            // Update mobile nav
-            document.querySelectorAll('.nav-button').forEach(button => {
-                button.classList.remove('active');
-                if (button.dataset.nav === section) {
-                    button.classList.add('active');
-                }
-            });
-
-            // Show/hide sections
-            document.querySelectorAll('.section').forEach(sec => {
-                sec.classList.add('hidden');
-            });
-            document.getElementById(`${section}Section`).classList.remove('hidden');
-
-            // Scroll to top
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }
-
-        // Update AI toggle
-        function updateAIToggle() {
-            const aiToggle = document.getElementById('aiToggle');
-            const useAI = document.getElementById('useAI');
-            const aiStatus = document.getElementById('aiStatus');
-            
-            if (aiToggle.checked) {
-                useAI.value = 'true';
-                aiStatus.textContent = 'AI: On';
-                aiStatus.classList.add('bg-purple-900/20', 'border-purple-700/30', 'text-purple-400');
-                aiStatus.classList.remove('bg-gray-900/20', 'border-gray-700/30', 'text-gray-400');
-            } else {
-                useAI.value = 'false';
-                aiStatus.textContent = 'AI: Off';
-                aiStatus.classList.add('bg-gray-900/20', 'border-gray-700/30', 'text-gray-400');
-                aiStatus.classList.remove('bg-purple-900/20', 'border-purple-700/30', 'text-purple-400');
-            }
-        }
-
-        // Select prediction type
-        function selectPredictionType(type) {
-            // Update UI
-            document.querySelectorAll('.feature-card').forEach(card => {
-                card.classList.remove('active');
-                if (card.dataset.type === type) {
-                    card.classList.add('active');
-                }
-            });
-
-            // Update hidden field
-            document.getElementById('predictionType').value = type;
-
-            // Update form title
-            const titles = {
-                general: 'Complete Birth Chart Analysis',
-                career: 'Career & Professional Guidance',
-                child: 'Children & Family Predictions'
-            };
-            document.getElementById('formTitle').textContent = titles[type] || titles.general;
-        }
-
-        // Switch between tabs
-        function switchTab(tabName) {
-            // Update tab buttons
-            document.querySelectorAll('.tab-button').forEach(button => {
-                button.classList.remove('active');
-                if (button.dataset.tab === tabName) {
-                    button.classList.add('active');
-                }
-            });
-
-            // Show selected tab content
-            document.querySelectorAll('.prediction-section').forEach(section => {
-                section.classList.remove('active');
-            });
-            document.getElementById(`${tabName}Tab`).classList.add('active');
-        }
-
-        // Handle form submission
-        async function handleFormSubmit(e) {
+        document.getElementById('nadiForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const submitBtn = document.getElementById('submitBtn');
-            const submitText = document.getElementById('submitText');
+            const btn = document.getElementById('submitBtn');
+            const btnText = document.getElementById('submitText');
             const errorDiv = document.getElementById('errorMsg');
             const errorText = document.getElementById('errorText');
             const resultDiv = document.getElementById('predictionResult');
             
-            // Disable button and show loading
-            submitBtn.disabled = true;
-            submitText.innerHTML = '<div class="loading-spinner"></div> Analyzing Your Chart...';
+            btn.disabled = true;
+            btnText.innerHTML = '<div class="spinner"></div>PROCESSING...';
             errorDiv.classList.add('hidden');
             resultDiv.classList.add('hidden');
             
-            // Build date and time strings
             const day = document.getElementById('day').value.padStart(2, '0');
             const month = document.getElementById('month').value;
             const year = document.getElementById('year').value;
             const hour = document.getElementById('hour').value;
             const minute = document.getElementById('minute').value;
             
-            // Validate date
-            if (!day || !month || !year) {
-                errorText.textContent = 'Please enter complete birth date (Day, Month, Year)';
+            if (!day || !month || !year || !hour || !minute) {
+                errorText.textContent = 'Complete all fields';
                 errorDiv.classList.remove('hidden');
-                submitBtn.disabled = false;
-                submitText.innerHTML = '<i class="fas fa-crystal-ball mr-2"></i>Generate Prediction';
+                btn.disabled = false;
+                btnText.textContent = 'GENERATE PREDICTION';
                 return;
             }
             
-            // Validate time
-            if (!hour || !minute) {
-                errorText.textContent = 'Please select birth time (Hour and Minute)';
-                errorDiv.classList.remove('hidden');
-                submitBtn.disabled = false;
-                submitText.innerHTML = '<i class="fas fa-crystal-ball mr-2"></i>Generate Prediction';
-                return;
-            }
-            
-            const formData = {
+            const data = {
                 name: document.getElementById('name').value,
                 date: `${year}-${month}-${day}`,
                 time: `${hour}:${minute}`,
                 location: document.getElementById('location').value,
-                language: document.getElementById('language').value,
-                prediction_type: document.getElementById('predictionType').value,
-                use_ai: document.getElementById('useAI').value === 'true'
+                language: document.getElementById('language').value
             };
             
-            console.log('Submitting form data:', formData);
-            
             try {
-                const response = await fetch(`${BACKEND_URL}/predict`, {
+                const r = await fetch(`${BACKEND_URL}/predict`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(formData)
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
                 });
                 
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.detail || `Server error: ${response.status}`);
-                }
+                if (!r.ok) throw new Error('Server error');
                 
-                const data = await response.json();
-                console.log('Received data:', data);
+                const res = await r.json();
                 
-                // Store chart data for chat
-                currentChartData = {
-                    name: data.birth_details.name,
-                    ascendant: data.ascendant,
-                    moon_sign: data.moon_sign,
-                    sun_sign: data.sun_sign,
-                    yogas: data.yogas,
-                    dasha: data.dasha_period,
-                    planetary_positions: data.planetary_positions.map(p => ({
-                        planet: p.planet,
-                        sign: p.sign,
-                        house: p.house
-                    }))
-                };
+                document.getElementById('languageBadge').textContent = 
+                    res.birth_details.language === 'Hindi' ? '🇮🇳 HINDI' : '🇬🇧 ENGLISH';
                 
-                // Display prediction
-                displayPrediction(data, formData);
+                document.getElementById('ascendant').textContent = 
+                    res.birth_details.language === 'Hindi' ? res.ascendant_hindi : res.ascendant;
+                document.getElementById('moonSign').textContent = 
+                    res.birth_details.language === 'Hindi' ? res.moon_sign_hindi : res.moon_sign;
                 
-                // Show result and navigate
+                const moon = res.planetary_positions.find(p => p.planet === 'Moon');
+                document.getElementById('nakshatra').textContent = 
+                    res.birth_details.language === 'Hindi' ? moon.nakshatra_hindi : moon.nakshatra;
+                
+                document.getElementById('predictionText').textContent = res.prediction;
+                
+                const grid = document.getElementById('planetsGrid');
+                grid.innerHTML = '';
+                res.planetary_positions.forEach(p => {
+                    const card = document.createElement('div');
+                    card.className = 'planet-card';
+                    card.innerHTML = `
+                        <div class="planet-name">${res.birth_details.language === 'Hindi' ? p.planet_hindi : p.planet}</div>
+                        <div class="planet-sign">${res.birth_details.language === 'Hindi' ? p.sign_hindi : p.sign}</div>
+                    `;
+                    grid.appendChild(card);
+                });
+                
+                document.getElementById('timestamp').textContent = `Generated ${new Date().toLocaleString()}`;
+                
                 resultDiv.classList.remove('hidden');
-                navigateTo('predict');
+                setTimeout(() => resultDiv.scrollIntoView({ behavior: 'smooth' }), 100);
                 
-                // Scroll to result
-                setTimeout(() => {
-                    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-                
-            } catch (error) {
-                console.error('Error:', error);
-                errorText.textContent = error.message || 'Unable to connect to the servers.';
+            } catch (err) {
+                errorText.textContent = 'Connection failed. Try again.';
                 errorDiv.classList.remove('hidden');
-                errorDiv.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } finally {
-                submitBtn.disabled = false;
-                submitText.innerHTML = '<i class="fas fa-crystal-ball mr-2"></i>Generate Prediction';
+                btn.disabled = false;
+                btnText.textContent = 'GENERATE PREDICTION';
             }
-        }
-
-        // Display prediction data
-        function displayPrediction(data, formData) {
-            // Display language badge
-            const languageBadge = document.getElementById('languageBadge');
-            languageBadge.textContent = data.birth_details.language === 'Hindi' ? '🇮🇳 हिन्दी' : '🇬🇧 English';
-            
-            // Display prediction type badge
-            const typeBadge = document.getElementById('predictionTypeBadge');
-            const typeText = {
-                general: '🌙 Complete Analysis',
-                career: '💼 Career Guidance',
-                child: '👶 Child Prediction'
-            };
-            typeBadge.textContent = typeText[data.birth_details.prediction_type] || typeText.general;
-            
-            // Display AI badge if AI was used
-            const aiBadge = document.getElementById('aiBadge');
-            if (data.ai_prediction) {
-                aiBadge.classList.remove('hidden');
-            } else {
-                aiBadge.classList.add('hidden');
-            }
-            
-            // Display astrological data
-            document.getElementById('ascendant').textContent = 
-                data.birth_details.language === 'Hindi' ? data.ascendant_hindi : data.ascendant;
-            
-            document.getElementById('moonSign').textContent = 
-                data.birth_details.language === 'Hindi' ? data.moon_sign_hindi : data.moon_sign;
-            
-            document.getElementById('sunSign').textContent = 
-                data.birth_details.language === 'Hindi' ? 
-                data.planetary_positions.find(p => p.planet === 'Sun').sign_hindi : 
-                data.planetary_positions.find(p => p.planet === 'Sun').sign;
-            
-            // Display dasha
-            if (data.dasha_period) {
-                document.getElementById('dasha').textContent = data.dasha_period;
-            }
-            
-            // Display yogas
-            const yogasContainer = document.getElementById('yogasContainer');
-            if (data.yogas && data.yogas.length > 0) {
-                yogasContainer.innerHTML = '<div class="text-yellow-300 text-sm font-semibold mb-2">Special Yogas:</div>';
-                data.yogas.forEach(yoga => {
-                    const badge = document.createElement('span');
-                    badge.className = 'yoga-badge';
-                    badge.textContent = yoga;
-                    yogasContainer.appendChild(badge);
-                });
-            } else {
-                yogasContainer.innerHTML = '<div class="text-gray-500 text-sm">No special yogas detected</div>';
-            }
-            
-            // Display dasha info
-            const dashaContainer = document.getElementById('dashaContainer');
-            if (data.dasha_period) {
-                dashaContainer.innerHTML = `
-                    <div class="dasha-badge">
-                        <i class="fas fa-clock mr-2"></i>Current Dasha: ${data.dasha_period}
-                    </div>
-                `;
-            }
-            
-            // Display predictions
-            document.getElementById('generalPrediction').textContent = data.prediction;
-            
-            if (data.career_prediction) {
-                document.getElementById('careerPrediction').textContent = data.career_prediction;
-            }
-            
-            if (data.child_prediction) {
-                document.getElementById('childPrediction').textContent = data.child_prediction;
-            }
-            
-            // Display AI prediction
-            const aiPredictionSection = document.getElementById('aiPredictionSection');
-            const aiPrediction = document.getElementById('aiPrediction');
-            if (data.ai_prediction) {
-                aiPredictionSection.classList.remove('hidden');
-                aiPrediction.textContent = data.ai_prediction;
-            } else {
-                aiPredictionSection.classList.add('hidden');
-            }
-            
-            // Display planetary positions table
-            const planetaryTable = document.getElementById('planetaryTable');
-            planetaryTable.innerHTML = '';
-            
-            data.planetary_positions.forEach(planet => {
-                const row = document.createElement('tr');
-                row.className = 'border-b border-gray-800 hover:bg-gray-800/30';
-                
-                const statusClass = planet.is_retrograde ? 'retrograde' : 'direct';
-                const statusText = planet.is_retrograde ? 'R' : 'D';
-                
-                row.innerHTML = `
-                    <td class="py-2 px-2 md:px-4">
-                        <div class="flex items-center">
-                            <span class="planet-status ${statusClass}"></span>
-                            ${data.birth_details.language === 'Hindi' ? planet.planet_hindi : planet.planet}
-                        </div>
-                    </td>
-                    <td class="py-2 px-2 md:px-4">${data.birth_details.language === 'Hindi' ? planet.sign_hindi : planet.sign}</td>
-                    <td class="py-2 px-2 md:px-4">${planet.house}</td>
-                    <td class="py-2 px-2 md:px-4">${planet.degree_in_sign.toFixed(1)}°</td>
-                    <td class="py-2 px-2 md:px-4">${statusText}</td>
-                `;
-                planetaryTable.appendChild(row);
-            });
-            
-            // Timestamp
-            document.getElementById('timestamp').textContent = 
-                `Generated on ${new Date().toLocaleString()}`;
-        }
-
-        // Chat functions
-        async function sendChatMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            
-            if (!message) return;
-            
-            addChatMessage('user', message);
-            input.value = '';
-            
-            showTypingIndicator('chatMessages');
-            
-            try {
-                const response = await fetch(`${BACKEND_URL}/chat`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        language: document.getElementById('language').value,
-                        context: currentChartData,
-                        session_id: currentSessionId
-                    })
-                });
-                
-                const data = await response.json();
-                currentSessionId = data.session_id;
-                
-                removeTypingIndicator('chatMessages');
-                addChatMessage('bot', data.response);
-                
-            } catch (error) {
-                console.error('Chat error:', error);
-                removeTypingIndicator('chatMessages');
-                addChatMessage('bot', 'Sorry, I encountered an error. Please try again.');
-            }
-        }
-
-        async function sendMobileChatMessage() {
-            const input = document.getElementById('mobileChatInput');
-            const message = input.value.trim();
-            
-            if (!message) return;
-            
-            addMobileChatMessage('user', message);
-            input.value = '';
-            
-            showTypingIndicator('mobileChatMessages');
-            
-            try {
-                const response = await fetch(`${BACKEND_URL}/chat`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        message: message,
-                        language: document.getElementById('language').value,
-                        context: currentChartData,
-                        session_id: currentSessionId
-                    })
-                });
-                
-                const data = await response.json();
-                currentSessionId = data.session_id;
-                
-                removeTypingIndicator('mobileChatMessages');
-                addMobileChatMessage('bot', data.response);
-                
-            } catch (error) {
-                console.error('Chat error:', error);
-                removeTypingIndicator('mobileChatMessages');
-                addMobileChatMessage('bot', 'Sorry, I encountered an error. Please try again.');
-            }
-        }
-
-        function addChatMessage(sender, message) {
-            const container = document.getElementById('chatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message ${sender === 'user' ? 'user-message' : 'bot-message'}`;
-            
-            if (sender === 'bot') {
-                messageDiv.innerHTML = `<div class="font-bold text-yellow-300 mb-1">AstroBot</div><div>${message}</div>`;
-            } else {
-                messageDiv.innerHTML = `<div class="font-bold text-blue-300 mb-1">You</div><div>${message}</div>`;
-            }
-            
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function addMobileChatMessage(sender, message) {
-            const container = document.getElementById('mobileChatMessages');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `chat-message ${sender === 'user' ? 'user-message' : 'bot-message'}`;
-            
-            if (sender === 'bot') {
-                messageDiv.innerHTML = `<div class="font-bold text-yellow-300 mb-1">AstroBot</div><div>${message}</div>`;
-            } else {
-                messageDiv.innerHTML = `<div class="font-bold text-blue-300 mb-1">You</div><div>${message}</div>`;
-            }
-            
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function showTypingIndicator(containerId) {
-            const container = document.getElementById(containerId);
-            const typingDiv = document.createElement('div');
-            typingDiv.className = 'typing-indicator';
-            typingDiv.id = 'typingIndicator';
-            typingDiv.innerHTML = `
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-                <div class="typing-dot"></div>
-            `;
-            container.appendChild(typingDiv);
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function removeTypingIndicator(containerId) {
-            const typingDiv = document.getElementById('typingIndicator');
-            if (typingDiv) {
-                typingDiv.remove();
-            }
-        }
-
-        function askQuestion(question) {
-            if (window.innerWidth < 768) {
-                document.getElementById('mobileChatInput').value = question;
-                sendMobileChatMessage();
-            } else {
-                document.getElementById('chatInput').value = question;
-                sendChatMessage();
-            }
-        }
-
-        function toggleChatDrawer() {
-            const drawer = document.getElementById('chatDrawer');
-            drawer.classList.toggle('open');
-        }
-
-        function closeChatDrawer() {
-            const drawer = document.getElementById('chatDrawer');
-            drawer.classList.remove('open');
-        }
-
-        // Initialize on load
-        window.addEventListener('load', () => {
-            console.log('Nadi Jyotish AI Platform loaded');
-            checkOllamaStatus();
         });
     </script>
 </body>
