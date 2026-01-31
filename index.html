@@ -3,118 +3,143 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nadi Jyotish | Ancient Divine Secrets</title>
+    <title>Nadi Jyotish | Ancient Celestial Secrets</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Montserrat:wght@300;400;600&family=Cormorant+Garamond:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Poppins', sans-serif; background-color: #000; }
-        .heading-font { font-family: 'Cinzel', serif; }
-        .gold-glow { box-shadow: 0 0 20px rgba(217, 119, 6, 0.3); }
-        .glass { background: rgba(20, 20, 20, 0.8); backdrop-filter: blur(12px); border: 1px solid rgba(217, 119, 6, 0.2); }
-        
-        /* Divine Background Overlay */
-        .divine-bg {
-            background-image: linear-gradient(rgba(0,0,0,0.85), rgba(0,0,0,0.85)), url('https://images.unsplash.com/photo-1623150531024-e200f38b25dd?auto=format&fit=crop&q=80&w=1920');
-            background-size: cover;
-            background-position: center;
-            background-attachment: fixed;
+        :root {
+            --gold: #d4af37;
+            --dark-obsidian: #050505;
         }
+        body { 
+            font-family: 'Montserrat', sans-serif; 
+            background-color: var(--dark-obsidian);
+            color: #e5e5e5;
+        }
+        .serif-title { font-family: 'Cinzel Decorative', cursive; }
+        .nadi-scroll { font-family: 'Cormorant Garamond', serif; }
+
+        /* Mystic Background */
+        .cosmic-bg {
+            background: radial-gradient(circle at 50% 50%, #1a1a2e 0%, #050505 100%);
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1;
+        }
+        
+        .gold-border {
+            border: 1px solid transparent;
+            background: linear-gradient(var(--dark-obsidian), var(--dark-obsidian)) padding-box,
+                        linear-gradient(to bottom right, #bf953f, #fcf6ba, #b38728) border-box;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .gold-text {
+            background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+        .float-icon { animation: float 4s ease-in-out infinite; }
     </style>
 </head>
-<body class="divine-bg text-gray-200 min-h-screen">
+<body class="min-h-screen">
+    <div class="cosmic-bg"></div>
 
-    <div class="max-w-3xl mx-auto p-6">
-        <header class="text-center py-12">
-            <h1 class="heading-font text-5xl md:text-6xl text-amber-500 mb-2 tracking-widest uppercase">Nadi Jyotish</h1>
-            <p class="text-amber-200/60 italic tracking-widest text-sm uppercase">Discover Your Destiny Written Centuries Ago</p>
-            <div class="w-32 h-1 bg-amber-600 mx-auto mt-4 rounded-full opacity-50"></div>
+    <div class="max-w-4xl mx-auto px-6 py-12">
+        
+        <header class="text-center mb-16">
+            <img src="https://cdn-icons-png.flaticon.com/512/2361/2361730.png" class="w-16 h-16 mx-auto mb-4 filter sepia opacity-80 float-icon" alt="Ohm">
+            <h1 class="serif-title text-4xl md:text-6xl gold-text tracking-tighter mb-4">Nadi Jyotish</h1>
+            <p class="text-sm tracking-[0.3em] text-gray-500 uppercase">Your Cosmic Blueprint Awaits</p>
         </header>
 
-        <div class="glass gold-glow rounded-2xl p-8 mb-10 fade-in">
-            <form id="nadiForm" class="space-y-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-xs uppercase tracking-widest text-amber-500 font-bold mb-2">Seeker's Name</label>
-                        <input type="text" id="name" required placeholder="Enter full name" 
-                            class="w-full bg-black/50 border border-amber-900/50 rounded-lg px-4 py-3 text-white focus:border-amber-500 outline-none transition">
+        <div class="glass-card rounded-3xl p-8 md:p-12 gold-border transition-all duration-500">
+            <form id="astrologyForm" class="space-y-8">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="relative">
+                        <label class="text-xs uppercase tracking-widest text-amber-500 mb-2 block">Seeker's Name</label>
+                        <input type="text" id="name" required class="w-full bg-transparent border-b border-gray-800 py-3 text-lg outline-none focus:border-amber-500 transition-colors" placeholder="Full Name">
                     </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-widest text-amber-500 font-bold mb-2">Output Language</label>
-                        <select id="language" class="w-full bg-black/50 border border-amber-900/50 rounded-lg px-4 py-3 text-white focus:border-amber-500 outline-none transition">
-                            <option value="English">English</option>
-                            <option value="Hindi">हिन्दी (Hindi)</option>
+                    <div class="relative">
+                        <label class="text-xs uppercase tracking-widest text-amber-500 mb-2 block">Language</label>
+                        <select id="language" class="w-full bg-transparent border-b border-gray-800 py-3 text-lg outline-none focus:border-amber-500 transition-colors">
+                            <option value="English" class="bg-black">English</option>
+                            <option value="Hindi" class="bg-black">Hindi (हिन्दी)</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-widest text-amber-500 font-bold mb-2">Birth Date</label>
-                        <input type="date" id="date" required 
-                            class="w-full bg-black/50 border border-amber-900/50 rounded-lg px-4 py-3 text-white focus:border-amber-500 outline-none transition">
+                    <div class="relative">
+                        <label class="text-xs uppercase tracking-widest text-amber-500 mb-2 block">Birth Date</label>
+                        <input type="date" id="date" required class="w-full bg-transparent border-b border-gray-800 py-3 text-lg outline-none focus:border-amber-500 transition-colors">
                     </div>
-                    <div>
-                        <label class="block text-xs uppercase tracking-widest text-amber-500 font-bold mb-2">Birth Time</label>
-                        <input type="time" id="time" required 
-                            class="w-full bg-black/50 border border-amber-900/50 rounded-lg px-4 py-3 text-white focus:border-amber-500 outline-none transition">
+                    <div class="relative">
+                        <label class="text-xs uppercase tracking-widest text-amber-500 mb-2 block">Birth Time</label>
+                        <input type="time" id="time" required class="w-full bg-transparent border-b border-gray-800 py-3 text-lg outline-none focus:border-amber-500 transition-colors">
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-xs uppercase tracking-widest text-amber-500 font-bold mb-2">Birth Location</label>
-                    <input type="text" id="location" required placeholder="City, State, Country" 
-                        class="w-full bg-black/50 border border-amber-900/50 rounded-lg px-4 py-3 text-white focus:border-amber-500 outline-none transition">
+                <div class="relative">
+                    <label class="text-xs uppercase tracking-widest text-amber-500 mb-2 block">Birth Location</label>
+                    <input type="text" id="location" required class="w-full bg-transparent border-b border-gray-800 py-3 text-lg outline-none focus:border-amber-500 transition-colors" placeholder="City, Country">
                 </div>
 
-                <button type="submit" id="submitBtn" 
-                    class="w-full bg-gradient-to-r from-amber-700 via-amber-600 to-amber-700 text-black font-bold py-4 rounded-lg uppercase tracking-widest hover:from-amber-500 hover:to-amber-500 transition duration-300 shadow-xl">
-                    ✨ Reveal Ancient Prediction
+                <button type="submit" id="submitBtn" class="w-full py-5 rounded-full bg-gradient-to-r from-amber-700 via-amber-500 to-amber-700 text-black font-bold uppercase tracking-widest hover:brightness-110 transition-all shadow-lg shadow-amber-900/20">
+                    ✨ Unveil Destiny
                 </button>
             </form>
         </div>
 
-        <div id="predictionResult" class="hidden glass rounded-2xl p-8 mb-10 border-amber-500/40 relative overflow-hidden">
-            <div class="absolute top-0 right-0 p-4 opacity-10">
-                <img src="https://cdn-icons-png.flaticon.com/512/2361/2361730.png" class="w-24" alt="Sacred Ohm">
-            </div>
-            
-            <h2 class="heading-font text-3xl text-amber-500 mb-6 border-b border-amber-900 pb-2">Your Nadi Prediction</h2>
-            
-            <div id="predictionText" class="text-gray-300 leading-relaxed text-lg space-y-4">
+        <div id="resultArea" class="hidden mt-12 space-y-6">
+            <div class="glass-card rounded-3xl p-8 md:p-12 border border-amber-500/20 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-5">
+                    <h1 class="serif-title text-9xl">NADI</h1>
                 </div>
-            
-            <div class="mt-8 grid grid-cols-2 gap-4 text-sm">
-                <div class="bg-amber-900/20 p-3 rounded border border-amber-800/30">
-                    <span class="block text-amber-600 font-bold uppercase text-xs">Moon Sign</span>
-                    <span id="moonSign" class="text-amber-200">--</span>
-                </div>
-                <div class="bg-amber-900/20 p-3 rounded border border-amber-800/30">
-                    <span class="block text-amber-600 font-bold uppercase text-xs">Nakshatra</span>
-                    <span id="nakshatra" class="text-amber-200">--</span>
+                
+                <h2 class="serif-title text-2xl text-amber-500 mb-6">Celestial Proclamation</h2>
+                <div id="predictionContent" class="nadi-scroll text-xl md:text-2xl leading-relaxed italic text-gray-300">
+                    </div>
+
+                <div class="mt-10 grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="p-4 rounded-2xl bg-white/5 text-center">
+                        <span class="text-[10px] uppercase text-amber-600 block">Moon Sign</span>
+                        <span id="moonSign" class="font-bold text-amber-100 italic">--</span>
+                    </div>
+                    <div class="p-4 rounded-2xl bg-white/5 text-center">
+                        <span class="text-[10px] uppercase text-amber-600 block">Nakshatra</span>
+                        <span id="nakshatra" class="font-bold text-amber-100 italic">--</span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div id="errorMsg" class="hidden bg-red-900/20 border border-red-500/50 text-red-200 p-4 rounded-lg text-center mb-6">
-            Unable to connect to the celestial server. Please try again.
-        </div>
-
-        <footer class="text-center text-amber-700 text-xs tracking-widest py-8 uppercase">
-            &copy; 2026 Nadi Astrology Hub • Divine Wisdom for the Modern Soul
+        <footer class="mt-20 text-center text-gray-600 text-[10px] uppercase tracking-[0.5em]">
+            &copy; 2026 Nadi Astrology Hub • For Spiritual Guidance Only
         </footer>
     </div>
 
     <script>
-        // UPDATE THIS TO YOUR RAILWAY APP URL
-        const BACKEND_URL = "https://web-production-d5287.up.railway.app"; 
+        // Automatic Backend Detection
+        const BACKEND_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? "http://127.0.0.1:8000" 
+            : "https://your-railway-app-name.up.railway.app"; 
 
-        document.getElementById('nadiForm').addEventListener('submit', async (e) => {
+        const form = document.getElementById('astrologyForm');
+        const btn = document.getElementById('submitBtn');
+        const resultArea = document.getElementById('resultArea');
+
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const resultDiv = document.getElementById('predictionResult');
-            const errorDiv = document.getElementById('errorMsg');
-            
             btn.disabled = true;
-            btn.innerHTML = "Consulting Ancient Leaves...";
-            resultDiv.classList.add('hidden');
-            errorDiv.classList.add('hidden');
+            btn.innerHTML = "Consulting the Heavens...";
+            resultArea.classList.add('hidden');
 
             const payload = {
                 name: document.getElementById('name').value,
@@ -131,26 +156,23 @@
                     body: JSON.stringify(payload)
                 });
 
-                if (!response.ok) throw new Error('Heavenly servers are busy.');
+                if (!response.ok) throw new Error('Celestial connection lost.');
 
                 const data = await response.json();
                 
-                // Inject Data
-                document.getElementById('predictionText').innerHTML = data.prediction.replace(/\n/g, '<br>');
-                document.getElementById('moonSign').textContent = data.moon_sign_hindi || data.moon_sign;
+                document.getElementById('predictionContent').innerText = data.prediction;
+                document.getElementById('moonSign').innerText = data.moon_sign_hindi || data.moon_sign;
                 
-                // Fetch nakshatra from the first planetary position for the moon if available
                 const moonData = data.planetary_positions.find(p => p.planet === 'Moon');
-                document.getElementById('nakshatra').textContent = moonData ? (moonData.nakshatra_hindi || moonData.nakshatra) : 'N/A';
-                
-                resultDiv.classList.remove('hidden');
-                resultDiv.scrollIntoView({ behavior: 'smooth' });
+                document.getElementById('nakshatra').innerText = moonData ? (moonData.nakshatra_hindi || moonData.nakshatra) : 'N/A';
 
+                resultArea.classList.remove('hidden');
+                resultArea.scrollIntoView({ behavior: 'smooth' });
             } catch (err) {
-                errorDiv.classList.remove('hidden');
+                alert("Error: " + err.message);
             } finally {
                 btn.disabled = false;
-                btn.innerHTML = "✨ Reveal Ancient Prediction";
+                btn.innerHTML = "✨ Unveil Destiny";
             }
         });
     </script>
