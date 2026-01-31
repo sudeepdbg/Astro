@@ -80,19 +80,18 @@ NAKSHATRA_LORDS = [
     "Jupiter", "Saturn", "Mercury"
 ]
 
-# ==================== LLM CONFIGURATION ====================
-class LLMConfig:
-    """Configuration for LLM integration"""
-    # Ollama configuration (free, self-hosted)
+# ==================== OLLAMA CONFIGURATION ====================
+class OllamaConfig:
+    """Configuration for Ollama LLM integration"""
+    # Ollama server URL - defaults to localhost
     OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    # Alternative: Use HuggingFace Inference API (free tier available)
-    HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "")
     
-    # Model selection (using smaller models for faster responses)
-    MODEL_NAME = os.getenv("LLM_MODEL", "mistral:7b")  # or "llama3.2:3b", "gemma:7b"
+    # Model to use (small models for faster responses)
+    # Available options: "mistral:7b", "llama3.2:3b", "gemma:7b", "phi:2.7b"
+    MODEL_NAME = os.getenv("OLLAMA_MODEL", "mistral:7b")
     
-    # Fallback to template-based responses if LLM is unavailable
-    USE_LLM = os.getenv("USE_LLM", "false").lower() == "true"
+    # Enable/disable LLM features
+    ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() == "true"
     
     # System prompt for astrology chatbot
     SYSTEM_PROMPT = """You are AstroBot, an expert Vedic astrology assistant with deep knowledge of Nadi Jyotish. 
@@ -142,6 +141,155 @@ Astrological context for this user:
 Provide a helpful, accurate response based on Vedic astrology principles."""
     }
 
+# ==================== OLLAMA SERVICE ====================
+class OllamaService:
+    """Service for interacting with Ollama LLM"""
+    
+    @staticmethod
+    async def generate_response(prompt: str, system_prompt: str = None, model: str = None) -> str:
+        """Generate text using Ollama API"""
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                payload = {
+                    "model": model or OllamaConfig.MODEL_NAME,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.7,
+                        "top_p": 0.9,
+                        "max_tokens": 800
+                    }
+                }
+                
+                if system_prompt:
+                    payload["system"] = system_prompt
+                
+                response = await client.post(
+                    f"{OllamaConfig.OLLAMA_BASE_URL}/api/generate",
+                    json=payload
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    return result.get("response", "I apologize, but I couldn't generate a response at this time.")
+                else:
+                    logger.error(f"Ollama API error: {response.status_code}")
+                    return None
+                    
+        except Exception as e:
+            logger.error(f"Error calling Ollama: {e}")
+            return None
+    
+    @staticmethod
+    async def check_ollama_available() -> bool:
+        """Check if Ollama server is running"""
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{OllamaConfig.OLLAMA_BASE_URL}/api/tags")
+                return response.status_code == 200
+        except:
+            return False
+    
+    @staticmethod
+    async def get_available_models() -> List[str]:
+        """Get list of available Ollama models"""
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.get(f"{OllamaConfig.OLLAMA_BASE_URL}/api/tags")
+                if response.status_code == 200:
+                    models = response.json().get("models", [])
+                    return [m.get("name") for m in models]
+        except:
+            return []
+        return []
+    
+    @staticmethod
+    async def generate_astrology_prediction(
+        chart_data: Dict[str, Any], 
+        language: str
+    ) -> str:
+        """Generate AI-powered astrology prediction"""
+        
+        # Prepare the prompt
+        prompt_template = OllamaConfig.PROMPT_TEMPLATES["generic_prediction"]
+        prompt = prompt_template.format(
+            name=chart_data.get("name", "User"),
+            date=chart_data.get("date", "Unknown"),
+            time=chart_data.get("time", "Unknown"),
+            location=chart_data.get("location", "Unknown"),
+            ascendant=chart_data.get("ascendant", "Unknown"),
+            moon_sign=chart_data.get("moon_sign", "Unknown"),
+            moon_nakshatra=chart_data.get("moon_nakshatra", "Unknown"),
+            sun_sign=chart_data.get("sun_sign", "Unknown"),
+            yogas=", ".join(chart_data.get("yogas", [])),
+            dasha=chart_data.get("dasha", "Unknown"),
+            chart_summary=chart_data.get("chart_summary", "No chart summary available"),
+            language=language
+        )
+        
+        # Generate response
+        response = await OllamaService.generate_response(
+            prompt, 
+            system_prompt=OllamaConfig.SYSTEM_PROMPT
+        )
+        
+        if not response:
+            # Fallback to template-based response
+            if language == "Hindi":
+                response = """मैं वर्तमान में AI सहायता प्रदान नहीं कर सकता। कृपया ऊपर दिए गए मानक भविष्यवाणी का उपयोग करें।"""
+            else:
+                response = """I'm unable to provide AI assistance at the moment. Please use the standard prediction above."""
+        
+        return response
+    
+    @staticmethod
+    async def chat_response(
+        question: str,
+        context: Optional[str] = None,
+        astrology_context: Optional[Dict[str, Any]] = None,
+        language: str = "English"
+    ) -> str:
+        """Generate chat response for astrology questions"""
+        
+        # Prepare astrology context
+        astro_context_str = "No astrological context available."
+        if astrology_context:
+            astro_context_str = json.dumps(astrology_context, indent=2)
+        
+        prompt_template = OllamaConfig.PROMPT_TEMPLATES["chat_response"]
+        prompt = prompt_template.format(
+            context=context or "No previous conversation.",
+            question=question,
+            astrology_context=astro_context_str,
+            language=language
+        )
+        
+        # Generate response
+        response = await OllamaService.generate_response(
+            prompt,
+            system_prompt=OllamaConfig.SYSTEM_PROMPT
+        )
+        
+        if not response:
+            # Fallback responses
+            if "career" in question.lower() or "job" in question.lower():
+                if language == "Hindi":
+                    response = "करियर के संबंध में, 10वें भाव और सूर्य की स्थिति महत्वपूर्ण है। विस्तृत विश्लेषण के लिए कृपया अपनी जन्म कुंडली साझा करें।"
+                else:
+                    response = "Regarding career, the 10th house and Sun's position are significant. For detailed analysis, please share your birth chart."
+            elif "child" in question.lower() or "children" in question.lower():
+                if language == "Hindi":
+                    response = "संतान के विषय में पंचम भाव और चंद्रमा की स्थिति मुख्य हैं। अधिक जानकारी के लिए जन्म विवरण प्रदान करें।"
+                else:
+                    response = "For children matters, the 5th house and Moon's position are key. Provide birth details for more information."
+            else:
+                if language == "Hindi":
+                    response = "मैं नाड़ी ज्योतिष विशेषज्ञ हूं। आपके प्रश्न का उत्तर देने के लिए मुझे अधिक संदर्भ की आवश्यकता है। कृपया अपना जन्म विवरण साझा करें।"
+                else:
+                    response = "I'm a Nadi astrology expert. I need more context to answer your question. Please share your birth details."
+        
+        return response
+
 # ==================== DATA MODELS ====================
 class Language(str, Enum):
     ENGLISH = "English"
@@ -156,7 +304,7 @@ class BirthDetails(BaseModel):
     longitude: Optional[float] = None
     language: Language = Language.ENGLISH
     prediction_type: str = Field(default="general", description="general, career, child")
-    use_llm: bool = Field(default=False, description="Use AI for enhanced predictions")
+    use_ai: bool = Field(default=False, description="Use AI for enhanced predictions")
 
     @field_validator('date')
     @classmethod
@@ -200,183 +348,13 @@ class ChatMessage(BaseModel):
     session_id: Optional[str] = None
     message: str
     language: Language = Language.ENGLISH
-    context: Optional[Dict[str, Any]] = None  # Can include birth chart data
+    context: Optional[Dict[str, Any]] = None
 
 class ChatResponse(BaseModel):
     response: str
     session_id: Optional[str] = None
     timestamp: str
     is_astrology_related: bool = True
-
-# ==================== LLM SERVICE ====================
-class LLMService:
-    """Service for interacting with LLMs"""
-    
-    @staticmethod
-    async def generate_with_ollama(prompt: str, system_prompt: str = None) -> str:
-        """Generate text using Ollama API"""
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                payload = {
-                    "model": LLMConfig.MODEL_NAME,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {
-                        "temperature": 0.7,
-                        "top_p": 0.9,
-                        "max_tokens": 1000
-                    }
-                }
-                
-                if system_prompt:
-                    payload["system"] = system_prompt
-                
-                response = await client.post(
-                    f"{LLMConfig.OLLAMA_BASE_URL}/api/generate",
-                    json=payload
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    return result.get("response", "I apologize, but I couldn't generate a response at this time.")
-                else:
-                    logger.error(f"Ollama API error: {response.status_code}")
-                    return None
-                    
-        except Exception as e:
-            logger.error(f"Error calling Ollama: {e}")
-            return None
-    
-    @staticmethod
-    async def generate_with_huggingface(prompt: str) -> str:
-        """Generate text using HuggingFace Inference API"""
-        if not LLMConfig.HUGGINGFACE_API_KEY:
-            return None
-        
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                headers = {
-                    "Authorization": f"Bearer {LLMConfig.HUGGINGFACE_API_KEY}"
-                }
-                
-                # Using a smaller model for faster response
-                payload = {
-                    "inputs": prompt,
-                    "parameters": {
-                        "max_new_tokens": 500,
-                        "temperature": 0.7,
-                        "do_sample": True
-                    }
-                }
-                
-                response = await client.post(
-                    "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2",
-                    headers=headers,
-                    json=payload
-                )
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    if isinstance(result, list) and len(result) > 0:
-                        return result[0].get("generated_text", prompt)
-                    return str(result)
-                else:
-                    logger.error(f"HuggingFace API error: {response.status_code}")
-                    return None
-                    
-        except Exception as e:
-            logger.error(f"Error calling HuggingFace: {e}")
-            return None
-    
-    @staticmethod
-    async def generate_astrology_prediction(
-        chart_data: Dict[str, Any], 
-        language: Language
-    ) -> str:
-        """Generate AI-powered astrology prediction"""
-        
-        # Prepare the prompt
-        prompt_template = LLMConfig.PROMPT_TEMPLATES["generic_prediction"]
-        prompt = prompt_template.format(
-            name=chart_data.get("name", "User"),
-            date=chart_data.get("date", "Unknown"),
-            time=chart_data.get("time", "Unknown"),
-            location=chart_data.get("location", "Unknown"),
-            ascendant=chart_data.get("ascendant", "Unknown"),
-            moon_sign=chart_data.get("moon_sign", "Unknown"),
-            moon_nakshatra=chart_data.get("moon_nakshatra", "Unknown"),
-            sun_sign=chart_data.get("sun_sign", "Unknown"),
-            yogas=", ".join(chart_data.get("yogas", [])),
-            dasha=chart_data.get("dasha", "Unknown"),
-            chart_summary=chart_data.get("chart_summary", "No chart summary available"),
-            language=language.value
-        )
-        
-        # Try Ollama first, then HuggingFace
-        response = await LLMService.generate_with_ollama(
-            prompt, 
-            system_prompt=LLMConfig.SYSTEM_PROMPT
-        )
-        
-        if not response:
-            response = await LLMService.generate_with_huggingface(prompt)
-        
-        if not response:
-            # Fallback to template-based response
-            if language == Language.HINDI:
-                response = """मैं वर्तमान में AI सहायता प्रदान नहीं कर सकता। कृपया ऊपर दिए गए मानक भविष्यवाणी का उपयोग करें।"""
-            else:
-                response = """I'm unable to provide AI assistance at the moment. Please use the standard prediction above."""
-        
-        return response
-    
-    @staticmethod
-    async def chat_response(
-        question: str,
-        context: Optional[str] = None,
-        astrology_context: Optional[Dict[str, Any]] = None,
-        language: Language = Language.ENGLISH
-    ) -> str:
-        """Generate chat response for astrology questions"""
-        
-        # Prepare astrology context
-        astro_context_str = "No astrological context available."
-        if astrology_context:
-            astro_context_str = json.dumps(astrology_context, indent=2)
-        
-        prompt_template = LLMConfig.PROMPT_TEMPLATES["chat_response"]
-        prompt = prompt_template.format(
-            context=context or "No previous conversation.",
-            question=question,
-            astrology_context=astro_context_str,
-            language=language.value
-        )
-        
-        # Try to get LLM response
-        response = await LLMService.generate_with_ollama(
-            prompt,
-            system_prompt=LLMConfig.SYSTEM_PROMPT
-        )
-        
-        if not response:
-            # Fallback responses
-            if "career" in question.lower() or "job" in question.lower():
-                if language == Language.HINDI:
-                    response = "करियर के संबंध में, 10वें भाव और सूर्य की स्थिति महत्वपूर्ण है। विस्तृत विश्लेषण के लिए कृपया अपनी जन्म कुंडली साझा करें।"
-                else:
-                    response = "Regarding career, the 10th house and Sun's position are significant. For detailed analysis, please share your birth chart."
-            elif "child" in question.lower() or "children" in question.lower():
-                if language == Language.HINDI:
-                    response = "संतान के विषय में पंचम भाव और चंद्रमा की स्थिति मुख्य हैं। अधिक जानकारी के लिए जन्म विवरण प्रदान करें।"
-                else:
-                    response = "For children matters, the 5th house and Moon's position are key. Provide birth details for more information."
-            else:
-                if language == Language.HINDI:
-                    response = "मैं नाड़ी ज्योतिष विशेषज्ञ हूं। आपके प्रश्न का उत्तर देने के लिए मुझे अधिक संदर्भ की आवश्यकता है। कृपया अपना जन्म विवरण साझा करें।"
-                else:
-                    response = "I'm a Nadi astrology expert. I need more context to answer your question. Please share your birth details."
-        
-        return response
 
 # ==================== ASTROLOGY CALCULATORS ====================
 class EnhancedAstrologyCalculator:
@@ -773,33 +751,39 @@ async def generate_prediction(details: BirthDetails):
         
         # Generate AI prediction if requested
         ai_prediction = None
-        if details.use_llm and LLMConfig.USE_LLM:
+        if details.use_ai and OllamaConfig.ENABLE_LLM:
             try:
-                # Prepare chart data for AI
-                chart_summary = []
-                for pos in positions:
-                    chart_summary.append(f"{pos.planet}: {pos.sign} in {pos.house}th house")
+                # Check if Ollama is available
+                ollama_available = await OllamaService.check_ollama_available()
                 
-                chart_data = {
-                    "name": details.name,
-                    "date": details.date,
-                    "time": details.time,
-                    "location": details.location,
-                    "ascendant": ascendant_sign,
-                    "moon_sign": moon_data.sign,
-                    "moon_nakshatra": moon_data.nakshatra,
-                    "sun_sign": next(p for p in positions if p.planet == "Sun").sign,
-                    "yogas": yogas,
-                    "dasha": dasha_period,
-                    "chart_summary": "\n".join(chart_summary[:10])
-                }
-                
-                ai_prediction = await LLMService.generate_astrology_prediction(
-                    chart_data, details.language
-                )
+                if ollama_available:
+                    # Prepare chart data for AI
+                    chart_summary = []
+                    for pos in positions[:7]:  # Limit to main planets
+                        chart_summary.append(f"{pos.planet}: {pos.sign} in House {pos.house}")
+                    
+                    chart_data = {
+                        "name": details.name,
+                        "date": details.date,
+                        "time": details.time,
+                        "location": details.location,
+                        "ascendant": ascendant_sign,
+                        "moon_sign": moon_data.sign,
+                        "moon_nakshatra": moon_data.nakshatra,
+                        "sun_sign": next(p for p in positions if p.planet == "Sun").sign,
+                        "yogas": yogas,
+                        "dasha": dasha_period,
+                        "chart_summary": "\n".join(chart_summary)
+                    }
+                    
+                    ai_prediction = await OllamaService.generate_astrology_prediction(
+                        chart_data, details.language.value
+                    )
+                else:
+                    ai_prediction = "AI features are currently unavailable. Ollama server is not running."
             except Exception as e:
                 logger.error(f"Error generating AI prediction: {e}")
-                ai_prediction = "AI prediction temporarily unavailable."
+                ai_prediction = "AI prediction temporarily unavailable due to technical issues."
         
         result = NadiPrediction(
             birth_details=details,
@@ -825,7 +809,7 @@ async def generate_prediction(details: BirthDetails):
         raise HTTPException(status_code=400, detail=f"Error: {str(e)}")
 
 # ==================== CHAT BOT ENDPOINTS ====================
-# In-memory storage for chat sessions (for demo purposes)
+# In-memory storage for chat sessions
 chat_sessions = {}
 
 @app.post("/chat", response_model=ChatResponse)
@@ -843,13 +827,24 @@ async def chat_with_astrobot(message: ChatMessage):
         # Prepare astrology context if provided
         astrology_context = message.context or session_context.get("astrology_data", {})
         
-        # Generate response
-        response_text = await LLMService.chat_response(
-            question=message.message,
-            context=session_context.get("history", ""),
-            astrology_context=astrology_context,
-            language=message.language
-        )
+        # Check if Ollama is available
+        ollama_available = await OllamaService.check_ollama_available() if OllamaConfig.ENABLE_LLM else False
+        
+        response_text = ""
+        if ollama_available:
+            # Generate response using Ollama
+            response_text = await OllamaService.chat_response(
+                question=message.message,
+                context=session_context.get("history", ""),
+                astrology_context=astrology_context,
+                language=message.language.value
+            )
+        else:
+            # Fallback response
+            if message.language == Language.HINDI:
+                response_text = "मैं वर्तमान में चैट सहायता प्रदान नहीं कर सकता। कृपया अपना जन्म विवरण दर्ज करें और विस्तृत भविष्यवाणी प्राप्त करें।"
+            else:
+                response_text = "I'm currently unable to provide chat assistance. Please enter your birth details to get detailed predictions."
         
         # Update session history
         if session_id not in chat_sessions:
@@ -887,45 +882,27 @@ async def chat_with_astrobot(message: ChatMessage):
             is_astrology_related=False
         )
 
-@app.post("/chat/with-chart", response_model=ChatResponse)
-async def chat_with_birth_chart(message: ChatMessage, birth_details: BirthDetails):
-    """Chat endpoint with birth chart context"""
+# ==================== OLLAMA STATUS ENDPOINTS ====================
+@app.get("/ollama/status")
+async def check_ollama_status():
+    """Check if Ollama server is running and get available models"""
     try:
-        # First generate the prediction to get chart data
-        prediction_response = await generate_prediction(birth_details)
+        ollama_available = await OllamaService.check_ollama_available()
+        models = await OllamaService.get_available_models() if ollama_available else []
         
-        # Extract chart data for context
-        chart_data = {
-            "name": birth_details.name,
-            "ascendant": prediction_response.ascendant,
-            "moon_sign": prediction_response.moon_sign,
-            "sun_sign": next(p for p in prediction_response.planetary_positions if p.planet == "Sun").sign,
-            "planetary_positions": [
-                f"{p.planet} in {p.sign} (House {p.house})" 
-                for p in prediction_response.planetary_positions[:5]
-            ],
-            "yogas": prediction_response.yogas,
-            "dasha": prediction_response.dasha_period
+        return {
+            "ollama_available": ollama_available,
+            "models_available": models,
+            "current_model": OllamaConfig.MODEL_NAME,
+            "llm_enabled": OllamaConfig.ENABLE_LLM,
+            "ollama_url": OllamaConfig.OLLAMA_BASE_URL
         }
-        
-        # Update message with context
-        message.context = chart_data
-        
-        # Call regular chat endpoint
-        return await chat_with_astrobot(message)
-        
     except Exception as e:
-        logger.error(f"Error in chart chat: {e}")
-        error_msg = "Unable to process your birth chart. Please check the details and try again."
-        if message.language == Language.HINDI:
-            error_msg = "आपकी जन्म कुंडली प्रोसेस करने में असमर्थ। कृपया विवरण जांचें और पुनः प्रयास करें।"
-        
-        return ChatResponse(
-            response=error_msg,
-            session_id=message.session_id,
-            timestamp=datetime.now().isoformat(),
-            is_astrology_related=True
-        )
+        return {
+            "ollama_available": False,
+            "error": str(e),
+            "llm_enabled": OllamaConfig.ENABLE_LLM
+        }
 
 # ==================== ADDITIONAL ENDPOINTS ====================
 @app.post("/predict/career", response_model=NadiPrediction)
@@ -943,30 +920,18 @@ def health_check():
     return {
         "status": "active",
         "version": "4.0",
-        "features": ["General", "Career", "Child Predictions", "AI Chat", "LLM Integration"],
-        "llm_available": LLMConfig.USE_LLM,
+        "features": ["General", "Career", "Child Predictions", "AI Chat", "Ollama Integration"],
+        "llm_enabled": OllamaConfig.ENABLE_LLM,
         "timestamp": datetime.now().isoformat()
     }
-
-@app.get("/models/available")
-async def get_available_models():
-    """Check available LLM models"""
-    try:
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(f"{LLMConfig.OLLAMA_BASE_URL}/api/tags")
-            if response.status_code == 200:
-                models = response.json().get("models", [])
-                return {"available_models": [m.get("name") for m in models]}
-            else:
-                return {"available_models": [], "error": "Ollama not reachable"}
-    except Exception as e:
-        return {"available_models": [], "error": str(e)}
 
 # ==================== MAIN ====================
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    logger.info(f"Starting Nadi Astrology API v4.0 with LLM support")
-    logger.info(f"LLM Enabled: {LLMConfig.USE_LLM}")
-    logger.info(f"Model: {LLMConfig.MODEL_NAME}")
+    logger.info(f"Starting Nadi Astrology API v4.0 with Ollama integration")
+    logger.info(f"Ollama Enabled: {OllamaConfig.ENABLE_LLM}")
+    if OllamaConfig.ENABLE_LLM:
+        logger.info(f"Ollama URL: {OllamaConfig.OLLAMA_BASE_URL}")
+        logger.info(f"Model: {OllamaConfig.MODEL_NAME}")
     uvicorn.run(app, host="0.0.0.0", port=port)
