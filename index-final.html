@@ -111,6 +111,10 @@
                 <span class="text-yellow-300 text-2xl">⭐</span>
             </div>
             
+            <!-- Planetary Info -->
+            <div id="planetaryInfo" class="mb-6 grid grid-cols-2 gap-4 text-sm"></div>
+            
+            <!-- Prediction Text -->
             <div id="predictionText" class="text-purple-100 leading-relaxed whitespace-pre-line text-lg"></div>
 
             <div class="mt-8 pt-6 border-t border-purple-400/30 text-center text-sm text-purple-300">
@@ -125,6 +129,9 @@
     </div>
 
     <script>
+        // ⚙️ CONFIGURATION - YOUR RAILWAY BACKEND URL
+        const BACKEND_URL = 'https://web-production-7266a.up.railway.app';
+        
         // Create animated stars
         const starsContainer = document.getElementById('stars');
         for (let i = 0; i < 50; i++) {
@@ -160,64 +167,84 @@
             };
             
             try {
-                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                console.log('Calling backend:', `${BACKEND_URL}/predict`);
+                
+                // Call your backend API
+                const response = await fetch(`${BACKEND_URL}/predict`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        model: 'claude-sonnet-4-20250514',
-                        max_tokens: 1000,
-                        messages: [{
-                            role: 'user',
-                            content: `Act as a Nadi astrology expert. Based on the following birth details, provide a mystical Nadi-style prediction:
-
-Name: ${formData.name}
-Date of Birth: ${formData.date}
-Time of Birth: ${formData.time}
-Place of Birth: ${formData.location}
-
-Calculate planetary positions for this birth time and provide a Nadi-style reading covering:
-1. Life Purpose (Dharma)
-2. Career & Prosperity
-3. Relationships & Family
-4. Health & Longevity
-5. Spiritual Path
-
-Format your response as a mystical reading, starting with "The Ancient Nadi Leaves Reveal..." and use poetic, spiritual language. Keep it under 400 words.`
-                        }]
-                    })
+                    body: JSON.stringify(formData)
                 });
                 
-                const data = await response.json();
-                const prediction = data.content.find(c => c.type === 'text')?.text;
+                console.log('Response status:', response.status);
                 
-                if (prediction) {
-                    document.getElementById('predictionText').textContent = prediction;
-                    document.getElementById('timestamp').textContent = 
-                        `✨ This reading was generated on ${new Date().toLocaleDateString()} ✨`;
-                    predictionCard.classList.remove('hidden');
-                    
-                    // Save to history
-                    const history = JSON.parse(localStorage.getItem('nadiHistory') || '[]');
-                    history.unshift({
-                        ...formData,
-                        prediction,
-                        timestamp: new Date().toISOString()
-                    });
-                    localStorage.setItem('nadiHistory', JSON.stringify(history.slice(0, 10)));
-                    
-                    // Scroll to prediction
-                    predictionCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Backend error:', errorText);
+                    throw new Error(`Backend error: ${response.status} - ${errorText}`);
                 }
+                
+                const data = await response.json();
+                console.log('Prediction received:', data);
+                
+                // Display planetary information
+                const planetaryInfo = document.getElementById('planetaryInfo');
+                planetaryInfo.innerHTML = `
+                    <div class="bg-purple-800/30 p-3 rounded-lg">
+                        <div class="text-purple-200 font-semibold">Ascendant</div>
+                        <div class="text-yellow-300">${data.ascendant}</div>
+                    </div>
+                    <div class="bg-purple-800/30 p-3 rounded-lg">
+                        <div class="text-purple-200 font-semibold">Moon Sign</div>
+                        <div class="text-yellow-300">${data.moon_sign}</div>
+                    </div>
+                `;
+                
+                // Display prediction
+                document.getElementById('predictionText').textContent = data.prediction;
+                document.getElementById('timestamp').textContent = 
+                    `✨ This reading was generated on ${new Date().toLocaleDateString()} ✨`;
+                predictionCard.classList.remove('hidden');
+                
+                // Save to local history
+                const history = JSON.parse(localStorage.getItem('nadiHistory') || '[]');
+                history.unshift({
+                    ...formData,
+                    prediction: data.prediction,
+                    ascendant: data.ascendant,
+                    moon_sign: data.moon_sign,
+                    timestamp: new Date().toISOString()
+                });
+                localStorage.setItem('nadiHistory', JSON.stringify(history.slice(0, 10)));
+                
+                // Scroll to prediction
+                predictionCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                
             } catch (error) {
+                console.error('Full error:', error);
                 errorMsg.querySelector('p').textContent = 
-                    'Unable to connect to the cosmic forces. Please try again.';
+                    `Unable to connect to the cosmic forces. Error: ${error.message}. Check browser console for details.`;
                 errorMsg.classList.remove('hidden');
-                console.error(error);
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '✨ Reveal My Nadi Prediction';
+            }
+        });
+        
+        // Test backend connection on page load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(`${BACKEND_URL}/health`);
+                if (response.ok) {
+                    console.log('✅ Backend connection successful!');
+                } else {
+                    console.warn('⚠️ Backend is running but returned:', response.status);
+                }
+            } catch (error) {
+                console.error('❌ Cannot connect to backend:', error);
+                console.log('Backend URL:', BACKEND_URL);
             }
         });
     </script>
