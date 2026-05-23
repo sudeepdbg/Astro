@@ -361,12 +361,13 @@ elif page == "📜 Horoscope":
                 st.error(f"Ephemeris error: {e}. Enable Demo Data in sidebar.")
                 st.stop()
 
-            st.session_state["chart"] = chart
-            st.session_state["chart_name"] = name
+            # FIXED: Use non-conflicting session state keys
+            st.session_state["computed_chart"] = chart
+            st.session_state["computed_chart_name"] = name
 
-    if "chart" in st.session_state:
-        chart = st.session_state["chart"]
-        name = st.session_state["chart_name"]
+    if "computed_chart" in st.session_state:
+        chart = st.session_state["computed_chart"]
+        name = st.session_state["computed_chart_name"]
 
         c1, c2 = st.columns([1.3, 1])
         with c1:
@@ -466,7 +467,7 @@ elif page == "💑 Matchmaking":
                     <li><b>Graha Maitri (5 pts):</b> Moon-sign lord friendship</li>
                     <li><b>Gana (6 pts):</b> Temperament (Deva / Manushya / Rakshasa)</li>
                     <li><b>Bhakoot (7 pts):</b> Relative Moon position (2/12, 6/8 checked)</li>
-                    <li><b>Nadi (8 pts):</b> Health & progeny (same Nadi = 0)</li>
+                    <li><b>Nadi (8 pts):</b> Health & progeny compatibility (same Nadi = 0)</li>
                 </ul>
             </div>
             """, unsafe_allow_html=True)
