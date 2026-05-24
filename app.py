@@ -1,15 +1,20 @@
 import streamlit as st
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 import numpy as np
 import pandas as pd
 import requests
 import os
 import random
-from datetime import datetime
+import json
+from datetime import datetime, timedelta
+from io import BytesIO
 from vedic_engine import (
     compute_chart, ChartData, calculate_ashtakoota, get_year_prediction,
-    ZODIAC, SIGN_SANSKRIT, SIGN_LORD, HOUSE_MEANINGS, NAKSHATRAS,
-    generate_demo_chart, longitude_to_sign
+    calculate_varshphal, analyze_career, analyze_marriage, analyze_children, analyze_health,
+    ZODIAC, ZODIAC_SHORT, SIGN_SANSKRIT, SIGN_LORD, HOUSE_MEANINGS, NAKSHATRAS,
+    generate_demo_chart, load_chart_from_file, longitude_to_sign,
+    SWISSEPH_AVAILABLE
 )
 
 # ------------------------------------------------------------------
@@ -23,13 +28,13 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------------
-# GEOCODING (OpenStreetMap — free, no API key)
+# GEOCODING
 # ------------------------------------------------------------------
 @st.cache_resource
 def get_geolocator():
     try:
         from geopy.geocoders import Nominatim
-        return Nominatim(user_agent="vedic-astro-suite/1.0", timeout=10)
+        return Nominatim(user_agent="vedic-astro-suite/2.0", timeout=10)
     except Exception:
         return None
 
@@ -51,6 +56,7 @@ def geocode_city(name: str):
 TIMEZONES = {
     "IST (India, UTC+5:30)": 5.5,
     "GMT / UTC (UTC+0:00)": 0.0,
+    "BST (London, UTC+1:00)": 1.0,
     "EST (New York, UTC-5:00)": -5.0,
     "CST (Chicago, UTC-6:00)": -6.0,
     "MST (Denver, UTC-7:00)": -7.0,
@@ -58,11 +64,12 @@ TIMEZONES = {
     "CET (Berlin, UTC+1:00)": 1.0,
     "JST (Tokyo, UTC+9:00)": 9.0,
     "AEST (Sydney, UTC+10:00)": 10.0,
+    "AEDT (Sydney DST, UTC+11:00)": 11.0,
     "Custom Offset": None
 }
 
 # ------------------------------------------------------------------
-# CUSTOM CSS — Spiritual Saffron & Indigo Theme
+# CUSTOM CSS
 # ------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -124,13 +131,12 @@ h1, h2, h3, h4 {
 .score-good { color: #65a30d; font-weight: 700; }
 .score-average { color: #ca8a04; font-weight: 700; }
 .score-challenging { color: #b91c1c; font-weight: 700; }
-hr {
-    border-color: #d4af37 !important;
-    opacity: 0.35;
-    margin: 1.5rem 0;
-}
+hr { border-color: #d4af37 !important; opacity: 0.35; margin: 1.5rem 0; }
 .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div, .stDateInput>div>div>input {
     border-radius: 8px !important;
+}
+.stDownloadButton>button {
+    background: linear-gradient(90deg, #059669 0%, #047857 100%) !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -139,12 +145,12 @@ hr {
 # SIDEBAR
 # ------------------------------------------------------------------
 st.sidebar.markdown("<h1 style='text-align:center; font-family:Cinzel; color:#92400e;'>🕉️ Jyotish</h1>", unsafe_allow_html=True)
-st.sidebar.markdown("<p style='text-align:center; color:#78350f;'>Vedic Astrology Suite</p>", unsafe_allow_html=True)
+st.sidebar.markdown("<p style='text-align:center; color:#78350f;'>Vedic Astrology Suite v2.0</p>", unsafe_allow_html=True)
 st.sidebar.divider()
 
 page = st.sidebar.radio("Navigate", [
     "🏠 Home", "📜 Horoscope", "💑 Matchmaking",
-    "🔮 Yearly Predictions", "❓ AI Astrologer", "🎲 Ram Shalaka"
+    "🔮 Yearly Predictions", "📊 Varshphal", "❓ AI Astrologer", "🎲 Ram Shalaka"
 ])
 
 st.sidebar.divider()
@@ -158,12 +164,12 @@ if api_key:
 st.sidebar.markdown("""
 <div style="font-size:0.8rem; color:#78350f; margin-top:2rem;">
 <b>Tip:</b> Enter city as <i>City, State, Country</i> for best results.<br>
-e.g. <i>Sitamarhi, Bihar, India</i>
+e.g. <i>Sitamarhi, Bihar, India</i> or <i>Muzaffarpur, Bihar, India</i>
 </div>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# INPUT COMPONENT
+# INPUT COMPONENT (FIXED: no session state key collisions)
 # ------------------------------------------------------------------
 def birth_input_form(key_prefix: str, default_name: str):
     """Reusable birth data form with city geocoding & timezone."""
@@ -171,14 +177,14 @@ def birth_input_form(key_prefix: str, default_name: str):
     with c1:
         name = st.text_input("👤 Name", default_name, key=f"{key_prefix}_name")
     with c2:
-        dob = st.date_input("📅 Date of Birth", datetime(1995, 6, 15), key=f"{key_prefix}_date")
+        dob = st.date_input("📅 Date of Birth", datetime(1991, 4, 12), key=f"{key_prefix}_date")
     with c3:
-        tob = st.time_input("🕒 Time of Birth", datetime.strptime("10:30", "%H:%M").time(), key=f"{key_prefix}_time")
+        tob = st.time_input("🕒 Time of Birth", datetime.strptime("10:26", "%H:%M").time(), key=f"{key_prefix}_time")
 
     st.markdown('<div class="card-title">📍 Birth Place</div>', unsafe_allow_html=True)
     city_col, btn_col = st.columns([4, 1])
     with city_col:
-        city_name = st.text_input("City / Town (e.g., Sitamarhi, Muzaffarpur, Datia, Gwalior...)",
+        city_name = st.text_input("City / Town (e.g., Sitamarhi, Muzaffarpur, Datia, Gwalior, Begusarai...)",
                                   "", key=f"{key_prefix}_city",
                                   placeholder="Type city name and click Find")
     with btn_col:
@@ -187,19 +193,21 @@ def birth_input_form(key_prefix: str, default_name: str):
         find_clicked = st.button("🔍 Find", key=f"{key_prefix}_find", use_container_width=True)
 
     # Geocode on button press
-    lat_key = f"{key_prefix}_lat"
-    lon_key = f"{key_prefix}_lon"
+    lat_key = f"{key_prefix}_lat_val"
+    lon_key = f"{key_prefix}_lon_val"
+    geo_ok_key = f"{key_prefix}_geo_ok"
+
     if find_clicked:
         with st.spinner("Locating..."):
             coords = geocode_city(city_name)
             if coords:
                 st.session_state[lat_key] = round(coords[0], 4)
                 st.session_state[lon_key] = round(coords[1], 4)
-                st.session_state[f"{key_prefix}_geo_ok"] = True
-                st.toast(f"Found: {coords[0]:.4f}, {coords[1]:.4f}")
+                st.session_state[geo_ok_key] = True
+                st.toast(f"✅ Found: {coords[0]:.4f}, {coords[1]:.4f}")
             else:
-                st.session_state[f"{key_prefix}_geo_ok"] = False
-                st.error("City not found. Please enter coordinates manually.")
+                st.session_state[geo_ok_key] = False
+                st.error("❌ City not found. Please enter coordinates manually or try 'City, State, Country'.")
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
@@ -211,61 +219,141 @@ def birth_input_form(key_prefix: str, default_name: str):
                                      key=f"{key_prefix}_tz_custom")
     with lat_col:
         lat = st.number_input("Lat", -90.0, 90.0,
-                            value=st.session_state.get(lat_key, 28.6139),
+                            value=st.session_state.get(lat_key, 25.42),
                             key=lat_key)
     with lon_col:
         lon = st.number_input("Lon", -180.0, 180.0,
-                            value=st.session_state.get(lon_key, 77.2090),
+                            value=st.session_state.get(lon_key, 86.13),
                             key=lon_key)
 
-    if st.session_state.get(f"{key_prefix}_geo_ok"):
+    if st.session_state.get(geo_ok_key):
         st.caption(f"✅ Coordinates locked: {lat:.4f}, {lon:.4f}")
 
     return name, dob, tob, lat, lon, tz_val
 
 # ------------------------------------------------------------------
-# CHART WHEEL (improved visuals)
+# CHART WHEEL (North Indian Style + Circular)
 # ------------------------------------------------------------------
-def draw_chart_wheel(chart: ChartData, title: str):
+def draw_north_indian_chart(chart: ChartData, title: str):
+    """Draw North Indian style diamond chart."""
+    fig, ax = plt.subplots(figsize=(10, 10))
+    fig.patch.set_facecolor('#1a0f0a')
+    ax.set_facecolor('#1a0f0a')
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 10)
+    ax.set_aspect('equal')
+    ax.axis('off')
+
+    # Diamond shape houses
+    houses = {
+        1: (5, 9),   # Top (Lagna)
+        2: (7, 7),   # Top-right
+        3: (9, 5),   # Right
+        4: (7, 3),   # Bottom-right
+        5: (5, 1),   # Bottom
+        6: (3, 3),   # Bottom-left
+        7: (1, 5),   # Left
+        8: (3, 7),   # Top-left
+        9: (6.5, 8), # Inner top-right
+        10: (8, 6.5),# Inner right
+        11: (6.5, 2),# Inner bottom-right
+        12: (3.5, 2) # Inner bottom-left
+    }
+
+    # Draw diamond
+    diamond = plt.Polygon([(5, 10), (10, 5), (5, 0), (0, 5)],
+                          fill=False, edgecolor='#d97706', linewidth=2)
+    ax.add_patch(diamond)
+
+    # House lines
+    lines = [
+        ((5, 10), (5, 0)), ((0, 5), (10, 5)),
+        ((2.5, 7.5), (7.5, 2.5)), ((2.5, 2.5), (7.5, 7.5))
+    ]
+    for start, end in lines:
+        ax.plot([start[0], end[0]], [start[1], end[1]], color='#d97706', linewidth=1.5)
+
+    # House numbers and signs
+    lagna_idx = ZODIAC.index(chart.lagna_sign)
+    for house_num in range(1, 13):
+        sign = ZODIAC[(lagna_idx + house_num - 1) % 12]
+        short = ZODIAC_SHORT[(lagna_idx + house_num - 1) % 12]
+        pos = houses[house_num]
+
+        # House number
+        ax.text(pos[0], pos[1] + 0.3, str(house_num),
+                ha='center', va='center', fontsize=8, color='#666', fontweight='bold')
+        # Sign
+        ax.text(pos[0], pos[1] - 0.3, short,
+                ha='center', va='center', fontsize=9, color='#fcd34d', fontweight='bold')
+
+    # Planets
+    planet_symbols = {"Sun": "☉", "Moon": "☽", "Mars": "♂", "Mercury": "☿",
+                      "Jupiter": "♃", "Venus": "♀", "Saturn": "♄", "Rahu": "☊", "Ketu": "☋"}
+    planet_colors = {"Sun": "#fbbf24", "Moon": "#e2e8f0", "Mars": "#f87171",
+                     "Mercury": "#34d399", "Jupiter": "#fb923c", "Venus": "#f472b6",
+                     "Saturn": "#94a3b8", "Rahu": "#a78bfa", "Ketu": "#a78bfa"}
+
+    # Group planets by house
+    house_planets = {i: [] for i in range(1, 13)}
+    for p, lon in chart.planets.items():
+        sign, _ = longitude_to_sign(lon)
+        house = ((ZODIAC.index(sign) - lagna_idx) % 12) + 1
+        house_planets[house].append(p)
+
+    for house_num, planets in house_planets.items():
+        if not planets:
+            continue
+        pos = houses[house_num]
+        n = len(planets)
+        for i, p in enumerate(planets):
+            offset_x = (i - (n-1)/2) * 0.4
+            ax.text(pos[0] + offset_x, pos[1], planet_symbols.get(p, p),
+                    ha='center', va='center', fontsize=14,
+                    color=planet_colors.get(p, '#fff'), fontweight='bold')
+
+    ax.set_title(title, fontsize=16, color='#fcd34d', fontweight='bold',
+                 pad=20, fontfamily='serif')
+    plt.tight_layout()
+    return fig
+
+
+def draw_circular_chart(chart: ChartData, title: str):
+    """Draw circular South Indian style chart."""
     fig, ax = plt.subplots(figsize=(9, 9), subplot_kw=dict(projection='polar'))
     fig.patch.set_facecolor('#0f172a')
     ax.set_facecolor('#0f172a')
 
-    # House sectors (alternating indigo)
     colors = ['#1e293b' if i % 2 == 0 else '#0f172a' for i in range(12)]
     for i in range(12):
         theta = np.linspace(np.radians(i*30), np.radians((i+1)*30), 50)
         ax.fill_between(theta, 0.35, 1.0, color=colors[i], alpha=0.95)
         ax.plot([np.radians(i*30)]*2, [0.35, 1.0], color='#d97706', linewidth=1.0)
 
-    # Sign labels
     for i, sign in enumerate(ZODIAC):
         angle = np.radians(i*30 + 15)
         ax.text(angle, 0.92, f"{sign}\n{SIGN_SANSKRIT[sign]}",
                 ha='center', va='center', fontsize=7.5, color='#fcd34d',
                 fontweight='bold', fontfamily='sans-serif')
 
-    # Planet symbols & colors
     symbols = {"Sun": "☉", "Moon": "☽", "Mars": "♂", "Mercury": "☿",
                "Jupiter": "♃", "Venus": "♀", "Saturn": "♄", "Rahu": "☊", "Ketu": "☋"}
     colors_p = {"Sun": "#fbbf24", "Moon": "#e2e8f0", "Mars": "#f87171",
                 "Mercury": "#34d399", "Jupiter": "#fb923c", "Venus": "#f472b6",
                 "Saturn": "#94a3b8", "Rahu": "#a78bfa", "Ketu": "#a78bfa"}
 
-    # Spread planets to avoid overlap
     used_bins = {}
     for planet, lon in chart.planets.items():
         base = lon % 360
         bin_id = int(base / 6)
         offset = used_bins.get(bin_id, 0) * 0.05
         used_bins[bin_id] = used_bins.get(bin_id, 0) + 1
-        angle = np.radians(base + 90)  # rotate so 0° Aries is at top
+        angle = np.radians(base + 90)
         dist = 0.58 + offset
         ax.text(angle, dist, symbols.get(planet, planet), fontsize=13,
                 ha='center', va='center', color=colors_p.get(planet, '#fff'),
                 fontweight='bold')
 
-    # Ascendant marker
     asc_angle = np.radians(chart.ascendant + 90)
     ax.plot([asc_angle, asc_angle], [0.35, 1.0], color='#ef4444', linewidth=2.5, linestyle='--')
     ax.text(asc_angle, 0.97, 'ASC ▲', ha='center', va='center', color='#ef4444',
@@ -280,21 +368,75 @@ def draw_chart_wheel(chart: ChartData, title: str):
     plt.tight_layout()
     return fig
 
+
 def planet_table(chart: ChartData):
     rows = []
+    lagna_idx = ZODIAC.index(chart.lagna_sign)
     for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
         sign, deg = longitude_to_sign(chart.planets[p])
         nak = chart.nakshatras[p]
+        house = ((ZODIAC.index(sign) - lagna_idx) % 12) + 1
         rows.append({
             "Planet": p,
             "Sign": f"{sign} ({SIGN_SANSKRIT[sign]})",
             "Deg": f"{deg:.2f}°",
+            "House": house,
             "Nakshatra": nak["nakshatra"],
             "Pada": nak["pada"],
             "Lord": nak["lord"],
-            "Navamsa": chart.navamsa[p]
+            "Navamsa": chart.navamsa[p],
+            "Dignity": chart.dignities.get(p, "")
         })
     return pd.DataFrame(rows)
+
+
+# ------------------------------------------------------------------
+# SAVE CHART FUNCTIONALITY
+# ------------------------------------------------------------------
+def save_chart_ui(chart: ChartData, name: str):
+    """UI for saving chart."""
+    col1, col2 = st.columns(2)
+    with col1:
+        chart_json = json.dumps(chart.to_dict(), indent=2, ensure_ascii=False)
+        st.download_button(
+            label="💾 Download Chart (JSON)",
+            data=chart_json,
+            file_name=f"{name.replace(' ', '_')}_chart.json",
+            mime="application/json",
+            use_container_width=True
+        )
+    with col2:
+        # Create summary text
+        summary = f"""VEDIC CHART — {name}
+{'='*50}
+Birth: {chart.birth_date.strftime('%d %b %Y, %I:%M %p') if chart.birth_date else 'Unknown'}
+Location: {chart.lat:.4f}°N, {chart.lon:.4f}°E
+
+LAGNA: {chart.lagna_sign} ({SIGN_SANSKRIT[chart.lagna_sign]})
+MOON SIGN: {chart.moon_sign} ({SIGN_SANSKRIT[chart.moon_sign]})
+SUN SIGN: {chart.sun_sign} ({SIGN_SANSKRIT[chart.sun_sign]})
+NAKSHATRA: {chart.nakshatras['Moon']['nakshatra']} (Pada {chart.nakshatras['Moon']['pada']})
+
+CURRENT DASHA:
+"""
+        current = chart.get_current_dasha_info()
+        if current:
+            summary += f"MD: {current['mahadasha']} ({current['mahadasha_start']} to {current['mahadasha_end']})\n"
+            summary += f"AD: {current['antardasha']} ({current['antardasha_start']} to {current['antardasha_end']})\n"
+
+        summary += "\nPLANETARY POSITIONS:\n"
+        for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
+            sign, deg = longitude_to_sign(chart.planets[p])
+            summary += f"{p}: {sign} {deg:.2f}° — {chart.nakshatras[p]['nakshatra']} {chart.nakshatras[p]['pada']}\n"
+
+        st.download_button(
+            label="📄 Download Summary (TXT)",
+            data=summary,
+            file_name=f"{name.replace(' ', '_')}_summary.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
+
 
 # ------------------------------------------------------------------
 # PAGES
@@ -307,13 +449,13 @@ if page == "🏠 Home":
     </div>
     """, unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     with c1:
         st.markdown("""
         <div class="card" style="text-align:center;">
             <div style="font-size:2.5rem;">📜</div>
             <h4>Horoscope</h4>
-            <p style="font-size:0.95rem;">Sidereal chart with Lahiri Ayanamsa, Nakshatra, Navamsa & Vimshottari Dasha.</p>
+            <p style="font-size:0.9rem;">Sidereal chart with Lahiri Ayanamsa, Nakshatra, Navamsa, Dasha & divisionals.</p>
         </div>
         """, unsafe_allow_html=True)
     with c2:
@@ -321,7 +463,7 @@ if page == "🏠 Home":
         <div class="card" style="text-align:center;">
             <div style="font-size:2.5rem;">💑</div>
             <h4>Matchmaking</h4>
-            <p style="font-size:0.95rem;">Full Ashtakoota (36 points) with detailed Koota breakdown & verdict.</p>
+            <p style="font-size:0.9rem;">Full Ashtakoota (36 points) with 8 Kootas & detailed verdict.</p>
         </div>
         """, unsafe_allow_html=True)
     with c3:
@@ -329,50 +471,109 @@ if page == "🏠 Home":
         <div class="card" style="text-align:center;">
             <div style="font-size:2.5rem;">🔮</div>
             <h4>Predictions</h4>
-            <p style="font-size:0.95rem;">Year-wise analysis for Career, Marriage, Children & Health via Dasha + Transit.</p>
+            <p style="font-size:0.9rem;">Year-wise analysis for Career, Marriage, Children & Health.</p>
+        </div>
+        """, unsafe_allow_html=True)
+    with c4:
+        st.markdown("""
+        <div class="card" style="text-align:center;">
+            <div style="font-size:2.5rem;">📊</div>
+            <h4>Varshphal</h4>
+            <p style="font-size:0.9rem;">Annual Solar Return chart (Tajaka) with Muntha analysis.</p>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("""
     <div class="card" style="margin-top:1rem;">
-        <h4 class="card-title">How to Use</h4>
+        <h4 class="card-title">✨ What's New in v2.0</h4>
         <ul>
-            <li>Enter <b>any city or town</b> (e.g., <i>Sitamarhi, Muzaffarpur, Datia, Damoh, Pukhrayan</i>) and click <b>Find</b> to auto-fill coordinates.</li>
-            <li>Select your timezone — <b>IST is default</b>; switch to <b>GMT/UTC</b> or any major zone.</li>
-            <li>Generate charts, match kundalis, or ask the AI Astrologer.</li>
+            <li><b>Exact Dasha Dates:</b> Mahadasha & Antardasha with precise start/end dates</li>
+            <li><b>Varshphal (Tajaka):</b> Annual Solar Return chart with Muntha</li>
+            <li><b>Detailed Predictions:</b> Career, Marriage, Children, Health with timing</li>
+            <li><b>Chart Saving:</b> Export charts as JSON or text summary</li>
+            <li><b>Global City Search:</b> Any city/town via OpenStreetMap geocoding</li>
+            <li><b>IST Default + GMT:</b> Timezone selection with IST pre-selected</li>
+            <li><b>North Indian Chart:</b> Traditional diamond-style chart option</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
 
+    # Load saved chart option
+    st.divider()
+    st.subheader("📂 Load Saved Chart")
+    uploaded = st.file_uploader("Upload previously saved chart (JSON)", type=["json"])
+    if uploaded:
+        try:
+            data = json.load(uploaded)
+            st.session_state["loaded_chart_data"] = data
+            st.success("Chart loaded! Go to Horoscope page to view.")
+        except Exception as e:
+            st.error(f"Error loading chart: {e}")
+
 elif page == "📜 Horoscope":
     st.title("📜 Free Horoscope Chart")
+
+    # Option to load saved chart
+    if "loaded_chart_data" in st.session_state:
+        if st.button("📂 Use Loaded Chart", use_container_width=True):
+            try:
+                data = st.session_state["loaded_chart_data"]
+                chart = ChartData(
+                    planets=data["planets"],
+                    ascendant=data["ascendant"],
+                    lagna_sign=data["lagna_sign"],
+                    birth_date=datetime.fromisoformat(data["birth_date"]) if data.get("birth_date") else None,
+                    lat=data.get("lat", 0),
+                    lon=data.get("lon", 0),
+                    tz=data.get("tz", 0)
+                )
+                st.session_state["computed_chart"] = chart
+                st.session_state["computed_chart_name"] = data.get("name", "Loaded Chart")
+                st.success("Chart loaded successfully!")
+            except Exception as e:
+                st.error(f"Error: {e}")
+
     name, date, time, lat, lon, tz = birth_input_form("chart", "Native")
 
-    if st.button("✨ Generate Chart", key="gen_chart"):
-        with st.spinner("Calculating sidereal positions..."):
-            try:
-                if use_demo:
-                    chart = generate_demo_chart()
-                    st.info("Demo mode active — install pyswisseph for live ephemeris.")
-                else:
-                    chart = compute_chart(date.year, date.month, date.day,
-                                          time.hour, time.minute, lat, lon, tz)
-            except Exception as e:
-                st.error(f"Ephemeris error: {e}. Enable Demo Data in sidebar.")
-                st.stop()
+    c1, c2 = st.columns(2)
+    with c1:
+        if st.button("✨ Generate Chart", use_container_width=True):
+            with st.spinner("Calculating sidereal positions with Lahiri Ayanamsa..."):
+                try:
+                    if use_demo:
+                        chart = generate_demo_chart()
+                        st.info("ℹ️ Demo mode active — install pyswisseph for live ephemeris.")
+                    else:
+                        chart = compute_chart(date.year, date.month, date.day,
+                                              time.hour, time.minute, lat, lon, tz)
+                except Exception as e:
+                    st.error(f"❌ Ephemeris error: {e}. Enable Demo Data in sidebar.")
+                    st.stop()
 
-            # FIXED: Use non-conflicting session state keys
-            st.session_state["computed_chart"] = chart
-            st.session_state["computed_chart_name"] = name
+                st.session_state["computed_chart"] = chart
+                st.session_state["computed_chart_name"] = name
+
+    with c2:
+        chart_style = st.selectbox("Chart Style", ["North Indian (Diamond)", "South Indian (Circular)"])
 
     if "computed_chart" in st.session_state:
         chart = st.session_state["computed_chart"]
         name = st.session_state["computed_chart_name"]
 
-        c1, c2 = st.columns([1.3, 1])
+        # Save options
+        st.divider()
+        save_chart_ui(chart, name)
+
+        # Chart display
+        st.divider()
+        if "North" in chart_style:
+            st.pyplot(draw_north_indian_chart(chart, f"{name}'s Horoscope (D1)"))
+        else:
+            st.pyplot(draw_circular_chart(chart, f"{name}'s Horoscope (D1)"))
+
+        # Birth summary
+        c1, c2, c3 = st.columns(3)
         with c1:
-            st.pyplot(draw_chart_wheel(chart, f"{name}'s Horoscope"))
-        with c2:
             st.markdown(f"""
             <div class="card">
                 <div class="card-title">🌟 Birth Summary</div>
@@ -384,17 +585,66 @@ elif page == "📜 Horoscope":
             </div>
             """, unsafe_allow_html=True)
 
-            st.markdown("""
-            <div class="card">
-                <div class="card-title">📖 Vimshottari Dasha</div>
-            """, unsafe_allow_html=True)
-            dasha_df = pd.DataFrame(chart.dasha)
-            st.dataframe(dasha_df, hide_index=True, use_container_width=True)
-            st.markdown("</div>", unsafe_allow_html=True)
+        with c2:
+            current = chart.get_current_dasha_info()
+            if current:
+                st.markdown(f"""
+                <div class="card">
+                    <div class="card-title">📖 Current Dasha</div>
+                    <p><b>MD:</b> {current['mahadasha']}</p>
+                    <p><small>{current['mahadasha_start']} → {current['mahadasha_end']}</small></p>
+                    <p><b>AD:</b> {current['antardasha']}</p>
+                    <p><small>{current['antardasha_start']} → {current['antardasha_end']}</small></p>
+                </div>
+                """, unsafe_allow_html=True)
 
+        with c3:
+            st.markdown(f"""
+            <div class="card">
+                <div class="card-title">📍 Birth Details</div>
+                <p><b>Date:</b> {chart.birth_date.strftime('%d %b %Y') if chart.birth_date else 'N/A'}</p>
+                <p><b>Time:</b> {chart.birth_date.strftime('%I:%M %p') if chart.birth_date else 'N/A'}</p>
+                <p><b>Lat:</b> {chart.lat:.4f}°</p>
+                <p><b>Lon:</b> {chart.lon:.4f}°</p>
+                <p><b>TZ:</b> UTC{chart.tz:+.2f}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # Planet positions
         st.divider()
         st.subheader("🪐 Planetary Positions")
         st.dataframe(planet_table(chart), hide_index=True, use_container_width=True)
+
+        # Divisional charts info
+        st.divider()
+        st.subheader("📊 Divisional Charts (Varga)")
+        varga_data = []
+        for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
+            varga_data.append({
+                "Planet": p,
+                "D1 (Rashi)": longitude_to_sign(chart.planets[p])[0],
+                "D9 (Navamsa)": chart.navamsa[p],
+                "D3 (Drekkana)": chart.drekkana[p],
+                "D7 (Saptamsa)": chart.saptamsa[p],
+                "D10 (Dasamsa)": chart.dasamsa[p],
+                "D12 (Dwadasamsa)": chart.dwadasamsa[p]
+            })
+        st.dataframe(pd.DataFrame(varga_data), hide_index=True, use_container_width=True)
+
+        # Full Dasha Table
+        st.divider()
+        st.subheader("📅 Vimshottari Dasha Timeline")
+        dasha_df = pd.DataFrame([
+            {
+                "Planet": p.planet,
+                "Start": p.start_date.strftime("%d %b %Y"),
+                "End": p.end_date.strftime("%d %b %Y"),
+                "Years": f"{p.years:.2f}",
+                "Status": "✅ Current" if p.start_date <= datetime.now() < p.end_date else ""
+            }
+            for p in chart.dasha_periods
+        ])
+        st.dataframe(dasha_df, hide_index=True, use_container_width=True)
 
 elif page == "💑 Matchmaking":
     st.title("💑 Ashtakoota Matchmaking")
@@ -414,7 +664,6 @@ elif page == "💑 Matchmaking":
                 if use_demo:
                     chart1 = generate_demo_chart()
                     chart2 = generate_demo_chart()
-                    # Offset chart2 for variety
                     chart2.planets = {k: (v + 55) % 360 for k, v in chart2.planets.items()}
                     chart2._compute_derived()
                 else:
@@ -459,16 +708,29 @@ elif page == "💑 Matchmaking":
             st.markdown("""
             <div class="card">
                 <div class="card-title">📖 What each Koota means</div>
-                <ul style="font-size:0.95rem; line-height:1.6;">
-                    <li><b>Varna (1 pt):</b> Spiritual ego-compatibility</li>
-                    <li><b>Vashya (2 pts):</b> Mutual attraction & control</li>
-                    <li><b>Tara (3 pts):</b> Destiny-star alignment</li>
-                    <li><b>Yoni (4 pts):</b> Sexual & intimacy harmony</li>
-                    <li><b>Graha Maitri (5 pts):</b> Moon-sign lord friendship</li>
-                    <li><b>Gana (6 pts):</b> Temperament (Deva / Manushya / Rakshasa)</li>
-                    <li><b>Bhakoot (7 pts):</b> Relative Moon position (2/12, 6/8 checked)</li>
-                    <li><b>Nadi (8 pts):</b> Health & progeny compatibility (same Nadi = 0)</li>
-                </ul>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; font-size:0.95rem;">
+                    <div><b>Varna (1):</b> Spiritual compatibility</div>
+                    <div><b>Vashya (2):</b> Mutual attraction</div>
+                    <div><b>Tara (3):</b> Destiny alignment</div>
+                    <div><b>Yoni (4):</b> Intimacy harmony</div>
+                    <div><b>Graha Maitri (5):</b> Planetary friendship</div>
+                    <div><b>Gana (6):</b> Temperament match</div>
+                    <div><b>Bhakoot (7):</b> Relative Moon position</div>
+                    <div><b>Nadi (8):</b> Health & progeny</div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Detailed analysis
+            st.divider()
+            st.subheader("📋 Detailed Analysis")
+            st.markdown(f"""
+            <div class="card">
+                <p><b>Moon Sign Compatibility:</b> {chart1.moon_sign} vs {chart2.moon_sign}</p>
+                <p><b>Nakshatra Compatibility:</b> {chart1.nakshatras['Moon']['nakshatra']} vs {chart2.nakshatras['Moon']['nakshatra']}</p>
+                <p><b>Gana:</b> {NAKSHATRA_GANA[chart1.nakshatras['Moon']['nakshatra']]} vs {NAKSHATRA_GANA[chart2.nakshatras['Moon']['nakshatra']]}</p>
+                <p><b>Nadi:</b> {NAKSHATRA_NADI[chart1.nakshatras['Moon']['nakshatra']]} vs {NAKSHATRA_NADI[chart2.nakshatras['Moon']['nakshatra']]}</p>
+                <p><b>Yoni:</b> {NAKSHATRA_YONI[chart1.nakshatras['Moon']['nakshatra']]} vs {NAKSHATRA_YONI[chart2.nakshatras['Moon']['nakshatra']]}</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -480,10 +742,10 @@ elif page == "🔮 Yearly Predictions":
     with c1:
         year = st.selectbox("📅 Select Year", list(range(2024, 2036)))
     with c2:
-        topic = st.segmented_control("Topic", ["Career", "Marriage", "Children", "Health"], default="Career")
+        topic = st.segmented_control("Topic", ["Career", "Marriage", "Children", "Health", "All"], default="All")
 
     if st.button("🔮 Predict", use_container_width=True):
-        with st.spinner("Analyzing Dasha & Gochar..."):
+        with st.spinner("Analyzing Dasha, Transit & Varshphal..."):
             try:
                 chart = generate_demo_chart() if use_demo else compute_chart(
                     date.year, date.month, date.day, time.hour, time.minute, lat, lon, tz)
@@ -493,27 +755,74 @@ elif page == "🔮 Yearly Predictions":
 
             pred = get_year_prediction(chart, year)
 
+            # Summary card
             st.markdown(f"""
             <div class="card">
-                <div class="card-title">📅 {pred['year']} — Transit & Dasha Snapshot</div>
-                <p><b>Mahadasha:</b> {pred['dasha']['mahadasha']} <span style="color:#92400e;">({pred['dasha']['years']} yrs)</span></p>
-                <p><b>Transit Saturn:</b> {pred['transits']['Saturn']} &nbsp;|&nbsp; <b>Transit Jupiter:</b> {pred['transits']['Jupiter']}</p>
+                <div class="card-title">📅 {pred['year']} — Year Summary</div>
+                <p><b>Mahadasha:</b> {pred['dasha'].get('mahadasha', 'N/A')} | <b>Antardasha:</b> {pred['dasha'].get('antardasha', 'N/A')}</p>
+                <p><b>Transit Saturn:</b> {pred['transits']['Saturn']} | <b>Transit Jupiter:</b> {pred['transits']['Jupiter']}</p>
+                <p><b>Muntha:</b> {pred['varshphal']['muntha_sign']} | <b>Themes:</b> {', '.join(pred['varshphal']['themes'])}</p>
                 <p style="color:#b91c1c;"><b>{pred['sade_sati']}</b></p>
+                <p><i>{pred['summary']}</i></p>
             </div>
             """, unsafe_allow_html=True)
 
-            content = pred[topic.lower()]
-            st.markdown(f"""
-            <div class="card" style="border-left: 6px solid #d97706;">
-                <div class="card-title">🔮 {topic} Prediction</div>
-                <p style="font-size:1.05rem; line-height:1.7; color:#451a03;">{content}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            topics_to_show = ["Career", "Marriage", "Children", "Health"] if topic == "All" else [topic]
 
+            for t in topics_to_show:
+                data = pred[t.lower()]
+                st.markdown(f"""
+                <div class="card" style="border-left: 6px solid #d97706;">
+                    <div class="card-title">🔮 {t} Analysis</div>
+                """, unsafe_allow_html=True)
+
+                if t == "Career":
+                    st.markdown(f"""
+                    <p><b>10th Lord:</b> {data['tenth_lord']} in {data['tenth_lord_position']}</p>
+                    <p><b>Planets in 10th:</b> {', '.join(data['planets_in_10th']) if data['planets_in_10th'] else 'None'}</p>
+                    <p><b>Yogas:</b></p>
+                    <ul>{''.join([f'<li>{y}</li>' for y in data['yogas']])}</ul>
+                    <p><b>Dasha Impact:</b> {data['dasha_career']}</p>
+                    <p><b>Recommended Fields:</b> {data['recommendation']}</p>
+                    """, unsafe_allow_html=True)
+
+                elif t == "Marriage":
+                    st.markdown(f"""
+                    <p><b>7th Lord:</b> {data['seventh_lord']} in {data['seventh_lord_position']}</p>
+                    <p><b>Planets in 7th:</b> {', '.join(data['planets_in_7th']) if data['planets_in_7th'] else 'None'}</p>
+                    <p><b>Venus Position:</b> House {data['venus_house']} ({data['venus_sign']})</p>
+                    <p><b>Kuja Dosha:</b> {'Yes' if data['kuja_dosha'] else 'No'} ({data['kuja_severity']})</p>
+                    <p><b>Timing:</b> {data['marriage_timing']}</p>
+                    <p><b>Spouse Nature:</b> {data['spouse_nature']}</p>
+                    """, unsafe_allow_html=True)
+
+                elif t == "Children":
+                    st.markdown(f"""
+                    <p><b>5th Lord:</b> {data['fifth_lord']} in {data['fifth_lord_position']}</p>
+                    <p><b>Planets in 5th:</b> {', '.join(data['planets_in_5th']) if data['planets_in_5th'] else 'None'}</p>
+                    <p><b>Jupiter (Putrakaraka):</b> House {data['jupiter_house']} — {data['jupiter_dignity']} ({data['jupiter_strength']})</p>
+                    <p><b>Predicted Children:</b> {data['predicted_number']}</p>
+                    <p><b>Timing:</b> {data['children_timing']}</p>
+                    <p><b>Advice:</b> {data['conception_advice']}</p>
+                    """, unsafe_allow_html=True)
+
+                elif t == "Health":
+                    st.markdown(f"""
+                    <p><b>Lagna Lord:</b> {data['lagna_lord']}</p>
+                    <p><b>Planets in 6th:</b> {', '.join(data['planets_in_6th']) if data['planets_in_6th'] else 'None'}</p>
+                    <p><b>Planets in 8th:</b> {', '.join(data['planets_in_8th']) if data['planets_in_8th'] else 'None'}</p>
+                    <p><b>Dasha Impact:</b> {data['health_dasha']}</p>
+                    <p><b>Vulnerable Areas:</b></p>
+                    <ul>{''.join([f'<li>{a}</li>' for a in data['vulnerable_areas']])}</ul>
+                    """, unsafe_allow_html=True)
+
+                st.markdown("</div>", unsafe_allow_html=True)
+
+            # AI insight
             if api_key:
                 with st.spinner("Consulting AI Astrologer..."):
-                    ctx = f"Lagna {chart.lagna_sign}, Moon {chart.moon_sign}, Dasha {pred['dasha']['mahadasha']}"
-                    prompt = f"Detailed Vedic prediction for {topic} in {year}. Context: {ctx}. Base reading: {content}"
+                    ctx = f"Lagna {chart.lagna_sign}, Moon {chart.moon_sign}, MD {pred['dasha'].get('mahadasha', 'N/A')}"
+                    prompt = f"Detailed Vedic prediction for {topic if topic != 'All' else 'all life areas'} in {year}. Context: {ctx}."
                     try:
                         r = requests.post(
                             "https://openrouter.ai/api/v1/chat/completions",
@@ -536,6 +845,68 @@ elif page == "🔮 Yearly Predictions":
                     except Exception as e:
                         st.warning(f"AI unavailable: {e}")
 
+elif page == "📊 Varshphal":
+    st.title("📊 Varshphal (Annual Chart)")
+    st.caption("Tajaka / Solar Return Analysis with Muntha")
+
+    name, date, time, lat, lon, tz = birth_input_form("varsh", "Native")
+    year = st.selectbox("📅 Select Year for Varshphal", list(range(2024, 2036)))
+
+    if st.button("🌟 Calculate Varshphal", use_container_width=True):
+        with st.spinner("Calculating Solar Return..."):
+            try:
+                chart = generate_demo_chart() if use_demo else compute_chart(
+                    date.year, date.month, date.day, time.hour, time.minute, lat, lon, tz)
+            except Exception as e:
+                st.error(str(e))
+                st.stop()
+
+            varsh = calculate_varshphal(chart, year)
+
+            st.markdown(f"""
+            <div class="card" style="text-align:center;">
+                <h2>{year} Varshphal</h2>
+                <p style="font-size:1.2rem;"><b>Varshphal Date:</b> {varsh['varshphal_date']}</p>
+                <p style="font-size:1.2rem;"><b>Muntha:</b> {varsh['muntha_sign']} ({varsh['muntha_longitude']}°)</p>
+                <p style="font-size:1.2rem;"><b>Years Elapsed:</b> {varsh['years_elapsed']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            st.markdown("""
+            <div class="card">
+                <div class="card-title">📖 Annual Themes</div>
+            """, unsafe_allow_html=True)
+            for theme in varsh['themes']:
+                st.markdown(f"<p>• {theme}</p>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+            # Muntha interpretation
+            st.markdown(f"""
+            <div class="card">
+                <div class="card-title">🎯 Muntha in {varsh['muntha_sign']}</div>
+                <p>Muntha lord <b>{SIGN_LORD[varsh['muntha_sign']]}</b> governs the year.</p>
+                <p>{_muntha_interpretation(varsh['muntha_sign'], chart.lagna_sign)}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+
+def _muntha_interpretation(muntha: str, lagna: str) -> str:
+    interpretations = {
+        "Aries": "Year of new beginnings, courage, and initiative. Focus on self-development.",
+        "Taurus": "Year of financial growth, stability, and material comfort. Good for investments.",
+        "Gemini": "Year of communication, learning, and networking. Travel indicated.",
+        "Cancer": "Year of emotional growth, family matters, and nurturing. Home improvements.",
+        "Leo": "Year of recognition, creativity, and authority. Leadership opportunities.",
+        "Virgo": "Year of health focus, service, and detailed work. Analytical success.",
+        "Libra": "Year of relationships, partnerships, and balance. Marriage/business deals.",
+        "Scorpio": "Year of transformation, research, and hidden gains. Occult interests.",
+        "Sagittarius": "Year of wisdom, travel, and fortune. Higher education success.",
+        "Capricorn": "Year of hard work, discipline, and career advancement. Long-term gains.",
+        "Aquarius": "Year of innovation, social causes, and unconventional success. Technology.",
+        "Pisces": "Year of spirituality, foreign connections, and intuition. Creative pursuits."
+    }
+    return interpretations.get(muntha, "Mixed results — maintain balance and adaptability.")
+
 elif page == "❓ AI Astrologer":
     st.title("❓ Ask the AI Vedic Astrologer")
     st.caption("Powered by OpenRouter (free Gemini model)")
@@ -548,12 +919,13 @@ elif page == "❓ AI Astrologer":
             try:
                 chart = generate_demo_chart() if use_demo else compute_chart(
                     date.year, date.month, date.day, time.hour, time.minute, lat, lon, tz)
+                current = chart.get_current_dasha_info()
                 st.session_state["ai_ctx"] = (
                     f"Native {name}: Lagna {chart.lagna_sign}, Moon {chart.moon_sign} "
                     f"in {chart.nakshatras['Moon']['nakshatra']} pada {chart.nakshatras['Moon']['pada']}, "
-                    f"Mahadasha {chart.dasha[0]['mahadasha']}."
+                    f"MD {current.get('mahadasha', 'Unknown')}, AD {current.get('antardasha', 'Unknown')}."
                 )
-                st.success("Context loaded!")
+                st.success("✅ Context loaded!")
             except Exception as e:
                 st.error(str(e))
 
@@ -563,9 +935,9 @@ elif page == "❓ AI Astrologer":
                                 "What does my chart say about my career in 2026?", height=100)
         if st.button("🙏 Ask Astrologer", use_container_width=True):
             if not api_key:
-                st.error("Please enter your OpenRouter API Key in the sidebar.")
+                st.error("❌ Please enter your OpenRouter API Key in the sidebar.")
             elif "ai_ctx" not in st.session_state:
-                st.warning("Please load chart context first (left panel).")
+                st.warning("⚠️ Please load chart context first (left panel).")
             else:
                 with st.spinner("Consulting the stars..."):
                     try:
@@ -588,7 +960,7 @@ elif page == "❓ AI Astrologer":
                         </div>
                         """, unsafe_allow_html=True)
                     except Exception as e:
-                        st.error(f"API Error: {e}")
+                        st.error(f"❌ API Error: {e}")
 
 elif page == "🎲 Ram Shalaka":
     st.title("🎲 Ram Shalaka")
@@ -606,7 +978,11 @@ elif page == "🎲 Ram Shalaka":
         {"text": "Sakala sumangala daayaka raghunandana, sadhubara nindaaka aridata bandana",
          "meaning": "The Lord of Raghus brings all auspiciousness and destroys the pain of the noble.", "type": "Positive"},
         {"text": "Bhagati heti mori kara puja, hoyi siddhi millaahi mahatuja",
-         "meaning": "Worship with devotion and faith — you shall attain perfection and great valor.", "type": "Positive"}
+         "meaning": "Worship with devotion and faith — you shall attain perfection and great valor.", "type": "Positive"},
+        {"text": "Rama charana rati mori man mahi, basahu sadaa siya sahita sadahi",
+         "meaning": "Devotion to Lord Ram's feet fills the heart — dwell eternally with Siya and Ram.", "type": "Positive"},
+        {"text": "Suni siya pati ke bachana suhaae, hridaya harasha gayatri guna gaae",
+         "meaning": "Hearing pleasing words from the beloved husband, the heart rejoices and sings virtues.", "type": "Positive"}
     ]
 
     if st.button("🙏 Seek Blessing", use_container_width=True):
