@@ -441,6 +441,24 @@ CURRENT DASHA:
 # ------------------------------------------------------------------
 # PAGES
 # ------------------------------------------------------------------
+def _muntha_interpretation(muntha: str, lagna: str) -> str:
+    interpretations = {
+        "Aries": "Year of new beginnings, courage, and initiative. Focus on self-development.",
+        "Taurus": "Year of financial growth, stability, and material comfort. Good for investments.",
+        "Gemini": "Year of communication, learning, and networking. Travel indicated.",
+        "Cancer": "Year of emotional growth, family matters, and nurturing. Home improvements.",
+        "Leo": "Year of recognition, creativity, and authority. Leadership opportunities.",
+        "Virgo": "Year of health focus, service, and detailed work. Analytical success.",
+        "Libra": "Year of relationships, partnerships, and balance. Marriage/business deals.",
+        "Scorpio": "Year of transformation, research, and hidden gains. Occult interests.",
+        "Sagittarius": "Year of wisdom, travel, and fortune. Higher education success.",
+        "Capricorn": "Year of hard work, discipline, and career advancement. Long-term gains.",
+        "Aquarius": "Year of innovation, social causes, and unconventional success. Technology.",
+        "Pisces": "Year of spirituality, foreign connections, and intuition. Creative pursuits."
+    }
+    return interpretations.get(muntha, "Mixed results — maintain balance and adaptability.")
+
+
 if page == "🏠 Home":
     st.markdown("""
     <div style="text-align:center; padding: 2rem 0;">
@@ -890,22 +908,7 @@ elif page == "📊 Varshphal":
             """, unsafe_allow_html=True)
 
 
-def _muntha_interpretation(muntha: str, lagna: str) -> str:
-    interpretations = {
-        "Aries": "Year of new beginnings, courage, and initiative. Focus on self-development.",
-        "Taurus": "Year of financial growth, stability, and material comfort. Good for investments.",
-        "Gemini": "Year of communication, learning, and networking. Travel indicated.",
-        "Cancer": "Year of emotional growth, family matters, and nurturing. Home improvements.",
-        "Leo": "Year of recognition, creativity, and authority. Leadership opportunities.",
-        "Virgo": "Year of health focus, service, and detailed work. Analytical success.",
-        "Libra": "Year of relationships, partnerships, and balance. Marriage/business deals.",
-        "Scorpio": "Year of transformation, research, and hidden gains. Occult interests.",
-        "Sagittarius": "Year of wisdom, travel, and fortune. Higher education success.",
-        "Capricorn": "Year of hard work, discipline, and career advancement. Long-term gains.",
-        "Aquarius": "Year of innovation, social causes, and unconventional success. Technology.",
-        "Pisces": "Year of spirituality, foreign connections, and intuition. Creative pursuits."
-    }
-    return interpretations.get(muntha, "Mixed results — maintain balance and adaptability.")
+
 
 elif page == "❓ AI Astrologer":
     st.title("❓ Ask the AI Vedic Astrologer")
