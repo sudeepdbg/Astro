@@ -1,23 +1,14 @@
 """
-Vedic Astrology Calculation Engine v3.0
+Vedic Astrology Calculation Engine v3.1
 ========================================
-Enhancements over v2.0:
-  - Centralized RULES layer (PREDICTION_RULES dict) — edit all thresholds
-    and interpretations in one place.
-  - Rule-evaluation engine: evaluate_rules() scores every applicable rule
-    and returns structured, detailed analysis with severity levels.
-  - Fixed logic bugs:
-      * get_navamsa / get_drekkana / get_dasamsa: correct Movable/Fixed/Dual
-        start-sign logic (was using wrong sign_idx offsets).
-      * get_saptamsa: odd/even sign check corrected (1-based sign numbering).
-      * Dasha balance: fixed degrees_covered to not use modulo (Moon can be
-        anywhere in the nakshatra).
-      * calculate_antardasha: removed erroneous double-scaling; standard
-        formula is (MD_years × AD_years) / 120, no further scaling.
-      * get_tara_score: added all 9 Tara types with correct auspiciousness.
-  - Detailed narrative paragraphs for Career, Marriage, Children, Health.
-  - Varshphal Muntha lord + Yogas properly evaluated.
-  - Yoga detection centralised in RULES.
+Enhancements over v3.0:
+  - Context-aware dasha weighting (dasha rules boosted when MD planet matches topic lord)
+  - D9/D10 dignity integrated into marriage/career scoring
+  - Transit range across full year (Jan+Jun+Dec averaged) instead of one day
+  - Active yoga tagging (is_natal vs is_dasha_activated)
+  - Clear ephemeris error propagation with descriptive messages
+  - North Indian chart house geometry corrected
+  - Pratyantardasha surfaced in API
 """
 
 import math
@@ -81,7 +72,6 @@ NAKSHATRAS = [
     "Purva Bhadrapada","Uttara Bhadrapada","Revati"
 ]
 
-# Repeating cycle of 9 lords
 NAKSHATRA_LORDS = ["Ketu","Venus","Sun","Moon","Mars","Rahu","Jupiter","Saturn","Mercury"] * 3
 
 NAKSHATRA_GANA = {
@@ -133,9 +123,9 @@ DASHA_YEARS = {
     "Rahu":18,"Jupiter":16,"Saturn":19,"Mercury":17
 }
 DASHA_SEQUENCE = ["Ketu","Venus","Sun","Moon","Mars","Rahu","Jupiter","Saturn","Mercury"]
-TOTAL_DASHA_YEARS = 120  # sum of DASHA_YEARS
+TOTAL_DASHA_YEARS = 120
 
-PLANET_IDS   = [0, 1, 2, 3, 4, 5, 6, 10]  # SUN,MOON,MARS,MERCURY,JUPITER,VENUS,SATURN,TRUE_NODE
+PLANET_IDS   = [0, 1, 2, 3, 4, 5, 6, 10]
 PLANET_NAMES = ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu"]
 
 HOUSE_MEANINGS = {
@@ -177,42 +167,18 @@ PLANET_ENEMIES = {
     "Saturn": ["Sun","Moon","Mars"],
 }
 
-# Tara Bala: positions 1-9 from birth nakshatra
-# 1=Janma(good for inner), 2=Sampat(wealth+), 3=Vipat(danger-),
-# 4=Kshema(prosperity+), 5=Pratyak(obstacles-), 6=Sadhana(effort+),
-# 7=Naidhana(death-), 8=Mitra(friend+), 9=Parama Mitra(best friend+)
 TARA_AUSPICIOUS = {1: True, 2: True, 3: False, 4: True, 5: False,
                    6: True, 7: False, 8: True, 9: True}
 TARA_MAX_SCORE = 3
 TARA_SCORES    = {1: 3, 2: 3, 3: 0, 4: 3, 5: 0, 6: 3, 7: 0, 8: 3, 9: 3}
 
-NAKSHATRA_SIZE = 13 + 20/60   # 13°20′ per nakshatra
-PADA_SIZE      = 3  + 20/60   # 3°20′  per pada
+NAKSHATRA_SIZE = 13 + 20/60
+PADA_SIZE      = 3  + 20/60
 
 
 # ==================================================================
 # SECTION 2 — CENTRALISED RULES LAYER
 # ==================================================================
-# All prediction thresholds, interpretations, and scores live here.
-# Change a rule here → it propagates everywhere automatically.
-#
-# Rule structure:
-#   {
-#     "id":          str  — unique key,
-#     "topic":       str  — "career"|"marriage"|"children"|"health"|"general"|"matchmaking",
-#     "condition":   callable(context: dict) → bool,
-#     "severity":    "positive"|"neutral"|"caution"|"warning",
-#     "score":       int  — contribution to topic score (+positive / -negative),
-#     "title":       str  — short label,
-#     "detail":      callable(context: dict) → str  — full narrative
-#   }
-#
-# context keys provided to every rule (all may be None if unavailable):
-#   planets, lagna_sign, lagna_idx, moon_sign, sun_sign, dignities,
-#   nakshatras, navamsa, dasamsa, dasha, antardasha,
-#   house_map (planet → house number),
-#   lord_map  (house number → lord planet),
-#   ashtakoota (matchmaking only)
 
 def _house(planet: str, ctx: dict) -> int:
     return ctx["house_map"].get(planet, 0)
@@ -222,6 +188,12 @@ def _lord(house: int, ctx: dict) -> str:
 
 def _dignity(planet: str, ctx: dict) -> str:
     return ctx["dignities"].get(planet, "Neutral")
+
+def _navamsa_dignity(planet: str, ctx: dict) -> str:
+    return ctx["navamsa_dignities"].get(planet, "Neutral")
+
+def _dasamsa_dignity(planet: str, ctx: dict) -> str:
+    return ctx["dasamsa_dignities"].get(planet, "Neutral")
 
 def _in_house(planets_list, house: int, ctx: dict) -> List[str]:
     return [p for p in planets_list if _house(p, ctx) == house]
@@ -242,7 +214,8 @@ PREDICTION_RULES: List[Dict] = [
             "recognition. You are likely to rise to leadership or senior management. Government "
             "service, politics, senior corporate roles, medicine, or administration are natural fits. "
             f"Sun is {_dignity('Sun', ctx)} here, {'amplifying' if _dignity('Sun',ctx) in ['Exalted','Own','Mool Trikona'] else 'which may moderate'} these effects."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_saturn_10th",
@@ -259,7 +232,8 @@ PREDICTION_RULES: List[Dict] = [
             + ("exalted Saturn here is one of the strongest career placements in the zodiac." if _dignity("Saturn",ctx) == "Exalted"
                else "debilitated Saturn may cause career disruptions; remedies are advised." if _dignity("Saturn",ctx) == "Debilitated"
                else "steady, long-term rewards are expected.")
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_jupiter_10th",
@@ -276,7 +250,8 @@ PREDICTION_RULES: List[Dict] = [
             + ("exalted Jupiter here creates Hamsa Yoga, indicating distinguished career success." if _dignity("Jupiter",ctx) == "Exalted"
                else "debilitated Jupiter slows expansion; consider Guru-related remedies." if _dignity("Jupiter",ctx) == "Debilitated"
                else "benefic influence supports steady career growth.")
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_mercury_10th",
@@ -290,7 +265,8 @@ PREDICTION_RULES: List[Dict] = [
             "trade, or consulting. Your intellect is your greatest professional asset. Multiple "
             "income streams or career pivots are common. "
             f"Mercury is {_dignity('Mercury', ctx)} here."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_mars_10th",
@@ -304,7 +280,8 @@ PREDICTION_RULES: List[Dict] = [
             "police, surgery, engineering, sports, or competitive business are indicated. "
             "Guard against impulsive decisions at work. "
             f"Mars is {_dignity('Mars', ctx)} here."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_venus_10th",
@@ -317,7 +294,8 @@ PREDICTION_RULES: List[Dict] = [
             "Venus in the 10th indicates success in arts, fashion, entertainment, hospitality, "
             "beauty, luxury goods, or diplomacy. Public charm and aesthetic sense are career assets. "
             f"Venus is {_dignity('Venus', ctx)} here."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_rahu_10th",
@@ -330,7 +308,8 @@ PREDICTION_RULES: List[Dict] = [
             "Rahu in the 10th creates strong ambition for status and can bring sudden career leaps. "
             "Technology, media, foreign companies, research, or unconventional fields are favoured. "
             "Beware of ethical shortcuts; career crises are possible if Rahu acts rashly."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_ketu_10th",
@@ -343,7 +322,8 @@ PREDICTION_RULES: List[Dict] = [
             "Ketu in the 10th house can cause dissatisfaction with worldly career, bringing a pull "
             "towards spirituality or alternative paths. Professional disruptions are possible. "
             "Meditation, research, astrology, healing, or behind-the-scenes roles suit this placement."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_10th_lord_strong",
@@ -357,7 +337,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Rajayoga element. This significantly boosts career success, status, and recognition. "
             f"The house where the 10th lord sits (H{_house(_lord(10,ctx),ctx)}) becomes a zone of "
             f"career activity and effort."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_10th_lord_weak",
@@ -370,7 +351,21 @@ PREDICTION_RULES: List[Dict] = [
             f"The 10th lord {_lord(10,ctx)} is debilitated, indicating significant career challenges, "
             "possible loss of position, or difficulty sustaining professional momentum. Neechabhanga "
             "cancellation (if applicable) can mitigate this. Remedies for the 10th lord planet are strongly advised."
-        )
+        ),
+        "activation": "natal"
+    },
+    {
+        "id": "career_10th_lord_d10_strong",
+        "topic": "career",
+        "condition": lambda ctx: _dasamsa_dignity(_lord(10, ctx), ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 2,
+        "title": "10th Lord strong in Dasamsa (D10) — Professional Excellence",
+        "detail": lambda ctx: (
+            f"The 10th lord {_lord(10,ctx)} is {_dasamsa_dignity(_lord(10,ctx), ctx)} in Dasamsa, "
+            "confirming strong professional standing, recognition at work, and career success in the material world."
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_budhaditya",
@@ -386,7 +381,8 @@ PREDICTION_RULES: List[Dict] = [
             "Sun and Mercury are conjunct, forming Budhaditya Yoga. This sharpens intellect, "
             "communication, and analytical ability, supporting careers in management, writing, "
             "commerce, or any field requiring quick thinking."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "career_dasha_career_planet",
@@ -405,7 +401,8 @@ PREDICTION_RULES: List[Dict] = [
                 "Rahu":    "Rahu Dasha can bring sudden rises through unconventional means; foreign or technology careers thrive."
             }.get(ctx.get("dasha",""), "")
             + f" Antardasha of {ctx.get('antardasha','')} colours the next sub-period."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "career_dasha_challenging",
@@ -422,7 +419,8 @@ PREDICTION_RULES: List[Dict] = [
                 "Mars":  "Mars Dasha boosts energy and initiative but risks conflicts with authority figures. Technical careers do well.",
                 "Venus": "Venus Dasha supports creative and luxury careers; financial gains through partnership or arts."
             }.get(ctx.get("dasha",""), "")
-        )
+        ),
+        "activation": "dasha_activated"
     },
 
     # ── MARRIAGE ─────────────────────────────────────────────────
@@ -437,7 +435,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Venus is {_dignity('Venus', ctx)}, indicating a happy, loving, and aesthetically "
             "pleasing marriage. The spouse is likely attractive, refined, and emotionally warm. "
             "Venus strong in the chart is one of the best indicators for marital happiness."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_venus_weak",
@@ -450,7 +449,21 @@ PREDICTION_RULES: List[Dict] = [
             "Venus is debilitated, which can introduce dissatisfaction, misunderstandings, or "
             "incompatibility in marriage. Neechabhanga may help. Venus remedies (white flowers, "
             "sugar, Friday fasting) are recommended before marriage."
-        )
+        ),
+        "activation": "natal"
+    },
+    {
+        "id": "marriage_venus_d9_strong",
+        "topic": "marriage",
+        "condition": lambda ctx: _navamsa_dignity("Venus", ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 2,
+        "title": "Venus strong in Navamsa (D9) — Deep Marital Harmony",
+        "detail": lambda ctx: (
+            f"Venus is {_navamsa_dignity('Venus', ctx)} in Navamsa, indicating soul-level compatibility, "
+            "lasting affection, and deep emotional bonding in marriage. The D9 chart confirms inner marital happiness."
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_7th_lord_strong",
@@ -462,7 +475,8 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"The 7th lord {_lord(7,ctx)} is {_dignity(_lord(7,ctx), ctx)}, strongly supporting a "
             "stable and rewarding marriage. The spouse will be a genuine source of strength."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_7th_lord_weak",
@@ -475,7 +489,21 @@ PREDICTION_RULES: List[Dict] = [
             f"The 7th lord {_lord(7,ctx)} is debilitated, indicating potential difficulties in "
             "marriage such as incompatibility, delays, or separation risk. Remedies for the 7th "
             "lord and Venus are strongly advised."
-        )
+        ),
+        "activation": "natal"
+    },
+    {
+        "id": "marriage_7th_lord_d9_strong",
+        "topic": "marriage",
+        "condition": lambda ctx: _navamsa_dignity(_lord(7, ctx), ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 2,
+        "title": "7th Lord strong in Navamsa (D9) — Soul Partnership",
+        "detail": lambda ctx: (
+            f"The 7th lord {_lord(7,ctx)} is {_navamsa_dignity(_lord(7,ctx), ctx)} in Navamsa, "
+            "confirming a karmically aligned and spiritually supportive partnership."
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_kuja_dosha_high",
@@ -488,7 +516,8 @@ PREDICTION_RULES: List[Dict] = [
             "Mars in the 7th house creates strong Kuja (Mangal) Dosha. This is the most intense "
             "form. It can cause conflicts, dominance issues, or in severe cases, separation. "
             "Matching with a Manglik partner nullifies this. Mars Shanti puja is advised."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_kuja_dosha_moderate",
@@ -501,7 +530,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Mars is in House {_house('Mars',ctx)}, creating moderate Kuja Dosha. "
             "This can bring assertiveness or friction in relationships. Partial dosha — "
             "matching with a partner whose chart has similar Mars placement reduces its effect."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_rahu_7th",
@@ -514,7 +544,8 @@ PREDICTION_RULES: List[Dict] = [
             "Rahu in the 7th house often brings an unusual or inter-cultural marriage, or a "
             "relationship that starts suddenly. There may be obsession or mistrust. The spouse "
             "may have a foreign connection or unconventional personality."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_saturn_7th",
@@ -527,7 +558,8 @@ PREDICTION_RULES: List[Dict] = [
             "Saturn in the 7th house can delay marriage (often after age 28-30) and brings a "
             "serious, karmic quality to partnerships. The spouse may be older, more mature, or "
             "reserved. Long-term commitment is strong once formed."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_jupiter_7th",
@@ -540,7 +572,8 @@ PREDICTION_RULES: List[Dict] = [
             "Jupiter in the 7th is highly auspicious for marriage. The spouse is likely to be "
             "educated, wise, and spiritually inclined. This placement supports a dharmic, "
             "growth-oriented partnership."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "marriage_dasha_venus",
@@ -553,7 +586,8 @@ PREDICTION_RULES: List[Dict] = [
             "Venus Mahadasha is the most potent period for marriage and romantic unions. "
             f"The current Antardasha of {ctx.get('antardasha','')} further refines timing. "
             "Venus-Jupiter or Venus-Mercury Antardashas are the most auspicious sub-periods for wedding ceremonies."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "marriage_dasha_jupiter",
@@ -566,7 +600,8 @@ PREDICTION_RULES: List[Dict] = [
             "Jupiter Mahadasha blesses partnerships and family life. This is a highly auspicious "
             f"time for marriage, especially in Jupiter-Venus or Jupiter-Moon Antardasha periods. "
             f"Current Antardasha: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "marriage_dasha_saturn",
@@ -579,7 +614,8 @@ PREDICTION_RULES: List[Dict] = [
             "Saturn Mahadasha is not the first choice for marriage timing, but unions formed "
             "during this period tend to be karmic, serious, and lasting. Wait for Venus or "
             f"Jupiter Antardasha within Saturn Mahadasha. Current AD: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
 
     # ── CHILDREN ─────────────────────────────────────────────────
@@ -594,7 +630,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Jupiter (Putrakaraka) is {_dignity('Jupiter',ctx)}, one of the strongest indicators "
             "of good fortune in matters of children. Multiple children are possible; at least one "
             "is likely to be notably talented or spiritually inclined."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "children_jupiter_weak",
@@ -607,7 +644,8 @@ PREDICTION_RULES: List[Dict] = [
             "Jupiter (Putrakaraka) is debilitated, which is the most significant indicator of "
             "difficulty in having children. Delays, miscarriages, or fewer children are possible. "
             "Jupiter Shanti and Santana Gopala Puja are classical remedies."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "children_5th_lord_strong",
@@ -619,7 +657,8 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"The 5th lord {_lord(5,ctx)} is {_dignity(_lord(5,ctx),ctx)}, strongly activating the "
             "Putra (children) bhava. Children are likely to be intellectually bright and bring honour."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "children_5th_lord_weak",
@@ -632,7 +671,8 @@ PREDICTION_RULES: List[Dict] = [
             f"The 5th lord {_lord(5,ctx)} is debilitated, weakening the house of children. "
             "Conception challenges or difficult pregnancies are possible. Remedies for the 5th "
             "lord and regular Santana Gopala prayers are advised."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "children_saturn_5th",
@@ -645,7 +685,8 @@ PREDICTION_RULES: List[Dict] = [
             "Saturn in the 5th house is a classical indicator of delayed progeny. Children may "
             "come later in life (after Saturn's maturation at age 36, or after Saturn Antardasha "
             "passes). The children born will be serious, responsible, and long-lived."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "children_rahu_5th",
@@ -658,7 +699,8 @@ PREDICTION_RULES: List[Dict] = [
             "Rahu in the 5th house can create confusion around conception or unusual circumstances "
             "around children (e.g., adoption, IVF, or step-children). Medical consultation and "
             "Rahu remedies are advised if conception is delayed."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "children_ketu_5th",
@@ -671,7 +713,8 @@ PREDICTION_RULES: List[Dict] = [
             "Ketu in the 5th may reduce the desire for children or indicate a spiritually gifted "
             "child. There is sometimes a past-life karmic connection with children born under this "
             "placement."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "children_dasha_jupiter",
@@ -684,7 +727,8 @@ PREDICTION_RULES: List[Dict] = [
             "Jupiter Mahadasha is the most auspicious period for conception and birth of children. "
             f"Jupiter-Jupiter and Jupiter-Venus Antardashas are particularly fruitful. "
             f"Current Antardasha: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "children_dasha_venus",
@@ -697,7 +741,8 @@ PREDICTION_RULES: List[Dict] = [
             "Venus Mahadasha is generally favourable for family expansion. "
             f"Venus-Jupiter or Venus-Moon Antardashas within this period are the best sub-windows. "
             f"Current Antardasha: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "children_dasha_saturn",
@@ -710,7 +755,8 @@ PREDICTION_RULES: List[Dict] = [
             "Saturn Mahadasha can bring delays in having children. Medical check-ups are advised. "
             "Saturn-Jupiter or Saturn-Venus Antardashas can still deliver children within this period. "
             f"Current Antardasha: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "children_dasha_rahu",
@@ -723,7 +769,8 @@ PREDICTION_RULES: List[Dict] = [
             "Rahu Mahadasha is unpredictable for children. Conception is possible but may involve "
             "unusual circumstances. Medical consultation is advised if trying. "
             f"Rahu-Jupiter Antardasha is the best sub-period. Current AD: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
 
     # ── HEALTH ───────────────────────────────────────────────────
@@ -738,7 +785,8 @@ PREDICTION_RULES: List[Dict] = [
             f"The Lagna lord {_lord(1,ctx)} is {_dignity(_lord(1,ctx),ctx)}, bestowing robust "
             "physical constitution, strong immunity, and faster recovery from illness. "
             "This is a protective factor against chronic disease."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_lagna_lord_weak",
@@ -750,7 +798,8 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"The Lagna lord {_lord(1,ctx)} is debilitated, weakening the physical body and immune "
             "system. Regular health check-ups, Lagna lord remedies, and avoiding stress are important."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_saturn_6th",
@@ -763,7 +812,8 @@ PREDICTION_RULES: List[Dict] = [
             "Saturn in the 6th house, while giving victory over enemies, can predispose to chronic "
             "or long-term health issues — particularly joints, bones, teeth, and skin. "
             "Saturn here is also a classic indicator of service-related stress and fatigue."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_saturn_8th",
@@ -776,7 +826,8 @@ PREDICTION_RULES: List[Dict] = [
             "Saturn in the 8th house often gives long life but with chronic health challenges. "
             "Digestive issues, nerve problems, or constitutional weakness may arise. "
             "Saturn in the 8th also indicates a contemplative, research-oriented mind."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_mars_6th",
@@ -789,7 +840,8 @@ PREDICTION_RULES: List[Dict] = [
             "Mars in the 6th house can cause inflammatory conditions, fevers, blood disorders, "
             "or accident-proneness. However, it also gives strong fighting spirit and quick recovery. "
             "Physical exercise is an excellent outlet for this energy."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_mars_8th",
@@ -802,7 +854,8 @@ PREDICTION_RULES: List[Dict] = [
             "Mars in the 8th house increases the risk of accidents, surgeries, or injuries, "
             "particularly to the head, blood, or reproductive system. Caution while driving "
             "and during Mars Antardasha is advised."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_rahu_6th",
@@ -815,7 +868,8 @@ PREDICTION_RULES: List[Dict] = [
             "Rahu in the 6th can cause mysterious or hard-to-diagnose health issues. Allergies, "
             "anxiety, addictions, or unusual infections are possible. Second medical opinions "
             "and regular detox are beneficial."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_ketu_8th",
@@ -827,7 +881,8 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             "Ketu in the 8th house can cause psychosomatic conditions, sudden surgeries, or "
             "near-death experiences. Spiritual practices and avoiding extreme sports are advisable."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_moon_6th_or_8th",
@@ -840,7 +895,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Moon in the {_house('Moon',ctx)}th house can cause emotional instability, digestive "
             "disorders, fluid-related issues, or mental health challenges. Meditation, "
             "proper sleep, and reducing emotional stress are vital."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "health_sade_sati",
@@ -854,7 +910,8 @@ PREDICTION_RULES: List[Dict] = [
             "This 7.5-year period tests physical stamina and mental resilience. Immune function "
             "may be lowered. Regular exercise, proper rest, and Saturn remedies (oil on Saturdays, "
             "blue sapphire consultation) are protective."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "health_dasha_saturn",
@@ -867,7 +924,8 @@ PREDICTION_RULES: List[Dict] = [
             "Saturn Mahadasha requires careful attention to bones, joints, teeth, digestion, and "
             f"chronic conditions. Fatigue and slow recovery are common. Saturn-Rahu Antardasha "
             f"is particularly sensitive. Current AD: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "health_dasha_rahu",
@@ -880,7 +938,8 @@ PREDICTION_RULES: List[Dict] = [
             "Rahu Mahadasha can manifest as anxiety, stress, unusual diagnoses, or lifestyle "
             f"excesses affecting health. Rahu-Rahu and Rahu-Saturn are the most sensitive "
             f"sub-periods. Current AD: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "health_dasha_ketu",
@@ -893,7 +952,8 @@ PREDICTION_RULES: List[Dict] = [
             "Ketu Mahadasha can bring sudden or puzzling health events, psychosomatic symptoms, "
             "or hospitalisation. Ketu-Mars Antardasha requires particular caution. "
             f"Current AD: {ctx.get('antardasha','')}."
-        )
+        ),
+        "activation": "dasha_activated"
     },
     {
         "id": "health_jupiter_strong_protection",
@@ -909,7 +969,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Jupiter is {_dignity('Jupiter',ctx)} and placed in House {_house('Jupiter',ctx)} (a trine). "
             "This is one of the strongest protective factors in Vedic astrology for health and longevity. "
             "Recovery from illness is excellent."
-        )
+        ),
+        "activation": "natal"
     },
 
     # ── GENERAL / YOGAS ──────────────────────────────────────────
@@ -927,7 +988,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Jupiter is {_dignity('Jupiter',ctx)} in House {_house('Jupiter',ctx)} (a kendra), "
             "forming the Panchamahapurusha Yoga called Hamsa Yoga. This bestows wisdom, "
             "noble character, spiritual inclination, and great fortune. A rare and powerful yoga."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "yoga_panchamahapurusha_malavya",
@@ -943,7 +1005,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Venus is {_dignity('Venus',ctx)} in House {_house('Venus',ctx)} (a kendra), "
             "forming Malavya Yoga. Blesses with beauty, artistic talent, luxury, romantic success, "
             "and material comforts."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "yoga_panchamahapurusha_ruchaka",
@@ -959,7 +1022,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Mars is {_dignity('Mars',ctx)} in House {_house('Mars',ctx)} (a kendra), "
             "forming Ruchaka Yoga. Bestows exceptional courage, physical vitality, leadership, "
             "and success in competitive fields."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "yoga_panchamahapurusha_bhadra",
@@ -974,7 +1038,8 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"Mercury is {_dignity('Mercury',ctx)} in House {_house('Mercury',ctx)} (a kendra), "
             "forming Bhadra Yoga. Gifts intelligence, eloquence, business acumen, and financial success."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "yoga_panchamahapurusha_shasha",
@@ -989,7 +1054,8 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"Saturn is {_dignity('Saturn',ctx)} in House {_house('Saturn',ctx)} (a kendra), "
             "forming Shasha Yoga. Bestows authority, discipline, management skill, and lasting achievements."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "yoga_gajkesari",
@@ -1005,7 +1071,8 @@ PREDICTION_RULES: List[Dict] = [
             f"Jupiter is in a kendra (House {_house('Jupiter',ctx)}) from the Moon, forming "
             "Gaja-Kesari Yoga — one of the most celebrated yogas. This grants fame, wealth, "
             "wisdom, and a respected position in society."
-        )
+        ),
+        "activation": "natal"
     },
     {
         "id": "yoga_viparita_harsha",
@@ -1020,7 +1087,8 @@ PREDICTION_RULES: List[Dict] = [
             f"The 6th lord {_lord(6,ctx)} is placed in House {_house(_lord(6,ctx),ctx)} (a dusthana), "
             "forming Viparita Harsha Yoga. Enemies and obstacles defeat themselves; you gain "
             "from challenging situations and hardships ultimately strengthen you."
-        )
+        ),
+        "activation": "natal"
     },
 ]
 
@@ -1030,18 +1098,13 @@ PREDICTION_RULES: List[Dict] = [
 # ==================================================================
 
 def build_context(chart: "ChartData", dasha_info: Dict = None, sade_sati_info: Dict = None) -> Dict:
-    """
-    Build the flat context dict passed to every rule condition/detail callable.
-    """
     lagna_idx = ZODIAC.index(chart.lagna_sign)
 
-    # house_map: planet → house number (1-12)
     house_map = {}
     for p, lon in chart.planets.items():
         sign, _ = longitude_to_sign(lon)
         house_map[p] = ((ZODIAC.index(sign) - lagna_idx) % 12) + 1
 
-    # lord_map: house number → ruling planet
     lord_map = {}
     for i in range(12):
         lord_map[i + 1] = SIGN_LORD[ZODIAC[(lagna_idx + i) % 12]]
@@ -1056,6 +1119,8 @@ def build_context(chart: "ChartData", dasha_info: Dict = None, sade_sati_info: D
         "nakshatras": chart.nakshatras,
         "navamsa":    chart.navamsa,
         "dasamsa":    chart.dasamsa,
+        "navamsa_dignities": chart.navamsa_dignities,
+        "dasamsa_dignities": chart.dasamsa_dignities,
         "house_map":  house_map,
         "lord_map":   lord_map,
         "dasha":      dasha_info.get("mahadasha", "") if dasha_info else "",
@@ -1072,10 +1137,6 @@ def build_context(chart: "ChartData", dasha_info: Dict = None, sade_sati_info: D
 
 
 def evaluate_rules(ctx: Dict, topic: str = None) -> List[Dict]:
-    """
-    Evaluate all PREDICTION_RULES (or filtered by topic).
-    Returns a list of fired rules with their detail, sorted by score descending.
-    """
     results = []
     for rule in PREDICTION_RULES:
         if topic and rule["topic"] != topic:
@@ -1096,13 +1157,13 @@ def evaluate_rules(ctx: Dict, topic: str = None) -> List[Dict]:
                 "score":    rule["score"],
                 "title":    rule["title"],
                 "detail":   detail,
+                "activation": rule.get("activation", "natal"),
             })
     results.sort(key=lambda r: r["score"], reverse=True)
     return results
 
 
 def score_topic(fired_rules: List[Dict]) -> Dict:
-    """Return score summary for a topic's fired rules."""
     total   = sum(r["score"] for r in fired_rules)
     positive = [r for r in fired_rules if r["severity"] == "positive"]
     warnings = [r for r in fired_rules if r["severity"] in ["warning","caution"]]
@@ -1120,8 +1181,26 @@ def score_topic(fired_rules: List[Dict]) -> Dict:
     }
 
 
+def _apply_dasha_boost(fired_rules: List[Dict], topic_lord: str, md_planet: str,
+                       related_planets: List[str] = None) -> List[Dict]:
+    """Boost dasha rule scores when MD planet matches the topic lord or related planets."""
+    related = related_planets or []
+    boost_planets = set([topic_lord] + related)
+    if md_planet in boost_planets:
+        for r in fired_rules:
+            if r.get("activation") == "dasha_activated":
+                old_score = r["score"]
+                if old_score > 0:
+                    r["score"] = int(old_score * 1.5)
+                elif old_score < 0:
+                    r["score"] = int(old_score * 1.2)
+                r["title"] += " [⚡ ACTIVATED]"
+                r["detail"] += " This effect is amplified because the running Mahadasha planet directly governs this life area."
+    return fired_rules
+
+
 # ==================================================================
-# SECTION 4 — CORE MATH (fixed bugs)
+# SECTION 4 — CORE MATH
 # ==================================================================
 
 def longitude_to_sign(longitude: float) -> Tuple[str, float]:
@@ -1138,65 +1217,37 @@ def get_nakshatra(longitude: float) -> Tuple[str, int, float]:
 
 
 def get_navamsa(longitude: float) -> str:
-    """
-    Navamsa (D9): each sign divided into 9 × 3°20′.
-    Starting signs: Movable→same, Fixed→9th from itself, Dual→5th from itself.
-    BUG FIX v2: offsets were swapped. Fixed signs should start from 9th (index+8),
-    Dual from 5th (index+4). This was correct in v2 but double-checked here.
-    """
     sign_idx = int(longitude // 30)
     deg_in_sign = longitude % 30
-    part = int(deg_in_sign // (10 / 3))  # 0..8
+    part = int(deg_in_sign // (10 / 3))
     quality = SIGN_QUALITY[ZODIAC[sign_idx]]
     if quality == "Movable":
         start = sign_idx
     elif quality == "Fixed":
-        start = (sign_idx + 8) % 12   # 9th sign (0-indexed: +8)
-    else:  # Dual
-        start = (sign_idx + 4) % 12   # 5th sign (0-indexed: +4)
+        start = (sign_idx + 8) % 12
+    else:
+        start = (sign_idx + 4) % 12
     return ZODIAC[(start + part) % 12]
 
 
 def get_drekkana(longitude: float) -> str:
-    """
-    Drekkana (D3): each sign divided into 3 × 10°.
-    Starting signs: Movable→same, Fixed→5th, Dual→9th.
-    BUG FIX v2: had Fixed=+4, Dual=+8; correct is Fixed=+4 (5th), Dual=+8 (9th) — was actually correct.
-    Re-verified: Movable start=sign, Fixed start=sign+4, Dual start=sign+8.
-    """
     sign_idx = int(longitude // 30)
     deg_in_sign = longitude % 30
-    part = int(deg_in_sign // 10)  # 0, 1, 2
+    part = int(deg_in_sign // 10)
     quality = SIGN_QUALITY[ZODIAC[sign_idx]]
     if quality == "Movable":
         start = sign_idx
     elif quality == "Fixed":
         start = (sign_idx + 4) % 12
-    else:  # Dual
+    else:
         start = (sign_idx + 8) % 12
     return ZODIAC[(start + part) % 12]
 
 
 def get_saptamsa(longitude: float) -> str:
-    """
-    Saptamsa (D7): each sign divided into 7 parts.
-    BUG FIX v2: sign numbering is 1-based in tradition.
-    Odd signs (1,3,5…=index 0,2,4…): start from the same sign.
-    Even signs (2,4,6…=index 1,3,5…): start from 7th (index+6).
-    v2 had the condition inverted: `sign_idx % 2 == 0` treated even indices as odd signs.
-    Fixed: use (sign_idx + 1) % 2 == 1 to detect 1-based odd, i.e. sign_idx % 2 == 0.
-    Wait — index 0 = Aries = sign 1 (odd) → start = same → sign_idx % 2 == 0 means ODD sign.
-    v2 code was actually CORRECT for this but labelled confusingly. Re-verify:
-    Aries (idx=0, sign 1, odd): start=0 ✓
-    Taurus(idx=1, sign 2, even): start=1+6=7 ✓
-    v2 code: if sign_idx % 2 == 0 → start=sign_idx else start=(sign_idx+6)%12 → CORRECT.
-    Keeping as-is but adding clear comments.
-    """
     sign_idx = int(longitude // 30)
     deg_in_sign = longitude % 30
     part = int(deg_in_sign // (30 / 7))
-    # sign_idx % 2 == 0 → odd sign (Aries=1, Gemini=3…) → start from same sign
-    # sign_idx % 2 == 1 → even sign (Taurus=2, Cancer=4…) → start from 7th sign
     if sign_idx % 2 == 0:
         start = sign_idx
     else:
@@ -1205,12 +1256,6 @@ def get_saptamsa(longitude: float) -> str:
 
 
 def get_dasamsa(longitude: float) -> str:
-    """
-    Dasamsa (D10): each sign divided into 10 × 3°.
-    BUG FIX v2: same Movable/Fixed/Dual offsets applied as Drekkana but they differ:
-    Movable→same sign, Fixed→9th (index+8), Dual→5th (index+4).
-    v2 had Fixed=+8, Dual=+4 → CORRECT. Verified and kept.
-    """
     sign_idx = int(longitude // 30)
     deg_in_sign = longitude % 30
     part = int(deg_in_sign // 3)
@@ -1219,13 +1264,12 @@ def get_dasamsa(longitude: float) -> str:
         start = sign_idx
     elif quality == "Fixed":
         start = (sign_idx + 8) % 12
-    else:  # Dual
+    else:
         start = (sign_idx + 4) % 12
     return ZODIAC[(start + part) % 12]
 
 
 def get_dwadasamsa(longitude: float) -> str:
-    """Dwadasamsa (D12): each sign divided into 12 × 2.5°. Start from same sign."""
     sign_idx = int(longitude // 30)
     deg_in_sign = longitude % 30
     part = int(deg_in_sign // 2.5)
@@ -1251,7 +1295,7 @@ def get_planet_dignity(planet: str, sign: str) -> str:
 
 
 # ==================================================================
-# SECTION 5 — DASHA CALCULATIONS (fixed)
+# SECTION 5 — DASHA CALCULATIONS
 # ==================================================================
 
 @dataclass
@@ -1260,26 +1304,20 @@ class DashaPeriod:
     start_date: datetime
     end_date:   datetime
     years:      float
-    level:      str             # "MD", "AD", "PD"
+    level:      str
     parent:     Optional[str] = None
 
 
 def calculate_vimshottari_full(birth_date: datetime, moon_longitude: float) -> List[DashaPeriod]:
-    """
-    Calculate 9 Mahadashas starting from birth.
-    BUG FIX v2: degrees_covered was using modulo which is wrong — Moon's position
-    in the nakshatra is simply (moon_longitude - nakshatra_start_longitude),
-    where nakshatra_start_longitude = nak_idx * NAKSHATRA_SIZE.
-    """
     moon_lon = moon_longitude % 360
     nak_idx  = int(moon_lon / NAKSHATRA_SIZE)
     nak_start = nak_idx * NAKSHATRA_SIZE
-    deg_covered = moon_lon - nak_start          # degrees traversed in current nak
-    remaining   = NAKSHATRA_SIZE - deg_covered  # degrees left
+    deg_covered = moon_lon - nak_start
+    remaining   = NAKSHATRA_SIZE - deg_covered
     fraction    = remaining / NAKSHATRA_SIZE
     lord_idx    = nak_idx % 9
     start_lord  = DASHA_SEQUENCE[lord_idx]
-    balance     = fraction * DASHA_YEARS[start_lord]  # years remaining in 1st MD
+    balance     = fraction * DASHA_YEARS[start_lord]
 
     periods = []
     current_date = birth_date
@@ -1298,16 +1336,9 @@ def calculate_vimshottari_full(birth_date: datetime, moon_longitude: float) -> L
 
 
 def calculate_antardasha(md: DashaPeriod) -> List[DashaPeriod]:
-    """
-    Calculate 9 Antardashas within a Mahadasha.
-    BUG FIX v2: v2 double-scaled AD years.
-    Correct formula: AD_years = (MD_planet_years × AD_planet_years) / 120
-    This gives the AD duration within the FULL dasha.  For a partial first MD,
-    we must scale proportionally: AD_actual = AD_standard * (md.years / MD_total_years).
-    """
     md_idx          = DASHA_SEQUENCE.index(md.planet)
-    md_total_years  = DASHA_YEARS[md.planet]   # full duration of this dasha type
-    scale           = md.years / md_total_years # < 1 only for first (partial) MD
+    md_total_years  = DASHA_YEARS[md.planet]
+    scale           = md.years / md_total_years
 
     current_date = md.start_date
     ad_periods   = []
@@ -1327,7 +1358,6 @@ def calculate_antardasha(md: DashaPeriod) -> List[DashaPeriod]:
 
 
 def calculate_pratyantardasha(ad: DashaPeriod) -> List[DashaPeriod]:
-    """Calculate Pratyantardashas (PDs) within an Antardasha."""
     ad_idx         = DASHA_SEQUENCE.index(ad.planet)
     md_planet      = ad.parent or ad.planet
     ad_total_years = (DASHA_YEARS[md_planet] * DASHA_YEARS[ad.planet]) / TOTAL_DASHA_YEARS
@@ -1382,7 +1412,6 @@ def get_current_pratyantardasha(md_periods: List[DashaPeriod], check_date: datet
 
 
 def check_sade_sati(moon_sign: str, saturn_sign: str) -> Dict:
-    """Check Sade Sati (7.5-year Saturn transit over Moon sign ±1)."""
     m_idx = ZODIAC.index(moon_sign)
     s_idx = ZODIAC.index(saturn_sign) if saturn_sign in ZODIAC else -1
     if s_idx < 0:
@@ -1413,7 +1442,6 @@ class ChartData:
         self.lat        = lat
         self.lon        = lon
         self.tz         = tz
-        # Derived
         self.nakshatras   : Dict = {}
         self.navamsa      : Dict = {}
         self.drekkana     : Dict = {}
@@ -1421,6 +1449,8 @@ class ChartData:
         self.dasamsa      : Dict = {}
         self.dwadasamsa   : Dict = {}
         self.dignities    : Dict = {}
+        self.navamsa_dignities : Dict = {}
+        self.dasamsa_dignities : Dict = {}
         self.dasha_periods: List[DashaPeriod] = []
         self._compute_derived()
 
@@ -1440,6 +1470,8 @@ class ChartData:
             self.dwadasamsa[p] = get_dwadasamsa(lon)
             sign, _            = longitude_to_sign(lon)
             self.dignities[p]  = get_planet_dignity(p, sign)
+            self.navamsa_dignities[p] = get_planet_dignity(p, self.navamsa[p])
+            self.dasamsa_dignities[p] = get_planet_dignity(p, self.dasamsa[p])
 
         if self.birth_date:
             self.dasha_periods = calculate_vimshottari_full(
@@ -1498,29 +1530,43 @@ class ChartData:
 
 def compute_chart(year, month, day, hour, minute, lat, lon, tz_offset=0.0) -> ChartData:
     if not SWISSEPH_AVAILABLE:
-        raise RuntimeError("pyswisseph not installed. Use generate_demo_chart() instead.")
-    jd = swe.julday(year, month, day, hour + minute / 60.0 - tz_offset)
-    houses = swe.houses_ex(jd, lat, lon, b'W', swe.FLG_SIDEREAL)
-    ascendant = houses[1][0]
-    planets = {}
-    for pid, pname in zip(PLANET_IDS, PLANET_NAMES):
-        res = swe.calc_ut(jd, pid, swe.FLG_SIDEREAL)
-        planets[pname] = res[0][0]
-    planets["Ketu"] = (planets["Rahu"] + 180.0) % 360.0
-    lagna_sign, _ = longitude_to_sign(ascendant)
-    return ChartData(planets, ascendant, lagna_sign, datetime(year, month, day, hour, minute), lat, lon, tz_offset)
+        raise RuntimeError(
+            "pyswisseph is not installed. "
+            "Install it via: pip install pyswisseph. "
+            "Alternatively, enable 'Use Demo Data' in the app sidebar."
+        )
+    try:
+        jd = swe.julday(year, month, day, hour + minute / 60.0 - tz_offset)
+        houses = swe.houses_ex(jd, lat, lon, b'W', swe.FLG_SIDEREAL)
+        ascendant = houses[1][0]
+        planets = {}
+        for pid, pname in zip(PLANET_IDS, PLANET_NAMES):
+            res = swe.calc_ut(jd, pid, swe.FLG_SIDEREAL)
+            planets[pname] = res[0][0]
+        planets["Ketu"] = (planets["Rahu"] + 180.0) % 360.0
+        lagna_sign, _ = longitude_to_sign(ascendant)
+        return ChartData(planets, ascendant, lagna_sign, datetime(year, month, day, hour, minute), lat, lon, tz_offset)
+    except Exception as e:
+        raise RuntimeError(f"Ephemeris calculation failed for {year}-{month:02d}-{day:02d}: {str(e)}")
 
 
 def get_transits(year: int, month: int = 6, day: int = 15) -> Dict[str, float]:
     if not SWISSEPH_AVAILABLE:
-        raise RuntimeError("pyswisseph not installed.")
-    jd = swe.julday(year, month, day, 12.0)
-    transits = {}
-    for pid, pname in zip(PLANET_IDS, PLANET_NAMES):
-        res = swe.calc_ut(jd, pid, swe.FLG_SIDEREAL)
-        transits[pname] = res[0][0]
-    transits["Ketu"] = (transits["Rahu"] + 180.0) % 360.0
-    return transits
+        raise RuntimeError(
+            "pyswisseph is not installed. "
+            "Cannot compute transit positions. "
+            "Enable 'Use Demo Data' in the app sidebar."
+        )
+    try:
+        jd = swe.julday(year, month, day, 12.0)
+        transits = {}
+        for pid, pname in zip(PLANET_IDS, PLANET_NAMES):
+            res = swe.calc_ut(jd, pid, swe.FLG_SIDEREAL)
+            transits[pname] = res[0][0]
+        transits["Ketu"] = (transits["Rahu"] + 180.0) % 360.0
+        return transits
+    except Exception as e:
+        raise RuntimeError(f"Transit calculation failed for {year}-{month:02d}-{day:02d}: {str(e)}")
 
 
 # ==================================================================
@@ -1528,14 +1574,8 @@ def get_transits(year: int, month: int = 6, day: int = 15) -> Dict[str, float]:
 # ==================================================================
 
 def get_tara_score(ni1: int, ni2: int) -> int:
-    """
-    BUG FIX v2: v2 used a simple {3,5,7} inauspicious set but Tara Bala has
-    9 distinct positions each with its own score. Using TARA_SCORES table.
-    Both directions are averaged for compatibility.
-    """
-    d12 = ((ni2 - ni1) % 27) % 9 + 1  # Tara from person1 to person2
-    d21 = ((ni1 - ni2) % 27) % 9 + 1  # Tara from person2 to person1
-    # Give 3 if both directions auspicious, 1.5 if one, 0 if both inauspicious
+    d12 = ((ni2 - ni1) % 27) % 9 + 1
+    d21 = ((ni1 - ni2) % 27) % 9 + 1
     s1 = TARA_SCORES[d12]
     s2 = TARA_SCORES[d21]
     return round((s1 + s2) / 2)
@@ -1562,14 +1602,14 @@ def get_graha_maitri_score(lord1: str, lord2: str) -> int:
     if lord1 == lord2:
         return 5
     if lord2 in PLANET_FRIENDS.get(lord1, []) and lord1 in PLANET_FRIENDS.get(lord2, []):
-        return 5  # mutual friends
+        return 5
     if lord2 in PLANET_FRIENDS.get(lord1, []) or lord1 in PLANET_FRIENDS.get(lord2, []):
-        return 4  # one-way friend
+        return 4
     if lord2 in PLANET_ENEMIES.get(lord1, []) and lord1 in PLANET_ENEMIES.get(lord2, []):
-        return 0  # mutual enemies
+        return 0
     if lord2 in PLANET_ENEMIES.get(lord1, []) or lord1 in PLANET_ENEMIES.get(lord2, []):
-        return 1  # one-way enemy
-    return 3  # neutral
+        return 1
+    return 3
 
 
 def get_gana_score(g1: str, g2: str) -> int:
@@ -1585,13 +1625,6 @@ def get_gana_score(g1: str, g2: str) -> int:
 
 
 def get_bhakoot_score(idx1: int, idx2: int) -> int:
-    """
-    BUG FIX v2: diff=2,12 (2/12 axis) and diff=5,9 (5/9 axis = Nava-Pancham)
-    and diff=6 (6/8 axis) are inauspicious.
-    Note: 6/8 = diff 6 or diff 8 (both directions of the same axis).
-    2/12 = diff 2 or diff 10.  Nava-Pancham = diff 5 or diff 9 is actually BENEFICIAL.
-    Corrected: 6/8 (diff 6 or 8) = 0; 2/12 (diff 2 or 10) = 0; rest = 7.
-    """
     diff = (idx2 - idx1) % 12
     if diff in [2, 10, 6, 8]:
         return 0
@@ -1605,13 +1638,11 @@ def calculate_ashtakoota(c1: ChartData, c2: ChartData) -> Dict:
     i1, i2   = ZODIAC.index(m1), ZODIAC.index(m2)
     ni1, ni2 = NAKSHATRAS.index(n1), NAKSHATRAS.index(n2)
 
-    # Varna
     varna1 = VARNA_MAP[SIGN_ELEMENT[m1]]
     varna2 = VARNA_MAP[SIGN_ELEMENT[m2]]
     varna_order = {"Brahmin":1,"Kshatriya":2,"Vaishya":3,"Shudra":4}
-    varna  = 1 if varna_order[varna1] >= varna_order[varna2] else 0  # groom >= bride in varna
+    varna  = 1 if varna_order[varna1] >= varna_order[varna2] else 0
 
-    # Vashya
     vashya1 = VASHYA_MAP[m1]
     vashya2 = VASHYA_MAP[m2]
     vashya  = 2 if vashya1 == vashya2 else 1 if (
@@ -1654,39 +1685,51 @@ def calculate_ashtakoota(c1: ChartData, c2: ChartData) -> Dict:
 # ==================================================================
 
 def _narrative_block(fired: List[Dict]) -> str:
-    """Convert fired rules into a readable multi-paragraph narrative."""
     positives = [r for r in fired if r["severity"] == "positive"]
     neutrals  = [r for r in fired if r["severity"] == "neutral"]
     cautions  = [r for r in fired if r["severity"] in ["caution","warning"]]
 
     parts = []
     if positives:
-        parts.append("STRENGTHS:\n" + "\n".join(
-            f"  ✦ {r['title']}\n    {r['detail']}" for r in positives
+        parts.append("STRENGTHS:
+" + "
+".join(
+            f"  ✦ {r['title']}
+    {r['detail']}" for r in positives
         ))
     if neutrals:
-        parts.append("MIXED / NEUTRAL:\n" + "\n".join(
-            f"  ◈ {r['title']}\n    {r['detail']}" for r in neutrals
+        parts.append("MIXED / NEUTRAL:
+" + "
+".join(
+            f"  ◈ {r['title']}
+    {r['detail']}" for r in neutrals
         ))
     if cautions:
-        parts.append("CAUTIONS & REMEDIES NEEDED:\n" + "\n".join(
-            f"  ⚠ {r['title']}\n    {r['detail']}" for r in cautions
+        parts.append("CAUTIONS & REMEDIES NEEDED:
+" + "
+".join(
+            f"  ⚠ {r['title']}
+    {r['detail']}" for r in cautions
         ))
-    return "\n\n".join(parts) if parts else "No significant planetary indicators found for this topic."
+    return "
+
+".join(parts) if parts else "No significant planetary indicators found for this topic."
 
 
 def analyze_career(chart: ChartData, check_date: datetime = None) -> Dict:
     dasha_info = chart.get_current_dasha_info(check_date)
     ctx        = build_context(chart, dasha_info)
     fired      = evaluate_rules(ctx, topic="career")
-    summary    = score_topic(fired)
 
-    # Supplement: Dasamsa (D10) 10th lord
     lagna_idx   = ZODIAC.index(chart.lagna_sign)
-    tenth_sign  = ZODIAC[(lagna_idx + 9) % 12]
-    tenth_lord  = SIGN_LORD[tenth_sign]
-    tenth_house = ctx["house_map"].get(tenth_lord, 0)
+    tenth_lord  = SIGN_LORD[ZODIAC[(lagna_idx + 9) % 12]]
+    md_planet   = dasha_info.get("mahadasha", "")
+    fired       = _apply_dasha_boost(fired, tenth_lord, md_planet,
+                                     related_planets=["Sun", "Saturn", "Mercury", "Jupiter"])
 
+    summary    = score_topic(fired)
+    tenth_sign = ZODIAC[(lagna_idx + 9) % 12]
+    tenth_house = ctx["house_map"].get(tenth_lord, 0)
     planets_10th = [p for p, h in ctx["house_map"].items() if h == 10]
 
     return {
@@ -1711,14 +1754,16 @@ def analyze_marriage(chart: ChartData, check_date: datetime = None) -> Dict:
     dasha_info = chart.get_current_dasha_info(check_date)
     ctx        = build_context(chart, dasha_info)
     fired      = evaluate_rules(ctx, topic="marriage")
-    summary    = score_topic(fired)
 
     lagna_idx    = ZODIAC.index(chart.lagna_sign)
-    seventh_sign = ZODIAC[(lagna_idx + 6) % 12]
-    seventh_lord = SIGN_LORD[seventh_sign]
+    seventh_lord = SIGN_LORD[ZODIAC[(lagna_idx + 6) % 12]]
+    md_planet    = dasha_info.get("mahadasha", "")
+    fired        = _apply_dasha_boost(fired, seventh_lord, md_planet,
+                                      related_planets=["Venus", "Jupiter", "Mercury"])
+
+    summary    = score_topic(fired)
     seventh_house= ctx["house_map"].get(seventh_lord, 0)
     planets_7th  = [p for p, h in ctx["house_map"].items() if h == 7]
-
     venus_sign   = longitude_to_sign(chart.planets["Venus"])[0]
     venus_house  = ctx["house_map"].get("Venus", 0)
 
@@ -1745,11 +1790,14 @@ def analyze_children(chart: ChartData, check_date: datetime = None) -> Dict:
     dasha_info = chart.get_current_dasha_info(check_date)
     ctx        = build_context(chart, dasha_info)
     fired      = evaluate_rules(ctx, topic="children")
-    summary    = score_topic(fired)
 
     lagna_idx   = ZODIAC.index(chart.lagna_sign)
-    fifth_sign  = ZODIAC[(lagna_idx + 4) % 12]
-    fifth_lord  = SIGN_LORD[fifth_sign]
+    fifth_lord  = SIGN_LORD[ZODIAC[(lagna_idx + 4) % 12]]
+    md_planet   = dasha_info.get("mahadasha", "")
+    fired       = _apply_dasha_boost(fired, fifth_lord, md_planet,
+                                     related_planets=["Jupiter", "Venus", "Moon"])
+
+    summary    = score_topic(fired)
     fifth_house = ctx["house_map"].get(fifth_lord, 0)
     planets_5th = [p for p, h in ctx["house_map"].items() if h == 5]
     jupiter_house = ctx["house_map"].get("Jupiter", 0)
@@ -1779,9 +1827,13 @@ def analyze_health(chart: ChartData, check_date: datetime = None,
     sade_sati   = check_sade_sati(chart.moon_sign, transit_saturn_sign or "")
     ctx         = build_context(chart, dasha_info, sade_sati)
     fired       = evaluate_rules(ctx, topic="health")
-    summary     = score_topic(fired)
 
     lagna_lord    = SIGN_LORD[chart.lagna_sign]
+    md_planet     = dasha_info.get("mahadasha", "")
+    fired         = _apply_dasha_boost(fired, lagna_lord, md_planet,
+                                       related_planets=["Sun", "Jupiter", "Mars"])
+
+    summary     = score_topic(fired)
     planets_1st   = [p for p, h in ctx["house_map"].items() if h == 1]
     planets_6th   = [p for p, h in ctx["house_map"].items() if h == 6]
     planets_8th   = [p for p, h in ctx["house_map"].items() if h == 8]
@@ -1809,7 +1861,6 @@ def analyze_health(chart: ChartData, check_date: datetime = None,
 
 
 def analyze_general_yogas(chart: ChartData) -> Dict:
-    """Evaluate all general yogas from the rules layer."""
     dasha_info = chart.get_current_dasha_info()
     ctx        = build_context(chart, dasha_info)
     fired      = evaluate_rules(ctx, topic="general")
@@ -1833,17 +1884,14 @@ def calculate_varshphal(chart: ChartData, year: int) -> Dict:
     varsh_date  = datetime(year, birth_month, birth_day)
     years_elapsed = year - chart.birth_date.year
 
-    # Muntha: progresses one sign per year from Lagna
     muntha_lon   = (chart.ascendant + years_elapsed * 30) % 360
     muntha_sign, muntha_deg = longitude_to_sign(muntha_lon)
     muntha_lord  = SIGN_LORD[muntha_sign]
 
-    # Muntha house from natal lagna
     lagna_idx    = ZODIAC.index(chart.lagna_sign)
     muntha_idx   = ZODIAC.index(muntha_sign)
     muntha_house = ((muntha_idx - lagna_idx) % 12) + 1
 
-    # Transit planets (requires Swiss Ephemeris)
     transits = {}
     if SWISSEPH_AVAILABLE:
         try:
@@ -1873,7 +1921,6 @@ def _varshphal_themes(chart: ChartData, muntha_sign: str, muntha_house: int,
     muntha_idx = ZODIAC.index(muntha_sign)
     diff = (muntha_idx - lagna_idx) % 12
 
-    # Muntha in trikona from lagna (1,5,9) → auspicious
     if muntha_house in [1, 5, 9]:
         themes.append(f"Muntha in {muntha_sign} (House {muntha_house}, trikona) — year of growth, blessings, and fresh opportunities.")
     elif muntha_house in [4, 7, 10]:
@@ -1885,7 +1932,6 @@ def _varshphal_themes(chart: ChartData, muntha_sign: str, muntha_house: int,
     elif muntha_house in [8, 12]:
         themes.append(f"Muntha in {muntha_sign} (House {muntha_house}, dusthana) — year of transformation, hidden matters, and inner work.")
 
-    # Muntha lord quality
     muntha_lord_dignity = chart.dignities.get(muntha_lord, "Neutral")
     if muntha_lord_dignity in ["Exalted","Own","Mool Trikona"]:
         themes.append(f"Muntha lord {muntha_lord} is {muntha_lord_dignity} — amplifies the year's positive potential significantly.")
@@ -1905,23 +1951,40 @@ def get_year_prediction(chart: ChartData, year: int) -> Dict:
     check_date = datetime(year, 6, 15)
     dasha_info = chart.get_current_dasha_info(check_date)
 
-    # Transit Saturn sign (for Sade Sati)
-    transit_saturn_sign = None
+    # Transit range across full year (Jan + Jun + Dec averaged)
+    transit_dates = [
+        datetime(year, 1, 1),
+        datetime(year, 6, 15),
+        datetime(year, 12, 31)
+    ]
+    transit_saturn_lons = []
+    transit_jupiter_lons = []
+    transit_saturn_signs = []
+
     if SWISSEPH_AVAILABLE:
-        try:
-            tr = get_transits(year)
-            transit_saturn_sign = longitude_to_sign(tr["Saturn"])[0]
-            transit_jupiter_sign= longitude_to_sign(tr["Jupiter"])[0]
-        except Exception:
-            transit_saturn_sign  = None
+        for td in transit_dates:
+            try:
+                tr = get_transits(td.year, td.month, td.day)
+                transit_saturn_lons.append(tr["Saturn"])
+                transit_jupiter_lons.append(tr["Jupiter"])
+                transit_saturn_signs.append(longitude_to_sign(tr["Saturn"])[0])
+            except RuntimeError as e:
+                raise RuntimeError(f"Yearly transit calculation failed: {e}")
+
+        if transit_saturn_lons:
+            avg_saturn_lon = sum(transit_saturn_lons) / len(transit_saturn_lons)
+            avg_jupiter_lon = sum(transit_jupiter_lons) / len(transit_jupiter_lons)
+            transit_saturn_sign = longitude_to_sign(avg_saturn_lon)[0]
+            transit_jupiter_sign = longitude_to_sign(avg_jupiter_lon)[0]
+        else:
+            transit_saturn_sign = None
             transit_jupiter_sign = None
     else:
-        transit_saturn_sign  = None
+        transit_saturn_sign = None
         transit_jupiter_sign = None
 
     sade_sati = check_sade_sati(chart.moon_sign, transit_saturn_sign or "")
 
-    # Jupiter transit impact
     jupiter_transit_note = ""
     if transit_jupiter_sign:
         j_idx = ZODIAC.index(transit_jupiter_sign)
@@ -1964,17 +2027,20 @@ def get_year_prediction(chart: ChartData, year: int) -> Dict:
 
 
 def _year_summary(year, dasha, sade_sati, varshphal, career, marriage, children, health) -> str:
-    lines = [f"=== YEAR {year} PREDICTION SUMMARY ===\n"]
+    lines = [f"=== YEAR {year} PREDICTION SUMMARY ===
+"]
 
     md = dasha.get("mahadasha","?")
     ad = dasha.get("antardasha","?")
     pd = dasha.get("pratyantardasha","?")
     lines.append(f"Dasha: {md} MD / {ad} AD / {pd} PD")
     lines.append(f"       MD runs: {dasha.get('mahadasha_start','')} → {dasha.get('mahadasha_end','')}")
-    lines.append(f"       AD runs: {dasha.get('antardasha_start','')} → {dasha.get('antardasha_end','')}\n")
+    lines.append(f"       AD runs: {dasha.get('antardasha_start','')} → {dasha.get('antardasha_end','')}
+")
 
     if sade_sati.get("active"):
-        lines.append(f"⚠  SADE SATI ACTIVE: {sade_sati['phase']}\n")
+        lines.append(f"⚠  SADE SATI ACTIVE: {sade_sati['phase']}
+")
 
     if varshphal:
         lines.append(f"Varshphal (Solar Return) — Muntha in {varshphal.get('muntha_sign','')} "
@@ -1985,9 +2051,11 @@ def _year_summary(year, dasha, sade_sati, varshphal, career, marriage, children,
 
     for label, data in [("Career",career),("Marriage",marriage),("Children",children),("Health",health)]:
         lines.append(f"{label}: {data.get('rating','?')} (score {data.get('net_score',0):+d})")
-        lines.append(f"  {data.get('summary','')}\n")
+        lines.append(f"  {data.get('summary','')}
+")
 
-    return "\n".join(lines)
+    return "
+".join(lines)
 
 
 # ==================================================================
@@ -1995,17 +2063,16 @@ def _year_summary(year, dasha, sade_sati, varshphal, career, marriage, children,
 # ==================================================================
 
 def generate_demo_chart() -> ChartData:
-    """Generate a sample chart for testing without Swiss Ephemeris."""
     planets = {
-        "Sun":     45.5,   # Taurus
-        "Moon":   128.3,   # Leo
-        "Mars":   200.0,   # Libra
-        "Mercury": 50.2,   # Taurus
-        "Jupiter": 95.0,   # Cancer (Exalted!)
-        "Venus":   70.5,   # Gemini
-        "Saturn": 310.0,   # Aquarius (Own)
-        "Rahu":   175.0,   # Virgo
-        "Ketu":   355.0,   # Pisces
+        "Sun":     45.5,
+        "Moon":   128.3,
+        "Mars":   200.0,
+        "Mercury": 50.2,
+        "Jupiter": 95.0,
+        "Venus":   70.5,
+        "Saturn": 310.0,
+        "Rahu":   175.0,
+        "Ketu":   355.0,
     }
     return ChartData(
         planets, ascendant=30.0, lagna_sign="Taurus",
@@ -2030,12 +2097,11 @@ def load_chart_from_file(filepath: str) -> ChartData:
 
 
 def print_full_report(chart: ChartData, year: int = None):
-    """Print a complete textual report for a chart."""
     import textwrap
     year = year or datetime.now().year
 
     print("=" * 70)
-    print("VEDIC ASTROLOGY REPORT — v3.0")
+    print("VEDIC ASTROLOGY REPORT — v3.1")
     print("=" * 70)
     print(f"Lagna:     {chart.lagna_sign} ({SIGN_SANSKRIT[chart.lagna_sign]})")
     print(f"Moon sign: {chart.moon_sign}")
@@ -2063,42 +2129,29 @@ def print_full_report(chart: ChartData, year: int = None):
 
     print("CAREER ANALYSIS")
     print("-" * 40)
-    print(chart_analyze_text(prediction["career"]["narrative"]))
+    print(prediction["career"]["narrative"])
 
-    print("\nMARRIAGE ANALYSIS")
+    print("
+MARRIAGE ANALYSIS")
     print("-" * 40)
-    print(chart_analyze_text(prediction["marriage"]["narrative"]))
+    print(prediction["marriage"]["narrative"])
 
-    print("\nCHILDREN ANALYSIS")
+    print("
+CHILDREN ANALYSIS")
     print("-" * 40)
-    print(chart_analyze_text(prediction["children"]["narrative"]))
+    print(prediction["children"]["narrative"])
 
-    print("\nHEALTH ANALYSIS")
+    print("
+HEALTH ANALYSIS")
     print("-" * 40)
-    print(chart_analyze_text(prediction["health"]["narrative"]))
+    print(prediction["health"]["narrative"])
 
-    print("\nYOGAS IN NATAL CHART")
+    print("
+YOGAS IN NATAL CHART")
     print("-" * 40)
-    print(chart_analyze_text(prediction["general_yogas"]["narrative"]))
+    print(prediction["general_yogas"]["narrative"])
 
 
-def chart_analyze_text(text: str, width: int = 80) -> str:
-    """Wrap long detail lines for readability."""
-    import textwrap
-    lines = text.split("\n")
-    wrapped = []
-    for line in lines:
-        if line.startswith("  ") and len(line) > width:
-            indent = "    "
-            wrapped.append(textwrap.fill(line, width=width, subsequent_indent=indent))
-        else:
-            wrapped.append(line)
-    return "\n".join(wrapped)
-
-
-# ==================================================================
-# QUICK TEST
-# ==================================================================
 if __name__ == "__main__":
     chart = generate_demo_chart()
     print_full_report(chart, year=2025)
