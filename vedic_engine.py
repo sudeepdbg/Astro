@@ -43,6 +43,8 @@ ZODIAC = [
     "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"
 ]
 
+ZODIAC_SHORT = ["ARI","TAU","GEM","CAN","LEO","VIR","LIB","SCO","SAG","CAP","AQU","PIS"]
+
 SIGN_SANSKRIT = {
     "Aries": "Mesha", "Taurus": "Vrishabha", "Gemini": "Mithuna",
     "Cancer": "Karka", "Leo": "Simha", "Virgo": "Kanya",
