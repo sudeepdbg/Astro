@@ -1877,7 +1877,17 @@ def analyze_general_yogas(chart: ChartData) -> Dict:
 
 def calculate_varshphal(chart: ChartData, year: int) -> Dict:
     if not chart.birth_date:
-        return {}
+        return {
+            "year": year,
+            "varshphal_date": "N/A",
+            "years_elapsed": 0,
+            "muntha_sign": "",
+            "muntha_house": 0,
+            "muntha_longitude": 0.0,
+            "muntha_lord": "",
+            "transits": {},
+            "themes": ["Birth date not available — cannot compute Varshphal."],
+        }
 
     birth_month = chart.birth_date.month
     birth_day   = chart.birth_date.day
