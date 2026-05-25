@@ -28,13 +28,35 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------------
+# SESSION STATE INITIALIZATION
+# ------------------------------------------------------------------
+def init_session_state():
+    defaults = {
+        "birth_name": "Native",
+        "birth_date": datetime(1991, 4, 12),
+        "birth_time": datetime.strptime("10:26", "%H:%M").time(),
+        "birth_lat": 25.42,
+        "birth_lon": 86.13,
+        "birth_tz": 5.5,
+        "birth_city": "",
+        "computed_chart": None,
+        "computed_chart_name": "",
+        "ai_ctx": "",
+    }
+    for key, val in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = val
+
+init_session_state()
+
+# ------------------------------------------------------------------
 # GEOCODING
 # ------------------------------------------------------------------
 @st.cache_resource
 def get_geolocator():
     try:
         from geopy.geocoders import Nominatim
-        return Nominatim(user_agent="vedic-astro-suite/2.0", timeout=10)
+        return Nominatim(user_agent="vedic-astro-suite/3.1", timeout=10)
     except Exception:
         return None
 
@@ -67,6 +89,8 @@ TIMEZONES = {
     "AEDT (Sydney DST, UTC+11:00)": 11.0,
     "Custom Offset": None
 }
+
+TZ_KEYS = list(TIMEZONES.keys())
 
 # ------------------------------------------------------------------
 # CUSTOM CSS — LIGHT THEME ONLY
@@ -239,23 +263,39 @@ e.g. <i>Sitamarhi, Bihar, India</i> or <i>Muzaffarpur, Bihar, India</i>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# INPUT COMPONENT
+# PERSISTED INPUT COMPONENT
 # ------------------------------------------------------------------
 def birth_input_form(key_prefix: str, default_name: str):
+    """Reusable birth data form with session state persistence."""
+
+    # Use session state keys that persist across pages
+    ss_name = f"birth_name"
+    ss_date = f"birth_date"
+    ss_time = f"birth_time"
+    ss_lat = f"birth_lat"
+    ss_lon = f"birth_lon"
+    ss_tz = f"birth_tz"
+    ss_city = f"birth_city"
+    ss_geo_ok = f"birth_geo_ok"
+
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
-        name = st.text_input("👤 Name", default_name, key=f"{key_prefix}_name")
+        name = st.text_input("👤 Name", st.session_state[ss_name], key=f"{key_prefix}_name")
+        st.session_state[ss_name] = name
     with c2:
-        dob = st.date_input("📅 Date of Birth", datetime(1991, 4, 12), key=f"{key_prefix}_date")
+        dob = st.date_input("📅 Date of Birth", st.session_state[ss_date], key=f"{key_prefix}_date")
+        st.session_state[ss_date] = dob
     with c3:
-        tob = st.time_input("🕒 Time of Birth", datetime.strptime("10:26", "%H:%M").time(), key=f"{key_prefix}_time")
+        tob = st.time_input("🕒 Time of Birth", st.session_state[ss_time], key=f"{key_prefix}_time")
+        st.session_state[ss_time] = tob
 
     st.markdown('<div class="card-title">📍 Birth Place</div>', unsafe_allow_html=True)
     city_col, btn_col = st.columns([4, 1])
     with city_col:
         city_name = st.text_input("City / Town (e.g., Sitamarhi, Muzaffarpur, Datia, Gwalior, Begusarai...)",
-                                  "", key=f"{key_prefix}_city",
+                                  st.session_state[ss_city], key=f"{key_prefix}_city",
                                   placeholder="Type city name and click Find")
+        st.session_state[ss_city] = city_name
     with btn_col:
         st.write("")
         st.write("")
@@ -269,38 +309,85 @@ def birth_input_form(key_prefix: str, default_name: str):
         with st.spinner("Locating..."):
             coords = geocode_city(city_name)
             if coords:
-                st.session_state[lat_key] = round(coords[0], 4)
-                st.session_state[lon_key] = round(coords[1], 4)
-                st.session_state[geo_ok_key] = True
+                st.session_state[ss_lat] = round(coords[0], 4)
+                st.session_state[ss_lon] = round(coords[1], 4)
+                st.session_state[ss_geo_ok] = True
                 st.toast(f"✅ Found: {coords[0]:.4f}, {coords[1]:.4f}")
             else:
-                st.session_state[geo_ok_key] = False
+                st.session_state[ss_geo_ok] = False
                 st.error("❌ City not found. Please enter coordinates manually or try 'City, State, Country'.")
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
-        tz_choice = st.selectbox("🌍 Timezone", list(TIMEZONES.keys()),
-                                 index=0, key=f"{key_prefix}_tz")
+        # Find index of current tz in TIMEZONES
+        current_tz = st.session_state[ss_tz]
+        tz_index = 0
+        for idx, (k, v) in enumerate(TIMEZONES.items()):
+            if v == current_tz:
+                tz_index = idx
+                break
+        tz_choice = st.selectbox("🌍 Timezone", TZ_KEYS, index=tz_index, key=f"{key_prefix}_tz")
         tz_val = TIMEZONES[tz_choice]
         if tz_val is None:
-            tz_val = st.number_input("UTC Offset (+/- hrs)", -12.0, 14.0, 5.5, 0.5,
+            tz_val = st.number_input("UTC Offset (+/- hrs)", -12.0, 14.0, current_tz, 0.5,
                                      key=f"{key_prefix}_tz_custom")
+        st.session_state[ss_tz] = tz_val
     with lat_col:
         lat = st.number_input("Lat", -90.0, 90.0,
-                            value=st.session_state.get(lat_key, 25.42),
+                            value=st.session_state[ss_lat],
                             key=lat_key)
+        st.session_state[ss_lat] = lat
     with lon_col:
         lon = st.number_input("Lon", -180.0, 180.0,
-                            value=st.session_state.get(lon_key, 86.13),
+                            value=st.session_state[ss_lon],
                             key=lon_key)
+        st.session_state[ss_lon] = lon
 
-    if st.session_state.get(geo_ok_key):
+    if st.session_state.get(ss_geo_ok):
         st.caption(f"✅ Coordinates locked: {lat:.4f}, {lon:.4f}")
 
     return name, dob, tob, lat, lon, tz_val
 
+
 # ------------------------------------------------------------------
-# CHART WHEEL — NORTH INDIAN (DIAMOND) FIXED
+# CHART COMPUTATION HELPER
+# ------------------------------------------------------------------
+def get_or_compute_chart(key_prefix: str, default_name: str, force_recompute: bool = False):
+    """Get chart from session state or compute new one. Returns (chart, name)."""
+    ss_chart = "computed_chart"
+    ss_name = "computed_chart_name"
+
+    # If we already have a computed chart and not forcing recompute, return it
+    if not force_recompute and st.session_state.get(ss_chart) is not None:
+        return st.session_state[ss_chart], st.session_state.get(ss_name, default_name)
+
+    # Otherwise compute from session state birth details
+    name = st.session_state["birth_name"]
+    date = st.session_state["birth_date"]
+    time = st.session_state["birth_time"]
+    lat = st.session_state["birth_lat"]
+    lon = st.session_state["birth_lon"]
+    tz = st.session_state["birth_tz"]
+
+    with st.spinner("Calculating sidereal positions with Lahiri Ayanamsa..."):
+        try:
+            if use_demo:
+                chart = generate_demo_chart()
+                st.info("ℹ️ Demo mode active — install pyswisseph for live ephemeris.")
+            else:
+                chart = compute_chart(date.year, date.month, date.day,
+                                      time.hour, time.minute, lat, lon, tz)
+        except RuntimeError as e:
+            st.error(f"❌ {e}")
+            st.stop()
+
+    st.session_state[ss_chart] = chart
+    st.session_state[ss_name] = name
+    return chart, name
+
+
+# ------------------------------------------------------------------
+# CHART WHEEL — NORTH INDIAN (DIAMOND)
 # ------------------------------------------------------------------
 def draw_north_indian_chart(chart: ChartData, title: str):
     fig, ax = plt.subplots(figsize=(10, 10))
@@ -311,37 +398,28 @@ def draw_north_indian_chart(chart: ChartData, title: str):
     ax.set_aspect('equal')
     ax.axis('off')
 
-    # Diamond vertices: top, right, bottom, left
     diamond_verts = [(5, 10), (10, 5), (5, 0), (0, 5)]
     diamond = plt.Polygon(diamond_verts, fill=False, edgecolor='#92400e', linewidth=2.5)
     ax.add_patch(diamond)
 
-    # Cross lines forming 4 central triangles + inner square
-    # Vertical: top(5,10) to bottom(5,0)
-    # Horizontal: left(0,5) to right(10,5)
     ax.plot([5, 5], [10, 0], color='#92400e', linewidth=1.5)
     ax.plot([0, 10], [5, 5], color='#92400e', linewidth=1.5)
-
-    # Diagonals of inner square: from midpoints of diamond edges
-    # Midpoints: top-right(7.5,7.5), bottom-right(7.5,2.5), bottom-left(2.5,2.5), top-left(2.5,7.5)
     ax.plot([2.5, 7.5], [7.5, 2.5], color='#92400e', linewidth=1.5)
     ax.plot([2.5, 7.5], [2.5, 7.5], color='#92400e', linewidth=1.5)
 
-    # House positions (center of each house cell)
-    # House 1 = top triangle, House 2 = top-right triangle, etc.
     houses = {
-        1:  (5.0, 7.5),   # Top triangle center
-        2:  (7.5, 7.5),   # Top-right small triangle
-        3:  (8.75, 5.0),  # Right outer triangle
-        4:  (7.5, 2.5),   # Bottom-right small triangle
-        5:  (5.0, 2.5),   # Bottom triangle center
-        6:  (2.5, 2.5),   # Bottom-left small triangle
-        7:  (1.25, 5.0),  # Left outer triangle
-        8:  (2.5, 7.5),   # Top-left small triangle
-        9:  (6.25, 6.25), # Inner top-right
-        10: (6.25, 3.75), # Inner bottom-right
-        11: (3.75, 3.75), # Inner bottom-left
-        12: (3.75, 6.25), # Inner top-left
+        1:  (5.0, 7.5),
+        2:  (7.5, 7.5),
+        3:  (8.75, 5.0),
+        4:  (7.5, 2.5),
+        5:  (5.0, 2.5),
+        6:  (2.5, 2.5),
+        7:  (1.25, 5.0),
+        8:  (2.5, 7.5),
+        9:  (6.25, 6.25),
+        10: (6.25, 3.75),
+        11: (3.75, 3.75),
+        12: (3.75, 6.25),
     }
 
     lagna_idx = ZODIAC.index(chart.lagna_sign)
@@ -351,17 +429,13 @@ def draw_north_indian_chart(chart: ChartData, title: str):
         short = ZODIAC_SHORT[(lagna_idx + house_num - 1) % 12]
         pos = houses[house_num]
 
-        # House number (small, top of cell)
         ax.text(pos[0], pos[1] + 0.35, str(house_num),
                 ha='center', va='center', fontsize=7, color='#9ca3af', fontweight='bold')
-        # Sign name
         ax.text(pos[0], pos[1], short,
                 ha='center', va='center', fontsize=10, color='#92400e', fontweight='bold')
-        # Sanskrit
         ax.text(pos[0], pos[1] - 0.35, SIGN_SANSKRIT[sign][:4],
                 ha='center', va='center', fontsize=7, color='#b45309')
 
-    # Planets
     planet_symbols = {"Sun": "☉", "Moon": "☽", "Mars": "♂", "Mercury": "☿",
                       "Jupiter": "♃", "Venus": "♀", "Saturn": "♄", "Rahu": "☊", "Ketu": "☋"}
     planet_colors = {"Sun": "#d97706", "Moon": "#6b7280", "Mars": "#dc2626",
@@ -392,7 +466,7 @@ def draw_north_indian_chart(chart: ChartData, title: str):
 
 
 # ------------------------------------------------------------------
-# CHART WHEEL — SOUTH INDIAN (CIRCULAR) FIXED
+# CHART WHEEL — SOUTH INDIAN (CIRCULAR)
 # ------------------------------------------------------------------
 def draw_circular_chart(chart: ChartData, title: str):
     fig, ax = plt.subplots(figsize=(9, 9), subplot_kw=dict(projection='polar'))
@@ -515,7 +589,7 @@ CURRENT DASHA:
 # ------------------------------------------------------------------
 # RULE-BASED PREDICTION DISPLAY
 # ------------------------------------------------------------------
-def render_fired_rules(fired_rules: List[Dict]):
+def render_fired_rules(fired_rules):
     if not fired_rules:
         st.info("No significant planetary indicators found for this topic.")
         return
@@ -622,7 +696,7 @@ if page == "🏠 Home":
             <li><b>Active Yoga Tagging:</b> Natal vs Dasha-activated rules clearly distinguished</li>
             <li><b>Redesigned North Indian Chart:</b> Proper diamond grid with correct house geometry</li>
             <li><b>Pratyantardasha Display:</b> PD level now visible in dasha card</li>
-            <li><b>Clear Ephemeris Errors:</b> Descriptive error messages with remediation steps</li>
+            <li><b>Persistent Birth Details:</b> Your birth data is remembered across all pages</li>
         </ul>
     </div>
     """, unsafe_allow_html=True)
@@ -683,7 +757,7 @@ elif page == "📜 Horoscope":
     with c2:
         chart_style = st.selectbox("Chart Style", ["North Indian (Diamond)", "South Indian (Circular)"])
 
-    if "computed_chart" in st.session_state:
+    if st.session_state.get("computed_chart") is not None:
         chart = st.session_state["computed_chart"]
         name = st.session_state["computed_chart_name"]
 
@@ -878,10 +952,10 @@ elif page == "🔮 Yearly Predictions":
             <div class="card">
                 <div class="card-title">📅 {pred['year']} — Year Summary</div>
                 <p><b>Mahadasha:</b> {pred['dasha'].get('mahadasha', 'N/A')} | <b>Antardasha:</b> {pred['dasha'].get('antardasha', 'N/A')} | <b>Pratyantardasha:</b> {pred['dasha'].get('pratyantardasha', 'N/A')}</p>
-                <p><b>Transit Saturn:</b> {pred['transits']['Saturn']} | <b>Transit Jupiter:</b> {pred['transits']['Jupiter']}</p>
-                <p><b>Muntha:</b> {pred['varshphal']['muntha_sign']} | <b>Themes:</b> {', '.join(pred['varshphal']['themes'])}</p>
-                <p style="color:#b91c1c;"><b>{pred['sade_sati']}</b></p>
-                <p><i>{pred['summary']}</i></p>
+                <p><b>Transit Saturn:</b> {pred.get('transit_saturn', 'N/A')} | <b>Transit Jupiter:</b> {pred.get('transit_jupiter', 'N/A')}</p>
+                <p><b>Muntha:</b> {pred['varshphal'].get('muntha_sign', 'N/A')} | <b>Themes:</b> {', '.join(pred['varshphal'].get('themes', []))}</p>
+                <p style="color:#b91c1c;"><b>{pred.get('sade_sati', {}).get('phase', '') if isinstance(pred.get('sade_sati'), dict) else pred.get('sade_sati', '')}</b></p>
+                <p><i>{pred.get('summary', '')}</i></p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -894,7 +968,6 @@ elif page == "🔮 Yearly Predictions":
                     <div class="card-title">🔮 {t} Analysis — {data['rating']} (Score: {data['net_score']:+d})</div>
                 """, unsafe_allow_html=True)
 
-                # Render fired rules with severity badges
                 render_fired_rules(data.get('fired_rules', []))
 
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -943,12 +1016,16 @@ elif page == "📊 Varshphal":
 
             varsh = calculate_varshphal(chart, year)
 
+            if not varsh:
+                st.error("❌ Unable to calculate Varshphal. Birth date may be missing or invalid.")
+                st.stop()
+
             st.markdown(f"""
             <div class="card" style="text-align:center;">
                 <h2>{year} Varshphal</h2>
-                <p style="font-size:1.2rem;"><b>Varshphal Date:</b> {varsh['varshphal_date']}</p>
-                <p style="font-size:1.2rem;"><b>Muntha:</b> {varsh['muntha_sign']} ({varsh['muntha_longitude']}°)</p>
-                <p style="font-size:1.2rem;"><b>Years Elapsed:</b> {varsh['years_elapsed']}</p>
+                <p style="font-size:1.2rem;"><b>Varshphal Date:</b> {varsh.get('varshphal_date', 'N/A')}</p>
+                <p style="font-size:1.2rem;"><b>Muntha:</b> {varsh.get('muntha_sign', 'N/A')} ({varsh.get('muntha_longitude', 'N/A')}°)</p>
+                <p style="font-size:1.2rem;"><b>Years Elapsed:</b> {varsh.get('years_elapsed', 'N/A')}</p>
             </div>
             """, unsafe_allow_html=True)
 
@@ -956,17 +1033,19 @@ elif page == "📊 Varshphal":
             <div class="card">
                 <div class="card-title">📖 Annual Themes</div>
             """, unsafe_allow_html=True)
-            for theme in varsh['themes']:
+            for theme in varsh.get('themes', []):
                 st.markdown(f"<p>• {theme}</p>", unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
-            st.markdown(f"""
-            <div class="card">
-                <div class="card-title">🎯 Muntha in {varsh['muntha_sign']}</div>
-                <p>Muntha lord <b>{SIGN_LORD[varsh['muntha_sign']]}</b> governs the year.</p>
-                <p>{_muntha_interpretation(varsh['muntha_sign'], chart.lagna_sign)}</p>
-            </div>
-            """, unsafe_allow_html=True)
+            muntha_sign = varsh.get('muntha_sign', '')
+            if muntha_sign:
+                st.markdown(f"""
+                <div class="card">
+                    <div class="card-title">🎯 Muntha in {muntha_sign}</div>
+                    <p>Muntha lord <b>{SIGN_LORD.get(muntha_sign, 'Unknown')}</b> governs the year.</p>
+                    <p>{_muntha_interpretation(muntha_sign, chart.lagna_sign)}</p>
+                </div>
+                """, unsafe_allow_html=True)
 
 
 elif page == "❓ AI Astrologer":
