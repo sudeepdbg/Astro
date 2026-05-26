@@ -266,10 +266,10 @@ e.g. <i>Sitamarhi, Bihar, India</i> or <i>Muzaffarpur, Bihar, India</i>
 """, unsafe_allow_html=True)
 
 # ------------------------------------------------------------------
-# PERSISTED INPUT COMPONENT
+# PERSISTED INPUT COMPONENT (with precise time input)
 # ------------------------------------------------------------------
 def birth_input_form(key_prefix: str, default_name: str):
-    """Reusable birth data form with session state persistence."""
+    """Reusable birth data form with session state persistence and precise time (minute-level)."""
     ss_name = f"birth_name"
     ss_date = f"birth_date"
     ss_time = f"birth_time"
@@ -287,7 +287,8 @@ def birth_input_form(key_prefix: str, default_name: str):
         dob = st.date_input("📅 Date of Birth", st.session_state[ss_date], key=f"{key_prefix}_date")
         st.session_state[ss_date] = dob
     with c3:
-        tob = st.time_input("🕒 Time of Birth", st.session_state[ss_time], key=f"{key_prefix}_time")
+        # Time input with step=60 seconds (1 minute) to allow precise minutes like 9:01, 9:03
+        tob = st.time_input("🕒 Time of Birth", st.session_state[ss_time], step=60, key=f"{key_prefix}_time")
         st.session_state[ss_time] = tob
 
     st.markdown('<div class="card-title">📍 Birth Place</div>', unsafe_allow_html=True)
@@ -382,11 +383,11 @@ def get_or_compute_chart(key_prefix: str, default_name: str, force_recompute: bo
     return chart, name
 
 # ------------------------------------------------------------------
-# IMPROVED CHART WHEEL — NORTH INDIAN (DIAMOND) WITH POLISHED GEOMETRY
+# COMPACT NORTH INDIAN CHART — REDUCED SIZE
 # ------------------------------------------------------------------
 def draw_north_indian_chart(chart: ChartData, title: str):
-    """Draw a clean, elegant North Indian diamond chart with proper house divisions."""
-    fig, ax = plt.subplots(figsize=(11, 11))
+    """Draw a compact, elegant North Indian diamond chart with smaller footprint."""
+    fig, ax = plt.subplots(figsize=(7, 7))  # Reduced from 11x11
     fig.patch.set_facecolor('#faf8f5')
     ax.set_facecolor('#faf8f5')
     ax.set_xlim(0, 10)
@@ -396,60 +397,38 @@ def draw_north_indian_chart(chart: ChartData, title: str):
 
     # Define diamond vertices
     diamond_verts = [(5, 10), (10, 5), (5, 0), (0, 5)]
-    diamond = plt.Polygon(diamond_verts, fill=False, edgecolor='#a05a2c', linewidth=2.5, linestyle='-', alpha=0.7)
+    diamond = plt.Polygon(diamond_verts, fill=False, edgecolor='#a05a2c', linewidth=2, linestyle='-', alpha=0.7)
     ax.add_patch(diamond)
     
-    # Draw the main cross lines (vertical & horizontal)
-    ax.plot([5, 5], [10, 0], color='#a05a2c', linewidth=1.2, alpha=0.6)
-    ax.plot([0, 10], [5, 5], color='#a05a2c', linewidth=1.2, alpha=0.6)
-    # Draw diagonal lines to form 8 triangles (classic North Indian style)
-    ax.plot([2.5, 7.5], [7.5, 2.5], color='#a05a2c', linewidth=1, alpha=0.5, linestyle=':')
-    ax.plot([2.5, 7.5], [2.5, 7.5], color='#a05a2c', linewidth=1, alpha=0.5, linestyle=':')
+    # Draw the main cross lines
+    ax.plot([5, 5], [10, 0], color='#a05a2c', linewidth=1, alpha=0.6)
+    ax.plot([0, 10], [5, 5], color='#a05a2c', linewidth=1, alpha=0.6)
+    ax.plot([2.5, 7.5], [7.5, 2.5], color='#a05a2c', linewidth=0.8, alpha=0.5, linestyle=':')
+    ax.plot([2.5, 7.5], [2.5, 7.5], color='#a05a2c', linewidth=0.8, alpha=0.5, linestyle=':')
     
-    # House positions (coordinates manually adjusted for balance)
-    # Outer houses: 1 to 8
+    # House positions (adjusted for compactness)
     houses_pos = {
-        1:  (5.0, 8.2),    # Top
-        2:  (7.8, 7.8),    # Top-right
-        3:  (8.8, 5.0),    # Right
-        4:  (7.8, 2.2),    # Bottom-right
-        5:  (5.0, 1.8),    # Bottom
-        6:  (2.2, 2.2),    # Bottom-left
-        7:  (1.2, 5.0),    # Left
-        8:  (2.2, 7.8),    # Top-left
-        # Inner houses 9-12 (central square)
-        9:  (6.5, 6.5),
-        10: (6.5, 3.5),
-        11: (3.5, 3.5),
-        12: (3.5, 6.5),
+        1:  (5.0, 8.2), 2:  (7.8, 7.8), 3:  (8.8, 5.0), 4:  (7.8, 2.2),
+        5:  (5.0, 1.8), 6:  (2.2, 2.2), 7:  (1.2, 5.0), 8:  (2.2, 7.8),
+        9:  (6.5, 6.5), 10: (6.5, 3.5), 11: (3.5, 3.5), 12: (3.5, 6.5),
     }
     
     lagna_idx = ZODIAC.index(chart.lagna_sign)
     
-    # Draw soft background fill for each house (using rectangles behind text? but we use text background)
     for house_num in range(1, 13):
         sign = ZODIAC[(lagna_idx + house_num - 1) % 12]
         short = ZODIAC_SHORT[(lagna_idx + house_num - 1) % 12]
         pos = houses_pos[house_num]
-        
-        # House number small
-        ax.text(pos[0], pos[1] + 0.45, str(house_num),
-                ha='center', va='center', fontsize=8, color='#9ca3af', fontweight='bold', alpha=0.7)
-        # Sign symbol (short)
-        ax.text(pos[0], pos[1], short,
-                ha='center', va='center', fontsize=13, color='#6b2d0f', fontweight='bold', fontfamily='sans-serif')
-        # Sanskrit name small below
-        ax.text(pos[0], pos[1] - 0.4, SIGN_SANSKRIT[sign][:4],
-                ha='center', va='center', fontsize=7, color='#b45309', alpha=0.8)
+        ax.text(pos[0], pos[1] + 0.45, str(house_num), ha='center', va='center', fontsize=7, color='#9ca3af', fontweight='bold', alpha=0.7)
+        ax.text(pos[0], pos[1], short, ha='center', va='center', fontsize=11, color='#6b2d0f', fontweight='bold')
+        ax.text(pos[0], pos[1] - 0.4, SIGN_SANSKRIT[sign][:4], ha='center', va='center', fontsize=6, color='#b45309', alpha=0.8)
     
-    # Planet symbols and colors
     planet_symbols = {"Sun": "☉", "Moon": "☽", "Mars": "♂", "Mercury": "☿",
                       "Jupiter": "♃", "Venus": "♀", "Saturn": "♄", "Rahu": "☊", "Ketu": "☋"}
     planet_colors = {"Sun": "#d97706", "Moon": "#6b7280", "Mars": "#dc2626",
                      "Mercury": "#059669", "Jupiter": "#92400e", "Venus": "#db2777",
                      "Saturn": "#4b5563", "Rahu": "#7c3aed", "Ketu": "#7c3aed"}
     
-    # Place planets in houses
     house_planets = {i: [] for i in range(1, 13)}
     for p, lon in chart.planets.items():
         sign, _ = longitude_to_sign(lon)
@@ -461,42 +440,29 @@ def draw_north_indian_chart(chart: ChartData, title: str):
             continue
         pos = houses_pos[house_num]
         n = len(planets)
-        # Arrange planets horizontally with small offset to avoid overlap
         start_x = pos[0] - (n-1)*0.22
         for i, p in enumerate(planets):
             ax.text(start_x + i*0.44, pos[1] - 0.85, planet_symbols.get(p, p),
-                    ha='center', va='center', fontsize=14,
-                    color=planet_colors.get(p, '#1f2937'), fontweight='bold')
+                    ha='center', va='center', fontsize=12, color=planet_colors.get(p, '#1f2937'), fontweight='bold')
     
-    # Mark Lagna (Ascendant) clearly
-    ax.text(5.0, 9.0, "LAGNA", ha='center', va='center', fontsize=9, color='#dc2626', fontweight='bold', alpha=0.9)
-    ax.plot(5, 9.2, marker='^', color='#dc2626', markersize=8, alpha=0.8)
+    ax.text(5.0, 9.0, "LAGNA", ha='center', va='center', fontsize=8, color='#dc2626', fontweight='bold', alpha=0.9)
+    ax.plot(5, 9.2, marker='^', color='#dc2626', markersize=6, alpha=0.8)
     
-    # Title
-    ax.set_title(title, fontsize=18, color='#6b2d0f', fontweight='bold', pad=25, fontfamily='serif')
-    
-    # Add a subtle legend for planets
-    legend_elements = [mpatches.Patch(facecolor='none', edgecolor='none', label=f"{sym} {p}") 
-                       for p, sym in planet_symbols.items() if p in chart.planets][:6]
-    if legend_elements:
-        ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.08),
-                  ncol=6, fontsize=8, frameon=False, handlelength=0, handletextpad=0.5)
-    
-    plt.tight_layout()
+    ax.set_title(title, fontsize=14, color='#6b2d0f', fontweight='bold', pad=15, fontfamily='serif')
+    plt.tight_layout(pad=0.5)
     return fig
 
 # ------------------------------------------------------------------
-# IMPROVED CHART WHEEL — SOUTH INDIAN (CIRCULAR) WITH BETTER PLANET SPACING
+# COMPACT CIRCULAR CHART — REDUCED SIZE
 # ------------------------------------------------------------------
 def draw_circular_chart(chart: ChartData, title: str):
-    """Elegant circular South Indian style chart with adaptive planet placement."""
-    fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(projection='polar'))
+    """Compact circular South Indian style chart."""
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(projection='polar'))  # Reduced from 10x10
     fig.patch.set_facecolor('#faf8f5')
     ax.set_facecolor('#faf8f5')
     ax.set_theta_offset(np.pi/2)
     ax.set_theta_direction(-1)
     
-    # Color scheme for signs
     sign_colors = ['#fff4e6', '#fef3c7', '#ffedd5', '#fef9e3', '#fff7ed', '#fefce8',
                    '#fff4e6', '#fef3c7', '#ffedd5', '#fef9e3', '#fff7ed', '#fefce8']
     for i in range(12):
@@ -504,45 +470,39 @@ def draw_circular_chart(chart: ChartData, title: str):
         theta_end = np.radians((i+1)*30)
         ax.fill_between(np.linspace(theta_start, theta_end, 30), 0.3, 1.0,
                         color=sign_colors[i % len(sign_colors)], alpha=0.7, edgecolor='#d4af37', linewidth=0.5)
-        # Sign labels at outer rim
         angle = np.radians(i*30 + 15)
         ax.text(angle, 0.92, f"{ZODIAC[i]}\n{SIGN_SANSKRIT[ZODIAC[i]]}",
-                ha='center', va='center', fontsize=7.5, color='#92400e', fontweight='bold')
+                ha='center', va='center', fontsize=6.5, color='#92400e', fontweight='bold')
     
-    # Planet symbols
     symbols = {"Sun": "☉", "Moon": "☽", "Mars": "♂", "Mercury": "☿",
                "Jupiter": "♃", "Venus": "♀", "Saturn": "♄", "Rahu": "☊", "Ketu": "☋"}
     colors_p = {"Sun": "#d97706", "Moon": "#6b7280", "Mars": "#dc2626",
                 "Mercury": "#059669", "Jupiter": "#92400e", "Venus": "#db2777",
                 "Saturn": "#4b5563", "Rahu": "#7c3aed", "Ketu": "#7c3aed"}
     
-    # Dynamic placement: avoid overlapping planets in same degree region
     used_bins = {}
     for planet, lon in chart.planets.items():
         base = lon % 360
-        bin_id = int(base / 6)  # 6-degree bins for placement
+        bin_id = int(base / 6)
         offset = used_bins.get(bin_id, 0) * 0.06
         used_bins[bin_id] = used_bins.get(bin_id, 0) + 1
         angle = np.radians(base)
         dist = 0.55 + offset
-        ax.text(angle, dist, symbols.get(planet, planet), fontsize=14,
+        ax.text(angle, dist, symbols.get(planet, planet), fontsize=11,
                 ha='center', va='center', color=colors_p.get(planet, '#1f2937'),
                 fontweight='bold', bbox=dict(facecolor='white', edgecolor='none', alpha=0.6, pad=1))
     
-    # Ascendant line
     asc_angle = np.radians(chart.ascendant)
-    ax.plot([asc_angle, asc_angle], [0.3, 1.0], color='#dc2626', linewidth=2.5, linestyle='--', alpha=0.8)
-    ax.text(asc_angle, 1.02, 'ASC ▲', ha='center', va='center', color='#dc2626', fontsize=9, fontweight='bold')
+    ax.plot([asc_angle, asc_angle], [0.3, 1.0], color='#dc2626', linewidth=2, linestyle='--', alpha=0.8)
+    ax.text(asc_angle, 1.02, 'ASC ▲', ha='center', va='center', color='#dc2626', fontsize=8, fontweight='bold')
     
-    # Inner circle styling
     ax.set_ylim(0, 1.05)
     ax.set_yticks([])
     ax.set_xticks([])
     ax.spines['polar'].set_visible(False)
     ax.grid(False)
-    ax.set_title(title, fontsize=18, color='#6b2d0f', fontweight='bold', pad=30, fontfamily='serif')
-    
-    plt.tight_layout()
+    ax.set_title(title, fontsize=14, color='#6b2d0f', fontweight='bold', pad=20, fontfamily='serif')
+    plt.tight_layout(pad=0.5)
     return fig
 
 def planet_table(chart: ChartData):
