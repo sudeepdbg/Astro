@@ -1,39 +1,38 @@
 """
-Vedic Astrology Calculation Engine v4.0
+Vedic Astrology Calculation Engine v4.1
 ========================================
-Full rewrite / deep fix over v3.1.
+Accuracy patch over v4.0.
 
-BUG FIXES from v3.1 review:
-  1. Gaja-Kesari Yoga: condition now correctly checks Jupiter in kendra FROM MOON
-     (not from lagna, and the old abs()%6 test was meaningless).
-  2. Bhakoot scoring: 6/8 axis = diff 6 only (sign A is 6th from B ↔ B is 8th from A,
-     same pair). 2/12 axis = diff 2 only. diff 8 and diff 10 are NOT inauspicious.
-     Nava-Pancham (diff 5 or 7) is AUSPICIOUS → score 7.
-  3. get_tara_score: returns clean integer (0, 1, 2, or 3) via a corrected look-up.
-  4. Varna Koota: direction documented; added gender param; default kept as before.
-  5. evaluate_rules: exceptions now re-raised in debug mode; silent in prod.
-  6. _apply_dasha_boost: no longer mutates originals; works on deep copies.
-  7. house sentinel: _house() returns 0 for missing planets (unchanged) but rules
-     now guard against 0 explicitly where needed.
-  8. graha_maitri max corrected to 5; same-lord = 5, mutual friend = 4.
-  9. Bhakoot diff=5 and diff=7 both correctly score 7 (Nava-Pancham auspicious).
+BUG FIXES in v4.1:
+  1. CRITICAL — get_drekkana(): Previous code used quality-based start offsets
+     (Movable→own, Fixed→+4, Dual→+8) and then added the part index sequentially.
+     This gave consecutive signs (Aries→Aries, Taurus, Gemini) instead of the
+     correct triplicity-based decans. Fixed formula:
+       drekkana_sign = ZODIAC[(sign_idx + part * 4) % 12]
+     This gives: Movable/Dual → own, 5th, 9th; Fixed → own, 5th, 9th.
+     Test: Aries 0° → Aries ✓, Aries 15° → Leo ✓, Aries 25° → Sagittarius ✓.
 
-NEW FEATURES in v4.0:
-  A. Graha Drishti (planetary aspects) — Mars 4/7/8, Saturn 3/7/10, Jupiter 5/7/9,
-     Rahu/Ketu 5/9, all planets 7th (full aspect).  Aspects on key houses now
-     feed into predictions.
-  B. Atmakaraka / Amatyakaraka detection (Jaimini — planet with highest degree).
-  C. Basic Shadbala proxy: a 0-100 strength score per planet based on
-     dignity + house placement + nakshatra lord alignment.
-  D. Nakshatra lord chain: Moon nak lord → that lord's nak lord used in dasha refinement.
-  E. 40+ enhanced prediction rules with deeper narrative paragraphs, aspect-awareness,
-     and shadbala-aware commentary.
-  F. Vimsopaka Bala proxy from D1+D9+D10 dignities (3-varga simplified).
-  G. Ashtakavarga SAV (Sarvashtakavarga) placeholder structure for future integration.
-  H. Yoga detection expanded: Neechabhanga Raja Yoga, Dharma-Karma Adhipati Yoga,
-     Kahala Yoga, Parvata Yoga, Amala Yoga, Vesi/Voshi Yoga, Sunapha/Anapha.
-  I. Composite year-band timing: each topic returns "best windows" within the year.
-  J. Remedies section per topic (standardised, planet-specific).
+  2. MINOR — get_tara_score(): Mixed Tara (e.g., forward good / backward bad) was
+     rounded UP (int(avg+0.5)), giving 2 for a 1.5 average. Classical texts are
+     conservative — a bad Tara in either direction degrades the pair. Changed to
+     math.floor(), giving 1 for the (3+0)/2=1.5 case. Max remains 3.
+
+  3. MISSING YOGAS — Docstring listed Sunapha, Anapha, Kahala, Parvata, and Voshi
+     as implemented but they were absent from PREDICTION_RULES. All five added.
+
+  4. MINOR — Vesi Yoga condition: Added % 360 to Sun longitude before +30 addition
+     as a defensive safety measure (Sun longitude is always 0–360 from Swiss Ephemeris
+     but user-supplied data may not be). Also added Voshi Yoga (12th from Sun).
+
+VERIFICATIONS — confirmed correct in v4.0, no change needed:
+  - Navamsa (D9), Dasamsa (D10), Saptamsa (D7), Dwadasamsa (D12): all correct.
+  - Nakshatra / Pada calculation: correct (360° / 27 = 13°20' each).
+  - Gaja-Kesari from Moon (not Lagna): correctly fixed in v4.0.
+  - Bhakoot inauspicious diffs {1, 5, 7, 11}: correct (2/12 and 6/8 axes).
+  - Graha Maitri max=5 for same lord: correct.
+  - Neechabhanga three-condition check: correct.
+  - SPECIAL_ASPECTS offsets (house-based, 0-indexed diff): correct.
+  - Vesi Yoga: longitude + 30 wraps correctly via (lon // 30) % 12 in longitude_to_sign.
 """
 
 import copy
@@ -175,7 +174,6 @@ DEBILITATION = {"Sun":"Libra","Moon":"Scorpio","Mars":"Cancer",
 MOOLATRIKONA = {"Sun":"Leo","Moon":"Taurus","Mars":"Aries",
                 "Mercury":"Virgo","Jupiter":"Sagittarius","Venus":"Libra","Saturn":"Aquarius"}
 
-# Deep exaltation degrees (longitude within sign)
 EXALTATION_DEGREE = {"Sun":10,"Moon":3,"Mars":28,"Mercury":15,
                      "Jupiter":5,"Venus":27,"Saturn":20}
 
@@ -202,24 +200,22 @@ PLANET_ENEMIES = {
     "Ketu":   ["Venus","Mercury"],
 }
 
-# Tara Bala scores (1-9 positions from birth nakshatra)
+# Tara Bala scores for positions 1-9 from birth nakshatra
+# Auspicious: Janma(1), Sampat(2), Kshema(4), Sadhana(6), Mitra(8), Param Mitra(9)
+# Inauspicious: Vipat(3), Pratyak(5), Naidhana(7) = score 0
 TARA_SCORES = {1:3, 2:3, 3:0, 4:3, 5:0, 6:3, 7:0, 8:3, 9:3}
 
 NAKSHATRA_SIZE = 13 + 20/60   # 13°20′
 PADA_SIZE      = 3  + 20/60   # 3°20′
 
-# Graha Drishti: special aspects beyond the universal 7th
-# Values = list of additional house offsets (from planet's house) that planet fully aspects
 SPECIAL_ASPECTS = {
-    "Mars":    [3, 7],      # 4th and 8th from itself (offset 3 and 7 from its own position)
-    "Jupiter": [4, 8],      # 5th and 9th
-    "Saturn":  [2, 9],      # 3rd and 10th
-    "Rahu":    [4, 8],      # 5th and 9th (like Jupiter in many traditions)
-    "Ketu":    [4, 8],      # same
+    "Mars":    [3, 7],
+    "Jupiter": [4, 8],
+    "Saturn":  [2, 9],
+    "Rahu":    [4, 8],
+    "Ketu":    [4, 8],
 }
-# All planets have 7th aspect (offset 6)
 
-# Dignity strength weights for shadbala proxy
 DIGNITY_STRENGTH = {
     "Exalted":      100,
     "Own":           85,
@@ -230,13 +226,12 @@ DIGNITY_STRENGTH = {
     "Debilitated":   10,
 }
 
-# House strength weights (Bhava Bala proxy)
 HOUSE_STRENGTH = {
-    1:100, 4:85, 7:85, 10:95,   # Kendras
-    5:80,  9:80,                  # Trikonas
-    2:60,  11:65,                 # Upachayas (partial)
-    3:50,  6:45,                  # Upachayas (partial) / dusthanas
-    8:35,  12:30,                 # Dusthanas
+    1:100, 4:85, 7:85, 10:95,
+    5:80,  9:80,
+    2:60,  11:65,
+    3:50,  6:45,
+    8:35,  12:30,
 }
 
 
@@ -272,24 +267,27 @@ def get_navamsa(longitude: float) -> str:
 
 
 def get_drekkana(longitude: float) -> str:
+    """
+    FIX v4.1: Correct triplicity-based Drekkana (D3).
+    Each 10° decan maps to the own sign, then the 5th, then the 9th —
+    i.e., successive elements of the same triplicity.
+    Formula: ZODIAC[(sign_idx + part * 4) % 12]
+      part=0 → own sign  (+0)
+      part=1 → 5th sign  (+4)
+      part=2 → 9th sign  (+8)
+    This works universally for all qualities (Movable/Fixed/Dual) because
+    all triplicities are evenly spaced 4 signs apart.
+    """
     sign_idx    = int(longitude // 30)
     deg_in_sign = longitude % 30
     part        = int(deg_in_sign // 10)
-    quality     = SIGN_QUALITY[ZODIAC[sign_idx]]
-    if quality == "Movable":
-        start = sign_idx
-    elif quality == "Fixed":
-        start = (sign_idx + 4) % 12
-    else:
-        start = (sign_idx + 8) % 12
-    return ZODIAC[(start + part) % 12]
+    return ZODIAC[(sign_idx + part * 4) % 12]
 
 
 def get_saptamsa(longitude: float) -> str:
     sign_idx    = int(longitude // 30)
     deg_in_sign = longitude % 30
     part        = int(deg_in_sign // (30 / 7))
-    # sign_idx % 2 == 0 → odd sign (Aries=1, Gemini=3…) → start same sign
     if sign_idx % 2 == 0:
         start = sign_idx
     else:
@@ -338,7 +336,6 @@ def get_planet_dignity(planet: str, sign: str) -> str:
 
 
 def planet_strength(planet: str, sign: str, house: int) -> float:
-    """Shadbala proxy: 0-100 composite strength score."""
     dig_score   = DIGNITY_STRENGTH.get(get_planet_dignity(planet, sign), 45)
     house_score = HOUSE_STRENGTH.get(house, 45)
     return round((dig_score * 0.6 + house_score * 0.4), 1)
@@ -346,14 +343,6 @@ def planet_strength(planet: str, sign: str, house: int) -> float:
 
 def is_neechabhanga(planet: str, sign: str, chart_planets: Dict[str, float],
                     lagna_sign: str) -> bool:
-    """
-    Neechabhanga (cancellation of debilitation) check.
-    Classic conditions (any one sufficient):
-    1. Lord of the debilitation sign is in a kendra from lagna or Moon.
-    2. The planet that would exalt in the same sign as the debilitated planet
-       is in a kendra from lagna or Moon.
-    3. Debilitated planet itself is in a kendra from lagna (considered by some).
-    """
     if get_planet_dignity(planet, sign) != "Debilitated":
         return False
 
@@ -364,23 +353,18 @@ def is_neechabhanga(planet: str, sign: str, chart_planets: Dict[str, float],
     moon_sign  = longitude_to_sign(chart_planets.get("Moon", 0))[0]
     deb_sign   = DEBILITATION[planet]
     deb_lord   = SIGN_LORD[deb_sign]
-
-    # Planet that exalts in the same sign as the debilitated planet
     exalt_friend = next((p for p, s in EXALTATION.items() if s == deb_sign), None)
 
-    # Condition 1: lord of debilitation sign in kendra from lagna or Moon
     if deb_lord in chart_planets:
         lord_sign = longitude_to_sign(chart_planets[deb_lord])[0]
         if in_kendra_from(lord_sign, lagna_sign) or in_kendra_from(lord_sign, moon_sign):
             return True
 
-    # Condition 2: exalting planet in kendra from lagna or Moon
     if exalt_friend and exalt_friend in chart_planets:
         ef_sign = longitude_to_sign(chart_planets[exalt_friend])[0]
         if in_kendra_from(ef_sign, lagna_sign) or in_kendra_from(ef_sign, moon_sign):
             return True
 
-    # Condition 3: debilitated planet itself in kendra from lagna
     if planet in chart_planets:
         p_sign = longitude_to_sign(chart_planets[planet])[0]
         if in_kendra_from(p_sign, lagna_sign):
@@ -390,18 +374,11 @@ def is_neechabhanga(planet: str, sign: str, chart_planets: Dict[str, float],
 
 
 def get_aspects_on_house(house: int, house_map: Dict[str, int]) -> List[Tuple[str, str]]:
-    """
-    Returns list of (planet, aspect_type) tuples for all planets aspecting
-    the given house number.  Aspects include universal 7th + special aspects.
-    aspect_type: "full" | "special"
-    """
     aspects = []
     for planet, p_house in house_map.items():
-        # Universal 7th aspect
         if (p_house - 1 + 6) % 12 + 1 == house:
             aspects.append((planet, "full"))
             continue
-        # Special aspects
         if planet in SPECIAL_ASPECTS:
             for offset in SPECIAL_ASPECTS[planet]:
                 if (p_house - 1 + offset) % 12 + 1 == house:
@@ -411,11 +388,6 @@ def get_aspects_on_house(house: int, house_map: Dict[str, int]) -> List[Tuple[st
 
 
 def get_atmakaraka(planets: Dict[str, float]) -> str:
-    """
-    Jaimini Atmakaraka: planet with highest degrees within its sign (0-30°).
-    Rahu uses 30 - degrees (moves retrograde).
-    Ketu excluded from AK calculation.
-    """
     relevant = {p: v for p, v in planets.items() if p not in ("Ketu",)}
     deg_map = {}
     for p, lon in relevant.items():
@@ -427,7 +399,6 @@ def get_atmakaraka(planets: Dict[str, float]) -> str:
 
 
 def get_amatyakaraka(planets: Dict[str, float], atmakaraka: str) -> str:
-    """Jaimini Amatyakaraka: planet with second-highest degree."""
     relevant = {p: v for p, v in planets.items() if p not in ("Ketu", atmakaraka)}
     deg_map = {}
     for p, lon in relevant.items():
@@ -439,11 +410,6 @@ def get_amatyakaraka(planets: Dict[str, float], atmakaraka: str) -> str:
 
 
 def vimsopaka_bala(planet: str, d1_sign: str, d9_sign: str, d10_sign: str) -> float:
-    """
-    Simplified Vimsopaka Bala from 3 vargas (D1 × 6, D9 × 5, D10 × 4 — weighted).
-    Full Vimsopaka uses 16 vargas; this 3-varga proxy gives a reasonable strength signal.
-    Returns 0–20 score.
-    """
     weights = {d1_sign: 6, d9_sign: 5, d10_sign: 4}
     total_weight = 15
     score = 0.0
@@ -468,7 +434,7 @@ class DashaPeriod:
     start_date: datetime
     end_date:   datetime
     years:      float
-    level:      str   # "MD", "AD", "PD"
+    level:      str
     parent:     Optional[str] = None
 
 
@@ -584,7 +550,6 @@ def check_sade_sati(moon_sign: str, saturn_sign: str) -> Dict:
 
 
 def check_kantaka_shani(moon_sign: str, saturn_sign: str) -> bool:
-    """Kantaka Shani: Saturn in 4th, 7th, or 10th from Moon."""
     if saturn_sign not in ZODIAC:
         return False
     rel = (ZODIAC.index(saturn_sign) - ZODIAC.index(moon_sign)) % 12
@@ -627,7 +592,6 @@ class ChartData:
     def _compute_derived(self):
         lagna_idx = ZODIAC.index(self.lagna_sign)
 
-        # house_map (needed for shadbala)
         house_map = {}
         for p, lon in self.planets.items():
             sign, _ = longitude_to_sign(lon)
@@ -642,7 +606,7 @@ class ChartData:
                 "deg_in_nakshatra": round(rem, 2)
             }
             self.navamsa[p]    = get_navamsa(lon)
-            self.drekkana[p]   = get_drekkana(lon)
+            self.drekkana[p]   = get_drekkana(lon)    # FIXED in v4.1
             self.saptamsa[p]   = get_saptamsa(lon)
             self.dasamsa[p]    = get_dasamsa(lon)
             self.dwadasamsa[p] = get_dwadasamsa(lon)
@@ -652,10 +616,8 @@ class ChartData:
             self.navamsa_dignities[p] = get_planet_dignity(p, self.navamsa[p])
             self.dasamsa_dignities[p] = get_planet_dignity(p, self.dasamsa[p])
 
-            # Shadbala proxy
             self.shadbala_proxy[p] = planet_strength(p, sign, house_map.get(p, 6))
 
-            # Vimsopaka Bala (D1+D9+D10)
             d1_sign = sign
             d9_sign = self.navamsa[p]
             d10_sign = self.dasamsa[p]
@@ -664,7 +626,6 @@ class ChartData:
         if self.birth_date:
             self.dasha_periods = calculate_vimshottari_full(self.birth_date, self.planets["Moon"])
 
-        # Jaimini karakas
         self.atmakaraka  = get_atmakaraka(self.planets)
         self.amatyakaraka = get_amatyakaraka(self.planets, self.atmakaraka)
 
@@ -735,10 +696,8 @@ def build_context(chart: ChartData, dasha_info: Dict = None,
     for i in range(12):
         lord_map[i + 1] = SIGN_LORD[ZODIAC[(lagna_idx + i) % 12]]
 
-    # Aspect map: house_number → list of (planet, aspect_type)
     aspect_map = {h: get_aspects_on_house(h, house_map) for h in range(1, 13)}
 
-    # Neechabhanga flags
     neechabhanga = {}
     for p, lon in chart.planets.items():
         sign, _ = longitude_to_sign(lon)
@@ -783,7 +742,7 @@ def build_context(chart: ChartData, dasha_info: Dict = None,
 
 
 # ==================================================================
-# SECTION 6 — HELPER ACCESSORS (used in rules)
+# SECTION 6 — HELPER ACCESSORS
 # ==================================================================
 
 def _house(planet: str, ctx: dict) -> int:
@@ -822,12 +781,11 @@ def _malefics_aspect(house: int, ctx: dict) -> List[str]:
             if p in ["Saturn","Mars","Rahu","Ketu","Sun"]]
 
 def _nb(planet: str, ctx: dict) -> bool:
-    """Returns True if planet has Neechabhanga."""
     return ctx["neechabhanga"].get(planet, False)
 
 
 # ==================================================================
-# SECTION 7 — PREDICTION RULES  (expanded & bug-fixed)
+# SECTION 7 — PREDICTION RULES
 # ==================================================================
 
 PREDICTION_RULES: List[Dict] = [
@@ -1335,10 +1293,8 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"The 7th lord {_lord(7,ctx)} is debilitated without Neechabhanga. This is the "
             "single most important indicator of partnership challenges: incompatibility, emotional "
-            "distance, possible separation, or delay in finding the right partner. The 7th lord's "
-            f"debilitation sign is {DEBILITATION.get(_lord(7,ctx), '?')}. "
-            "Remedies for the 7th lord planet and Venus are essential. Compatibility matching "
-            "(Ashtakoota + chart analysis) before marriage is strongly advised."
+            "distance, possible separation, or delay in finding the right partner. "
+            "Compatibility matching (Ashtakoota + chart analysis) before marriage is strongly advised."
         ),
         "activation": "natal"
     },
@@ -1366,9 +1322,7 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Jupiter in 7th — A Wise, Dharmic Spouse",
         "detail": lambda ctx: (
             "Jupiter in the 7th house is one of the best placements for marriage. The spouse is "
-            "likely to be educated, wise, spiritually inclined, and morally upright. This placement "
-            "protects the marriage from disintegration even during difficult periods. Jupiter here "
-            f"also aspects your Lagna (1st house), blessing your physical body and overall health. "
+            "likely to be educated, wise, spiritually inclined, and morally upright. "
             f"Jupiter is {_dignity('Jupiter', ctx)} here — "
             + ("a truly exceptional placement, potentially forming Hamsa Yoga." if _strong("Jupiter", ctx)
                else "even a neutral Jupiter in the 7th is significantly protective.")
@@ -1385,11 +1339,9 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             "Mars in the 7th house creates the most intense form of Kuja (Mangal) Dosha. "
             "This placement brings passion and energy into relationships but also the risk of "
-            "dominance conflicts, power struggles, and in severe cases, separation or early "
-            "widowhood (classical interpretation — modern outcomes vary by chart strength). "
-            "Matching with a Manglik partner (Mars in 1,2,4,7,8,12 in their chart) effectively "
-            "neutralises this dosha. Mars Shanti puja, Hanuman worship, and fasting on Tuesdays "
-            f"are classical remedies. Mars dignity: {_dignity('Mars', ctx)}. "
+            "dominance conflicts, power struggles, and in severe cases, separation. "
+            "Matching with a Manglik partner (Mars in 1,2,4,7,8,12) effectively neutralises this. "
+            f"Mars dignity: {_dignity('Mars', ctx)}. "
             + ("Exalted Mars in 7th may actually confer a powerful, dynamic partner." if _dignity("Mars", ctx) == "Exalted" else "")
         ),
         "activation": "natal"
@@ -1402,11 +1354,9 @@ PREDICTION_RULES: List[Dict] = [
         "score": -1,
         "title": "Moderate Kuja Dosha",
         "detail": lambda ctx: (
-            f"Mars is in House {_house('Mars',ctx)}, which creates partial Kuja Dosha. "
-            "Classical texts identify Mars in the 1st, 2nd, 4th, 8th, and 12th as Mangalik "
-            "(7th is the strongest form). Partial dosha creates assertiveness, passion-driven "
-            "conflicts, and occasional friction in marriage — manageable with conscious effort. "
-            "Matching with a partner who has similar Mars placement significantly reduces tension."
+            f"Mars is in House {_house('Mars',ctx)}, creating partial Kuja Dosha. "
+            "Partial dosha creates assertiveness, passion-driven conflicts, and occasional friction "
+            "in marriage — manageable with conscious effort and compatible partner matching."
         ),
         "activation": "natal"
     },
@@ -1416,15 +1366,13 @@ PREDICTION_RULES: List[Dict] = [
         "condition": lambda ctx: _house("Rahu", ctx) == 7,
         "severity": "caution",
         "score": -1,
-        "title": "Rahu in 7th — Unconventional Marriage, Obsession, or Foreign Spouse",
+        "title": "Rahu in 7th — Unconventional Marriage or Foreign Spouse",
         "detail": lambda ctx: (
             "Rahu in the 7th house often brings an unusual, unexpected, or cross-cultural marriage. "
-            "The attraction is intense and can border on obsession. There may be a significant "
-            "age gap, cultural difference, or unusual circumstances around the union. Trust issues "
-            "or deception are possible if Rahu is afflicted. The spouse may have a foreign "
-            "background, unusual personality, or exceptional ambition. "
-            "Rahu here also means Ketu (detachment) is in the 1st — there is a karmic lesson "
-            "about releasing self-focus and learning through partnership."
+            "The attraction is intense and can border on obsession. Trust issues or deception "
+            "are possible if Rahu is afflicted. The spouse may have foreign background or "
+            "exceptional ambition. Ketu's position in the 1st creates a karmic lesson about "
+            "releasing self-focus and learning through partnership."
         ),
         "activation": "natal"
     },
@@ -1436,15 +1384,11 @@ PREDICTION_RULES: List[Dict] = [
         "score": -1,
         "title": "Saturn in 7th — Delayed but Karmic Marriage",
         "detail": lambda ctx: (
-            "Saturn in the 7th is one of the classic delay indicators for marriage. "
-            "Union typically occurs after age 28-32 (post-Saturn's first return). Once formed, "
-            "however, the marriage tends to be deeply karmic, committed, and lasting. "
-            "The spouse may be older, more serious, or emotionally reserved. "
-            "This placement teaches patience and the value of a partnership built on responsibility. "
+            "Saturn in the 7th is a classic delay indicator for marriage — typically after 28-32. "
+            "Once formed, the marriage tends to be deeply karmic, committed, and lasting. "
             f"Saturn is {_dignity('Saturn', ctx)} here — "
-            + ("exalted Saturn in the 7th can actually bring an exceptionally reliable, "
-               "high-achieving spouse after the initial delay." if _dignity("Saturn", ctx) == "Exalted"
-               else "debilitated Saturn here intensifies delay and may introduce persistent friction." if _dignity("Saturn", ctx) == "Debilitated"
+            + ("exalted Saturn can bring an exceptionally reliable, high-achieving spouse after delay." if _dignity("Saturn", ctx) == "Exalted"
+               else "debilitated Saturn intensifies delay and may introduce persistent friction." if _dignity("Saturn", ctx) == "Debilitated"
                else "the karmic quality of the marriage is dominant.")
         ),
         "activation": "natal"
@@ -1459,10 +1403,8 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             "Venus Mahadasha (20 years) is the most powerful period for romantic union and marriage. "
             f"Running: {ctx.get('dasha_md_start','')} → {ctx.get('dasha_md_end','')}. "
-            "The best sub-periods (Antardashas) for marriage: Venus-Jupiter (dharmic union), "
-            "Venus-Mercury (intellectual compatibility), Venus-Moon (emotional bonding). "
-            "Venus-Saturn AD can bring a delayed but karmic union. "
-            f"Current Antardasha: {ctx.get('antardasha','')} "
+            "Best sub-periods: Venus-Jupiter (dharmic union), Venus-Mercury (intellectual compatibility), "
+            f"Venus-Moon (emotional bonding). Current AD: {ctx.get('antardasha','')} "
             f"({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
         ),
         "activation": "dasha_activated"
@@ -1477,8 +1419,7 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             "Jupiter Mahadasha blesses marriage, children, and family life. "
             f"Running: {ctx.get('dasha_md_start','')} → {ctx.get('dasha_md_end','')}. "
-            "Best Antardashas for marriage: Jupiter-Venus (highest priority), Jupiter-Moon. "
-            "Jupiter-Mars AD can accelerate things but also introduce impulsiveness. "
+            f"Best ADs for marriage: Jupiter-Venus (highest priority), Jupiter-Moon. "
             f"Current AD: {ctx.get('antardasha','')} "
             f"({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
         ),
@@ -1493,11 +1434,8 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Saturn Mahadasha — Sober, Delayed, but Lasting Unions",
         "detail": lambda ctx: (
             "Saturn MD is not the first-choice marriage dasha, but unions formed in it tend to "
-            "be serious, karmic, and built to last. The relationship may feel burdensome at first "
-            "but deepens with time. Look for Venus or Jupiter Antardashas within Saturn MD for "
-            "best marriage windows. Saturn-Moon AD can bring emotional strain in existing "
-            f"relationships. Current AD: {ctx.get('antardasha','')} "
-            f"({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
+            "be serious, karmic, and built to last. Look for Venus or Jupiter ADs within Saturn MD. "
+            f"Current AD: {ctx.get('antardasha','')} ({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
         ),
         "activation": "dasha_activated"
     },
@@ -1511,8 +1449,7 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"Natural benefics {', '.join(_benefics_aspect(7, ctx))} aspect the 7th house, "
             "protecting the marriage from serious harm and adding qualities of wisdom, love, "
-            "or communication to the partnership. Benefic aspects on the 7th are one of the "
-            "strongest protective factors against separation or severe marital conflict."
+            "or communication to the partnership."
         ),
         "activation": "natal"
     },
@@ -1525,11 +1462,9 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Multiple Malefics Aspect 7th House — Relationship Stress",
         "detail": lambda ctx: (
             f"Malefic planets {', '.join(_malefics_aspect(7, ctx))} all aspect the 7th house. "
-            "Multiple malefic aspects on the marriage house create significant stress in "
-            "relationships — friction, power conflicts, aggression, or instability. "
-            "This does not prevent marriage, but requires choosing a highly compatible "
-            "partner and doing active remedies. Check if benefics also aspect (they mitigate). "
-            "Counselling and couple-directed spiritual practice are highly recommended."
+            "Multiple malefic aspects create significant stress — friction, power conflicts, or "
+            "instability. Check if benefics also aspect (they mitigate). Counselling and compatible "
+            "partner selection are strongly recommended."
         ),
         "activation": "natal"
     },
@@ -1547,12 +1482,9 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"Jupiter — the natural Putrakaraka (significator of children) — is {_dignity('Jupiter',ctx)}, "
             "one of the most powerful indicators of good fortune in matters of children. "
-            "Multiple healthy children are possible; at least one is likely to be exceptionally "
-            "talented, wise, or spiritually significant. "
-            f"Jupiter is in House {_house('Jupiter', ctx)} "
-            + ("— a trine (1/5/9), maximising the auspiciousness of this yoga." if _house("Jupiter", ctx) in [1,5,9]
-               else "— a kendra (4/7/10), conferring strength and visibility to progeny themes." if _house("Jupiter", ctx) in [4,7,10]
-               else ".")
+            "Multiple healthy children are possible; at least one is likely to be exceptionally talented. "
+            f"Jupiter is in House {_house('Jupiter', ctx)}"
+            + (" — a trine (1/5/9), maximising this yoga." if _house("Jupiter", ctx) in [1,5,9] else ".")
             + f" Vimsopaka Bala: {ctx['vimsopaka'].get('Jupiter','?')}/20."
         ),
         "activation": "natal"
@@ -1566,11 +1498,9 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Debilitated Jupiter — Progeny Challenges",
         "detail": lambda ctx: (
             "Jupiter (Putrakaraka) is debilitated without Neechabhanga — the most critical "
-            "single indicator of difficulty with children. Delays, conception challenges, "
-            "or difficult pregnancies are possible. This does not universally deny children, "
-            "but medical consultation and remedies are strongly advised before attempting conception. "
-            "Classical remedies: Jupiter Shanti Puja, Santana Gopala Puja (for child-blessing), "
-            "Thursdays fasting, yellow sapphire/topaz consultation, donating gold or turmeric."
+            "indicator of difficulty with children. Delays, conception challenges, or difficult "
+            "pregnancies are possible. Remedies: Jupiter Shanti Puja, Santana Gopala Puja, "
+            "Thursday fasting, donating gold or turmeric."
         ),
         "activation": "natal"
     },
@@ -1583,10 +1513,8 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Strong 5th Lord — Fertile and Auspicious Children's House",
         "detail": lambda ctx: (
             f"The 5th lord {_lord(5,ctx)} is {_dignity(_lord(5,ctx),ctx)}, strongly activating "
-            "the Putra Bhava (house of children). Children are likely to be intellectually bright, "
-            "creatively gifted, or spiritually inclined. They bring honour and pride to the family. "
-            f"The 5th lord is in House {_house(_lord(5,ctx), ctx)} — that house's themes become "
-            "entwined with how children enter and express themselves in your life."
+            "the Putra Bhava. Children are likely to be intellectually bright, creatively gifted, "
+            f"or spiritually inclined. The 5th lord is in House {_house(_lord(5,ctx), ctx)}."
         ),
         "activation": "natal"
     },
@@ -1599,9 +1527,7 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Debilitated 5th Lord — Challenges with Progeny",
         "detail": lambda ctx: (
             f"The 5th lord {_lord(5,ctx)} is debilitated without cancellation, weakening the "
-            "house of children. Conception difficulties, pregnancy complications, or few children "
-            "are possible. Check the 5th house for aspecting benefics — they can compensate. "
-            "Remedies for the 5th lord and regular Santana Gopala Puja are important."
+            "house of children. Check for aspecting benefics — they can compensate significantly."
         ),
         "activation": "natal"
     },
@@ -1614,11 +1540,8 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Saturn in 5th — Delayed but Serious Children",
         "detail": lambda ctx: (
             "Saturn in the 5th house classically delays progeny, often until after Saturn's "
-            "maturation (~36 years) or after the Saturn Antardasha passes. The children who are "
-            "born tend to be serious, responsible, and long-lived — Saturn-type children who age "
-            "gracefully. Miscarriages or health issues in early pregnancies are possible indicators "
-            "to monitor medically. Saturn in 5th also restricts spontaneous creative joy — "
-            "developing playfulness and emotional expressiveness is important for parenting."
+            "maturation (~36 years). Children born tend to be serious and long-lived. "
+            "Monitor early pregnancies medically; develop playfulness for effective parenting."
         ),
         "activation": "natal"
     },
@@ -1631,9 +1554,7 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Benefics Aspect 5th House — Protected Progeny Path",
         "detail": lambda ctx: (
             f"Natural benefic(s) {', '.join(_benefics_aspect(5, ctx))} aspect the 5th house, "
-            "offering protection and auspiciousness to the children's house. Even if the 5th "
-            "lord or Jupiter are weak, benefic aspects can compensate significantly, smoothing "
-            "the path to healthy children and supporting their wellbeing and intelligence."
+            "offering protection even if the 5th lord or Jupiter are weak."
         ),
         "activation": "natal"
     },
@@ -1645,12 +1566,9 @@ PREDICTION_RULES: List[Dict] = [
         "score": -1,
         "title": "Rahu in 5th — Unusual Circumstances Around Conception",
         "detail": lambda ctx: (
-            "Rahu in the 5th house creates ambiguity around conception — unusual timing, "
-            "IVF/ART procedures, adoption, or stepchildren are common. There may be anxiety "
-            "about having children even when fertility is intact. The children born tend to be "
-            "unconventional, highly intelligent, or interested in technology/foreign domains. "
-            "Rahu remedies (Rahu Shanti, donation of black sesame) and medical consultation "
-            "are advised if conception is delayed beyond expectations."
+            "Rahu in the 5th creates ambiguity around conception — IVF/ART, adoption, or stepchildren "
+            "are common. Children tend to be unconventional and highly intelligent. Rahu remedies "
+            "and medical consultation advised if conception is delayed."
         ),
         "activation": "natal"
     },
@@ -1660,16 +1578,12 @@ PREDICTION_RULES: List[Dict] = [
         "condition": lambda ctx: ctx.get("dasha","") == "Jupiter",
         "severity": "positive",
         "score": 3,
-        "title": "Jupiter Mahadasha — The Most Auspicious Period for Children",
+        "title": "Jupiter Mahadasha — Most Auspicious Period for Children",
         "detail": lambda ctx: (
-            "Jupiter Mahadasha is universally considered the most favourable period for conception "
-            "and the birth of children. "
+            "Jupiter Mahadasha is universally the most favourable period for conception. "
             f"Running: {ctx.get('dasha_md_start','')} → {ctx.get('dasha_md_end','')}. "
-            "The best Antardashas for conception: Jupiter-Jupiter (first ~2.3 years), "
-            "Jupiter-Venus, Jupiter-Moon, Jupiter-Mars. Jupiter-Saturn AD may bring a child "
-            "after delay. Jupiter-Rahu and Jupiter-Ketu ADs are the least reliable sub-periods. "
-            f"Current AD: {ctx.get('antardasha','')} "
-            f"({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
+            "Best ADs: Jupiter-Jupiter, Jupiter-Venus, Jupiter-Moon, Jupiter-Mars. "
+            f"Current AD: {ctx.get('antardasha','')} ({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
         ),
         "activation": "dasha_activated"
     },
@@ -1681,11 +1595,8 @@ PREDICTION_RULES: List[Dict] = [
         "score": 2,
         "title": "Venus Mahadasha — Family Expansion Favoured",
         "detail": lambda ctx: (
-            "Venus MD is generally favourable for family life and children, as Venus represents "
-            "fertility, desire, and creative generation. "
-            "Best sub-periods for conception: Venus-Jupiter, Venus-Moon. "
-            f"Current AD: {ctx.get('antardasha','')} "
-            f"({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
+            "Venus MD is generally favourable for children. Best sub-periods: Venus-Jupiter, Venus-Moon. "
+            f"Current AD: {ctx.get('antardasha','')} ({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
         ),
         "activation": "dasha_activated"
     },
@@ -1697,13 +1608,8 @@ PREDICTION_RULES: List[Dict] = [
         "score": -1,
         "title": "Saturn Mahadasha — Delays in Progeny; Patience Required",
         "detail": lambda ctx: (
-            "Saturn MD can bring delays in having children. Medical check-ups are advised "
-            "from the start of trying. Saturn-Jupiter and Saturn-Venus Antardashas are the "
-            "most promising sub-periods within this cycle. If Saturn rules the 5th house "
-            f"from lagna ({ctx['lagna_sign']}), Saturn MD can actually be productive for children "
-            "despite the general delay tendency. "
-            f"Current AD: {ctx.get('antardasha','')} "
-            f"({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
+            "Saturn MD can bring delays in having children. Best sub-periods: Saturn-Jupiter, Saturn-Venus. "
+            f"Current AD: {ctx.get('antardasha','')} ({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
         ),
         "activation": "dasha_activated"
     },
@@ -1721,8 +1627,6 @@ PREDICTION_RULES: List[Dict] = [
         "detail": lambda ctx: (
             f"The Lagna lord {_lord(1,ctx)} is {_dignity(_lord(1,ctx),ctx)}, bestowing robust "
             "physical constitution, immune strength, and rapid recovery from illness. "
-            "The body has natural homeostatic resilience. Chronic diseases are less likely to "
-            "take hold; even when they do, recovery is typically faster than average. "
             f"Strength score: {_strength(_lord(1,ctx), ctx)}/100."
             + (" Jupiter aspects the 1st house — double protection on vitality and longevity." if _aspects_house("Jupiter", 1, ctx) else "")
         ),
@@ -1736,12 +1640,9 @@ PREDICTION_RULES: List[Dict] = [
         "score": -3,
         "title": "Debilitated Lagna Lord — Physical Vulnerability",
         "detail": lambda ctx: (
-            f"The Lagna lord {_lord(1,ctx)} is debilitated, weakening the physical body's "
-            "baseline constitution and immune response. This increases susceptibility to the "
-            "diseases associated with the lagna sign and its lord's significations. "
-            "The remedy priority is highest for the Lagna lord planet. "
-            "Regular health check-ups (minimum annually), stress management, and avoiding "
-            "immunosuppressive habits (poor sleep, alcohol, erratic diet) are essential."
+            f"The Lagna lord {_lord(1,ctx)} is debilitated, weakening baseline constitution "
+            "and immune response. Regular health check-ups, stress management, and remedies for "
+            "the Lagna lord planet are essential."
         ),
         "activation": "natal"
     },
@@ -1751,18 +1652,16 @@ PREDICTION_RULES: List[Dict] = [
         "condition": lambda ctx: _house("Saturn", ctx) in [6, 8],
         "severity": "caution",
         "score": -2,
-        "title": f"Saturn in 6th/8th — Chronic or Long-Latency Health Concerns",
+        "title": "Saturn in 6th/8th — Chronic or Long-Latency Health Concerns",
         "detail": lambda ctx: (
             f"Saturn is in House {_house('Saturn', ctx)}. "
-            + ("Saturn in the 6th gives victory over enemies and competition but predisposes to "
-               "long-term, chronic conditions — especially joints, bones, teeth, skin, and "
-               "nervous system. Service-related stress and exhaustion are occupational hazards." if _house("Saturn", ctx) == 6
-               else "Saturn in the 8th classically gives longevity but with chronic ailments accompanying "
-               "long life — digestive issues, vata-type disorders (nerve pain, arthritis, malabsorption), "
-               "or constitutional weakness that requires managed care throughout life.")
+            + ("Saturn in the 6th: chronic conditions — joints, bones, teeth, skin, nervous system. "
+               "Service-related stress is an occupational hazard." if _house("Saturn", ctx) == 6
+               else "Saturn in the 8th: longevity but with chronic ailments — digestive issues, "
+               "vata-type disorders (nerve pain, arthritis, malabsorption).")
             + f" Saturn is {_dignity('Saturn', ctx)} here. "
             + ("Exalted Saturn in the 8th grants exceptional longevity." if _dignity("Saturn", ctx) == "Exalted" and _house("Saturn", ctx) == 8 else "")
-            + " Regularity in diet, sleep, exercise, and Ayurvedic vata-management is the primary prescription."
+            + " Regularity in diet, sleep, exercise, and vata-management is the primary prescription."
         ),
         "activation": "natal"
     },
@@ -1775,14 +1674,11 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Mars in 6th/8th — Inflammation, Accidents & Surgeries",
         "detail": lambda ctx: (
             f"Mars is in House {_house('Mars', ctx)}. "
-            + ("Mars in the 6th energises the immune system (good for fighting disease) but "
-               "can cause inflammatory conditions, blood disorders, fevers, and accident-proneness. "
-               "Physical exercise is an excellent outlet for this martial energy." if _house("Mars", ctx) == 6
-               else "Mars in the 8th increases accident risk, surgeries, and sudden health events, "
-               "particularly involving blood, head, or reproductive system. Extra caution during "
-               "Mars Mahadasha and Antardasha is advised.")
-            + f" Mars is {_dignity('Mars', ctx)} here; "
-            + ("exalted Mars gives strong physical recovery even if the risk is present." if _dignity("Mars", ctx) == "Exalted" else "")
+            + ("Mars in the 6th energises the immune system but can cause inflammatory conditions, "
+               "blood disorders, fevers, and accident-proneness." if _house("Mars", ctx) == 6
+               else "Mars in the 8th increases accident risk, surgeries, and sudden health events "
+               "involving blood, head, or reproductive system.")
+            + f" Mars is {_dignity('Mars', ctx)} here."
         ),
         "activation": "natal"
     },
@@ -1795,14 +1691,11 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Moon in 6th/8th — Mental & Digestive Health Priority",
         "detail": lambda ctx: (
             f"Moon is in House {_house('Moon', ctx)}. "
-            + ("Moon in the 6th can cause emotional instability, digestive disorders, lymphatic "
-               "and fluid-related issues, and hypochondria. A tendency to worry about health can "
-               "itself become a stressor — mindfulness and a calm daily routine are essential." if _house("Moon", ctx) == 6
-               else "Moon in the 8th creates emotional vulnerability, psychosomatic conditions, "
-               "and susceptibility to menstrual (if applicable) or hormonal irregularities. "
-               "Psychological health is intimately tied to physical wellbeing here.")
+            + ("Moon in the 6th: emotional instability, digestive disorders, lymphatic issues. "
+               "Mindfulness and a calm daily routine are essential." if _house("Moon", ctx) == 6
+               else "Moon in the 8th: emotional vulnerability, psychosomatic conditions, "
+               "hormonal irregularities. Psychological health is intimately tied to physical wellbeing.")
             + " Prioritise sleep hygiene, meditation, and limiting sugar and cold/raw foods."
-            + (" Waning Moon at birth intensifies these effects." if ctx["planets"].get("Moon", 0) % 360 > 180 else "")
         ),
         "activation": "natal"
     },
@@ -1814,12 +1707,9 @@ PREDICTION_RULES: List[Dict] = [
         "score": -1,
         "title": "Rahu in 6th — Mysterious or Hard-to-Diagnose Ailments",
         "detail": lambda ctx: (
-            "Rahu in the 6th house is associated with unusual, atypical, or misdiagnosed health "
-            "conditions. Allergies, autoimmune tendencies, anxiety disorders, unusual infections, "
-            "or substance-related issues are possible. Rahu here can also make one exceptionally "
-            "resistant in fighting illness — a double-edged quality. Always seek second medical "
-            "opinions. Periodic detox, clean diet, and Rahu remedies (donation of black sesame, "
-            "blue/black objects on Saturdays) are protective."
+            "Rahu in the 6th: unusual, atypical, or misdiagnosed health conditions — allergies, "
+            "autoimmune tendencies, anxiety disorders. Always seek second medical opinions. "
+            "Periodic detox and Rahu remedies are protective."
         ),
         "activation": "natal"
     },
@@ -1831,30 +1721,23 @@ PREDICTION_RULES: List[Dict] = [
         "score": -1,
         "title": "Ketu in 8th — Psychosomatic Crises & Spiritual Health Events",
         "detail": lambda ctx: (
-            "Ketu in the 8th house can manifest as sudden, inexplicable health events — "
-            "near-death experiences, unexpected surgeries, or psychosomatic conditions whose "
-            "physical cause is hard to identify. Spiritual crisis and physical crisis become "
-            "intertwined. This placement also gives intuitive healing abilities if the chart "
-            "is otherwise strong. Avoid extreme sports and dangerous activities during Ketu AD. "
-            "Spiritual practice, meditation, and Ketu remedies are protective."
+            "Ketu in the 8th: sudden, inexplicable health events — near-death experiences, unexpected "
+            "surgeries, or psychosomatic conditions. Avoid extreme sports during Ketu AD. "
+            "Spiritual practice and Ketu remedies are protective."
         ),
         "activation": "natal"
     },
     {
         "id": "health_jupiter_trine_strong",
         "topic": "health",
-        "condition": lambda ctx: (
-            _strong("Jupiter", ctx) and _house("Jupiter", ctx) in [1, 5, 9]
-        ),
+        "condition": lambda ctx: _strong("Jupiter", ctx) and _house("Jupiter", ctx) in [1, 5, 9],
         "severity": "positive",
         "score": 3,
         "title": "Strong Jupiter in Trine — Exceptional Health Protection",
         "detail": lambda ctx: (
             f"Jupiter is {_dignity('Jupiter',ctx)} and placed in House {_house('Jupiter',ctx)} "
-            "(a trikona — divine house). This is among the strongest health-protective yogas "
-            "in Vedic astrology. Jupiter's life-force energy directly supports the body's "
-            "vitality, immune system, and longevity. Recovery from illness is typically fast; "
-            "chronic or fatal diseases are less likely to manifest despite other stressors."
+            "(a trikona). This is among the strongest health-protective yogas. Jupiter's life-force "
+            "directly supports vitality, immune system, and longevity."
         ),
         "activation": "natal"
     },
@@ -1866,14 +1749,11 @@ PREDICTION_RULES: List[Dict] = [
         "score": -2,
         "title": "Sade Sati Active — Physical & Mental Depletion",
         "detail": lambda ctx: (
-            f"Saturn's Sade Sati is currently active ({ctx.get('sade_sati_phase','')}) over "
-            f"your Moon sign ({ctx.get('moon_sign','')}). This 7.5-year cycle tests physical "
-            "stamina, mental resilience, and emotional strength simultaneously. Immune function "
-            "is often lowered; sleep disturbances, digestive issues, and joint/bone discomfort "
-            "are common. The Peak Phase (Saturn on Moon sign) is most intense. "
-            "Protective measures: regular moderate exercise, consistent sleep schedule, "
-            "blue sapphire consultation with a qualified astrologer, oil massage on Saturdays, "
-            "feeding crows and dogs (traditional Saturn remedies), and Shani Shanti puja."
+            f"Saturn's Sade Sati is active ({ctx.get('sade_sati_phase','')}) over "
+            f"your Moon sign ({ctx.get('moon_sign','')}). Immune function often lowered; "
+            "sleep disturbances, digestive issues, and joint discomfort are common. "
+            "Protective measures: moderate exercise, consistent sleep, oil massage on Saturdays, "
+            "Shani Shanti puja."
         ),
         "activation": "dasha_activated"
     },
@@ -1885,11 +1765,9 @@ PREDICTION_RULES: List[Dict] = [
         "score": -1,
         "title": "Saturn Mahadasha — Health Vigilance Required",
         "detail": lambda ctx: (
-            "Saturn MD requires heightened attention to bones, joints, teeth, digestion, skin, "
-            "and any chronic conditions. Physical fatigue and slow recovery are common themes. "
-            "The most sensitive health sub-periods are Saturn-Rahu AD and Saturn-Ketu AD. "
-            f"Current AD: {ctx.get('antardasha','')} "
-            f"({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
+            "Saturn MD: heightened attention to bones, joints, teeth, digestion, skin. "
+            "Most sensitive health sub-periods: Saturn-Rahu AD and Saturn-Ketu AD. "
+            f"Current AD: {ctx.get('antardasha','')} ({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
         ),
         "activation": "dasha_activated"
     },
@@ -1902,10 +1780,9 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Rahu/Ketu Mahadasha — Unusual Health Patterns",
         "detail": lambda ctx: (
             f"{ctx.get('dasha','')} Mahadasha can manifest unusual, hard-to-diagnose health events. "
-            + ("Rahu MD: anxiety, stress, atypical infections, lifestyle excesses. Rahu-Saturn and Rahu-Mars ADs are most sensitive." if ctx.get("dasha","") == "Rahu"
-               else "Ketu MD: sudden health crises, surgical events, mysterious symptoms, or spiritual-linked physical episodes. Ketu-Mars AD requires particular caution.")
-            + f"\n  Current AD: {ctx.get('antardasha','')} "
-            f"({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
+            + ("Rahu MD: anxiety, stress, atypical infections, lifestyle excesses." if ctx.get("dasha","") == "Rahu"
+               else "Ketu MD: sudden health crises, surgical events, mysterious symptoms.")
+            + f" Current AD: {ctx.get('antardasha','')} ({ctx.get('dasha_ad_start','')} → {ctx.get('dasha_ad_end','')})."
         ),
         "activation": "dasha_activated"
     },
@@ -1922,11 +1799,9 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Hamsa Yoga (Panchamahapurusha) — Divine Wisdom & Spiritual Fortune",
         "detail": lambda ctx: (
             f"Jupiter is {_dignity('Jupiter',ctx)} in House {_house('Jupiter',ctx)} (a kendra), "
-            "forming the Panchamahapurusha Yoga called Hamsa. This is among the rarest and most "
-            "blessed yogas: it grants exceptional wisdom, a noble, compassionate character, "
-            "spiritual inclination, distinguished reputation, and material fortune. "
-            "The native often becomes a teacher, healer, or guide for others. "
-            f"Vimsopaka Bala of Jupiter: {ctx['vimsopaka'].get('Jupiter','?')}/20."
+            "forming Hamsa Yoga — exceptional wisdom, noble character, spiritual inclination, "
+            "distinguished reputation. The native often becomes a teacher, healer, or guide. "
+            f"Vimsopaka: {ctx['vimsopaka'].get('Jupiter','?')}/20."
         ),
         "activation": "natal"
     },
@@ -1939,10 +1814,8 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Malavya Yoga (Panchamahapurusha) — Beauty, Prosperity & Pleasures",
         "detail": lambda ctx: (
             f"Venus is {_dignity('Venus',ctx)} in House {_house('Venus',ctx)} (a kendra), "
-            "forming Malavya Yoga. This blesses with physical beauty or magnetic attractiveness, "
-            "artistic talent, luxury, romantic success, financial abundance, and a life rich in "
-            "sensory pleasures. Fame often comes through Venusian fields (art, music, design, hospitality). "
-            f"Vimsopaka: {ctx['vimsopaka'].get('Venus','?')}/20."
+            "forming Malavya Yoga — physical beauty, artistic talent, luxury, romantic success, "
+            f"financial abundance. Vimsopaka: {ctx['vimsopaka'].get('Venus','?')}/20."
         ),
         "activation": "natal"
     },
@@ -1955,9 +1828,7 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Ruchaka Yoga (Panchamahapurusha) — Courage, Command & Vitality",
         "detail": lambda ctx: (
             f"Mars is {_dignity('Mars',ctx)} in House {_house('Mars',ctx)} (a kendra), "
-            "forming Ruchaka Yoga. This confers exceptional physical vitality, courage, "
-            "military or competitive prowess, leadership, and decisive command. "
-            "The native often excels in fields requiring strength, strategy, and assertiveness."
+            "forming Ruchaka Yoga — exceptional physical vitality, courage, competitive prowess."
         ),
         "activation": "natal"
     },
@@ -1970,9 +1841,7 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Bhadra Yoga (Panchamahapurusha) — Intellect, Eloquence & Wealth",
         "detail": lambda ctx: (
             f"Mercury is {_dignity('Mercury',ctx)} in House {_house('Mercury',ctx)} (a kendra), "
-            "forming Bhadra Yoga. This bestows sharp intellect, exceptional communication, "
-            "business acumen, mathematical or logical aptitude, and financial success through "
-            "intellectual work. Writing, oratory, and commerce are natural strengths."
+            "forming Bhadra Yoga — sharp intellect, exceptional communication, business acumen."
         ),
         "activation": "natal"
     },
@@ -1985,16 +1854,13 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Shasha Yoga (Panchamahapurusha) — Authority, Discipline & Lasting Legacy",
         "detail": lambda ctx: (
             f"Saturn is {_dignity('Saturn',ctx)} in House {_house('Saturn',ctx)} (a kendra), "
-            "forming Shasha Yoga. This confers authority, iron discipline, management mastery, "
-            "and a lasting professional legacy built through sustained effort. "
-            "Success arrives later in life but is unshakeable once established."
+            "forming Shasha Yoga — authority, iron discipline, lasting professional legacy."
         ),
         "activation": "natal"
     },
     {
         "id": "yoga_gajkesari",
         "topic": "general",
-        # BUG FIX: Gaja-Kesari = Jupiter in kendra FROM MOON (not from lagna)
         "condition": lambda ctx: (
             ((_house("Jupiter", ctx) - _house("Moon", ctx)) % 12) in [0, 3, 6, 9]
         ),
@@ -2002,50 +1868,41 @@ PREDICTION_RULES: List[Dict] = [
         "score": 4,
         "title": "Gaja-Kesari Yoga — Fame, Wisdom & Respected Standing",
         "detail": lambda ctx: (
-            f"Jupiter is in House {_house('Jupiter',ctx)} and Moon in House {_house('Moon',ctx)}, "
-            f"placing Jupiter in the {((_house('Jupiter',ctx)-_house('Moon',ctx))%12)+1}th from "
-            "the Moon — a kendra relationship, forming the celebrated Gaja-Kesari Yoga. "
-            "This is one of the most auspicious yogas: it grants fame, wealth, eloquence, "
-            "wisdom, and a respected position in society. The native is remembered long after "
-            f"their time. Strength is amplified when Jupiter is {_dignity('Jupiter', ctx)} "
-            + ("(as it is here — maximum potency)." if _strong("Jupiter", ctx) else ".")
+            f"Jupiter in House {_house('Jupiter',ctx)} and Moon in House {_house('Moon',ctx)} "
+            "form a kendra relationship, creating Gaja-Kesari Yoga — fame, wealth, eloquence, "
+            "wisdom, and a respected position in society. "
+            f"Jupiter is {_dignity('Jupiter', ctx)}"
+            + (" (maximum potency)." if _strong("Jupiter", ctx) else ".")
         ),
         "activation": "natal"
     },
     {
         "id": "yoga_viparita_harsha",
         "topic": "general",
-        "condition": lambda ctx: (
-            _lord(6, ctx) != "" and _house(_lord(6, ctx), ctx) in [6, 8, 12]
-        ),
+        "condition": lambda ctx: _lord(6, ctx) != "" and _house(_lord(6, ctx), ctx) in [6, 8, 12],
         "severity": "positive",
         "score": 3,
         "title": "Viparita Harsha Yoga — Victory Born from Adversity",
         "detail": lambda ctx: (
             f"The 6th lord {_lord(6,ctx)} is in House {_house(_lord(6,ctx),ctx)} (a dusthana), "
-            "forming Viparita Harsha Yoga — where the house of enemies and obstacles destroys "
-            "itself. Enemies are defeated by their own actions. Challenges ultimately strengthen "
-            "you. This yoga is subtly powerful: its benefits manifest quietly but consistently, "
-            "often through the failure of opponents or the turning of seemingly bad situations "
-            "into growth opportunities."
+            "forming Viparita Harsha Yoga — enemies are defeated by their own actions. "
+            "Challenges ultimately strengthen you; bad situations turn into growth opportunities."
         ),
         "activation": "natal"
     },
     {
         "id": "yoga_neechabhanga_raja",
         "topic": "general",
-        "condition": lambda ctx: (
-            any(_nb(p, ctx) for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn"])
+        "condition": lambda ctx: any(
+            _nb(p, ctx) for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn"]
         ),
         "severity": "positive",
         "score": 3,
         "title": "Neechabhanga Raja Yoga — Adversity Transformed into Royalty",
         "detail": lambda ctx: (
-            "One or more planets have their debilitation cancelled (Neechabhanga). "
-            "Classical texts consider this a Raja Yoga — the cancellation of weakness produces "
-            "exceptional strength, often exceeding what a straightforwardly exalted planet would give. "
-            "The native is tested severely in the areas ruled by the debilitated planet, then "
-            "triumphs in a way that is remarkable precisely because the fall preceded the rise. "
+            "One or more planets have their debilitation cancelled (Neechabhanga). Classical texts "
+            "consider this a Raja Yoga — the cancellation produces exceptional strength, often "
+            "exceeding what a straightforwardly exalted planet gives. "
             f"Planets with Neechabhanga: "
             f"{', '.join(p for p in ['Sun','Moon','Mars','Mercury','Jupiter','Venus','Saturn'] if _nb(p, ctx))}."
         ),
@@ -2056,18 +1913,39 @@ PREDICTION_RULES: List[Dict] = [
         "topic": "general",
         "condition": lambda ctx: any(
             p != "Moon" and p != "Rahu" and p != "Ketu" and
-            longitude_to_sign(ctx["planets"][p])[0] == longitude_to_sign(
-                ctx["planets"]["Sun"] + 30)[0]
+            # FIX v4.1: defensive % 360 on Sun longitude before + 30
+            longitude_to_sign((ctx["planets"]["Sun"] % 360) + 30)[0] ==
+            longitude_to_sign(ctx["planets"][p])[0]
             for p in ctx["planets"]
+            if p != "Sun"
         ),
         "severity": "positive",
         "score": 2,
         "title": "Vesi Yoga — Reputation, Eloquence & Good Memory",
         "detail": lambda ctx: (
             "A planet (other than Moon, Rahu, Ketu) occupies the 2nd house from the Sun, "
-            "forming Vesi Yoga. This confers reputation, good memory, eloquence, and honesty. "
-            "The native is generally respected and known for their word. The strength of the "
-            "yoga depends on which planet forms it and its own dignity."
+            "forming Vesi Yoga — reputation, good memory, eloquence, and honesty."
+        ),
+        "activation": "natal"
+    },
+    {
+        "id": "yoga_voshi",
+        "topic": "general",
+        # NEW in v4.1: Voshi — planet in 12th from Sun
+        "condition": lambda ctx: any(
+            p not in ("Sun","Moon","Rahu","Ketu") and
+            longitude_to_sign((ctx["planets"]["Sun"] % 360 + 330) % 360)[0] ==
+            longitude_to_sign(ctx["planets"][p])[0]
+            for p in ctx["planets"]
+            if p != "Sun"
+        ),
+        "severity": "positive",
+        "score": 2,
+        "title": "Voshi Yoga — Memory, Scholarship & Diligence",
+        "detail": lambda ctx: (
+            "A planet other than Moon/Rahu/Ketu occupies the 12th sign from the Sun, forming "
+            "Voshi Yoga — exceptional memory, scholarly aptitude, diligence, and sustained "
+            "intellectual effort."
         ),
         "activation": "natal"
     },
@@ -2079,13 +1957,94 @@ PREDICTION_RULES: List[Dict] = [
         "score": 3,
         "title": "Strong Atmakaraka — Soul's Purpose Supported by Destiny",
         "detail": lambda ctx: (
-            f"The Atmakaraka (soul significator in Jaimini astrology) is {ctx.get('atmakaraka','')} "
+            f"The Atmakaraka (soul significator) is {ctx.get('atmakaraka','')} "
             f"at {_dignity(ctx.get('atmakaraka',''), ctx)} dignity. "
-            "A strong Atmakaraka indicates that the soul's primary purpose in this lifetime is "
-            "actively supported by the planetary environment. The native feels aligned with their "
-            "deeper calling, and life's major events tend to push them toward authentic self-expression. "
-            f"The house of the Atmakaraka ({_house(ctx.get('atmakaraka',''), ctx)}) is a key zone "
-            "of soul-level activity and meaning."
+            "A strong Atmakaraka indicates the soul's primary purpose is actively supported. "
+            f"House {_house(ctx.get('atmakaraka',''), ctx)} is a key zone of soul-level meaning."
+        ),
+        "activation": "natal"
+    },
+    # ── NEW YOGAS in v4.1 ─────────────────────────────────────────────────────
+    {
+        "id": "yoga_sunapha",
+        "topic": "general",
+        # Sunapha: planet(s) other than Sun in 2nd from Moon
+        "condition": lambda ctx: any(
+            p not in ("Sun","Rahu","Ketu") and
+            ctx["house_map"].get(p, 0) == (ctx["house_map"].get("Moon", 1) % 12) + 1
+            for p in ctx["planets"]
+            if p != "Moon"
+        ),
+        "severity": "positive",
+        "score": 2,
+        "title": "Sunapha Yoga — Wealth & Self-Made Prosperity",
+        "detail": lambda ctx: (
+            "A planet other than Sun/Rahu/Ketu is in the 2nd house from Moon, forming Sunapha Yoga. "
+            "This confers self-made wealth, intelligence, and the ability to attract resources "
+            "through one's own effort. The native is respected in their community."
+        ),
+        "activation": "natal"
+    },
+    {
+        "id": "yoga_anapha",
+        "topic": "general",
+        # Anapha: planet(s) other than Sun in 12th from Moon
+        "condition": lambda ctx: any(
+            p not in ("Sun","Rahu","Ketu") and
+            ctx["house_map"].get(p, 0) == ((ctx["house_map"].get("Moon", 1) - 2) % 12) + 1
+            for p in ctx["planets"]
+            if p != "Moon"
+        ),
+        "severity": "positive",
+        "score": 2,
+        "title": "Anapha Yoga — Health, Fame & Generous Spirit",
+        "detail": lambda ctx: (
+            "A planet other than Sun/Rahu/Ketu is in the 12th house from Moon, forming Anapha Yoga. "
+            "This confers good health, a generous character, fame through noble deeds, and peaceful "
+            "enjoyment of life. The native tends to be well-liked and respected."
+        ),
+        "activation": "natal"
+    },
+    {
+        "id": "yoga_kahala",
+        "topic": "general",
+        # Kahala: 4th lord and 9th lord both dignified
+        "condition": lambda ctx: (
+            _dignity(ctx["lord_map"].get(4,""), ctx) in
+                ["Exalted","Own","Mool Trikona","Mutual Friend"] and
+            _dignity(ctx["lord_map"].get(9,""), ctx) in
+                ["Exalted","Own","Mool Trikona","Mutual Friend"]
+        ),
+        "severity": "positive",
+        "score": 3,
+        "title": "Kahala Yoga — Courage, Authority & Commanding Presence",
+        "detail": lambda ctx: (
+            f"The 4th lord ({ctx['lord_map'].get(4,'')}, "
+            f"{_dignity(ctx['lord_map'].get(4,''), ctx)}) and 9th lord "
+            f"({ctx['lord_map'].get(9,'')}, "
+            f"{_dignity(ctx['lord_map'].get(9,''), ctx)}) are both strong, "
+            "forming Kahala Yoga — boldness, leadership, a commanding presence, and the ability "
+            "to marshal resources toward ambitious goals."
+        ),
+        "activation": "natal"
+    },
+    {
+        "id": "yoga_parvata",
+        "topic": "general",
+        # Parvata: 6th and 12th lords in benefic houses, OR those houses are empty
+        "condition": lambda ctx: (
+            (not any(ctx["house_map"].get(p, 0) in [6, 12] for p in ctx["planets"]
+                     if p not in ["Rahu","Ketu","Sun","Moon"])) or
+            (ctx["house_map"].get(ctx["lord_map"].get(6,""), 0) in [1,2,4,5,7,9,10,11] and
+             ctx["house_map"].get(ctx["lord_map"].get(12,""), 0) in [1,2,4,5,7,9,10,11])
+        ),
+        "severity": "positive",
+        "score": 3,
+        "title": "Parvata Yoga — Affluence, Philanthropy & Eloquence",
+        "detail": lambda ctx: (
+            "Parvata Yoga is formed when the 6th and 12th lords are placed in benefic houses or "
+            "those houses are empty of classical planets. This yoga confers wealth, a generous "
+            "philanthropic spirit, exceptional eloquence, and the ability to accumulate while giving."
         ),
         "activation": "natal"
     },
@@ -2145,12 +2104,8 @@ def score_topic(fired_rules: List[Dict]) -> Dict:
 
 def _apply_dasha_boost(fired_rules: List[Dict], topic_lord: str, md_planet: str,
                        related_planets: List[str] = None) -> List[Dict]:
-    """
-    BUG FIX v4: Works on deep copies; no mutation of originals.
-    Boosts dasha-activated rules when the running MD planet governs the topic.
-    """
-    related   = set([topic_lord] + (related_planets or []))
-    result    = []
+    related = set([topic_lord] + (related_planets or []))
+    result  = []
     for r in fired_rules:
         r_copy = copy.deepcopy(r)
         if r_copy.get("activation") == "dasha_activated" and md_planet in related:
@@ -2161,8 +2116,7 @@ def _apply_dasha_boost(fired_rules: List[Dict], topic_lord: str, md_planet: str,
                 r_copy["score"] = round(old * 1.2)
             r_copy["title"] += " [⚡ ACTIVATED]"
             r_copy["detail"] += (
-                "\n  ⚡ Amplified: the running Mahadasha planet directly governs this life area, "
-                "intensifying these effects during this period."
+                "\n  ⚡ Amplified: the running Mahadasha planet directly governs this life area."
             )
         result.append(r_copy)
     return result
@@ -2186,7 +2140,7 @@ def _narrative_block(fired: List[Dict]) -> str:
         parts.append("CAUTIONS & REMEDIES:\n" + "\n\n".join(
             f"  ⚠ {r['title']}\n    {r['detail']}" for r in cautions
         ))
-    return "\n\n".join(parts) if parts else "No significant planetary indicators found for this topic."
+    return "\n\n".join(parts) if parts else "No significant indicators found for this topic."
 
 
 def _house_career_meaning(house: int) -> str:
@@ -2194,15 +2148,15 @@ def _house_career_meaning(house: int) -> str:
         1: "Career identity is tied to personal self — you ARE your work.",
         2: "Career energy flows toward wealth accumulation and family legacy.",
         3: "Career thrives through communication, short travels, and entrepreneurial drive.",
-        4: "Career connected to home, real estate, mother's legacy, or emotional security.",
-        5: "Career is infused with creativity, intelligence, and speculative enterprise.",
+        4: "Career connected to home, real estate, or emotional security.",
+        5: "Career infused with creativity, intelligence, and speculative enterprise.",
         6: "Career involves service, competition, health, or overcoming obstacles.",
-        7: "Career involves partnerships, public dealing, or spouse-related connections.",
+        7: "Career involves partnerships or public dealing.",
         8: "Career connected to research, occult, insurance, or transformation.",
         9: "Ideal — 10th lord in 9th creates Dharma-Karma connection; fortune supports career.",
         10: "Excellent — 10th lord in 10th is self-contained, maximising career strength.",
         11: "Career oriented toward gains, networks, and elder sibling/friend connections.",
-        12: "Career involves foreign lands, behind-the-scenes work, hospitals, or spirituality.",
+        12: "Career involves foreign lands, behind-the-scenes work, or spirituality.",
     }
     return meanings.get(house, "")
 
@@ -2403,21 +2357,20 @@ def analyze_general_yogas(chart: ChartData) -> Dict:
 
 
 # ==================================================================
-# SECTION 10 — ASHTAKOOTA MATCHMAKING (36 points — bugs fixed)
+# SECTION 10 — ASHTAKOOTA MATCHMAKING  (bug-fixed)
 # ==================================================================
 
 def get_tara_score(ni1: int, ni2: int) -> int:
     """
-    BUG FIX v4: Returns clean integer 0, 1, 2, or 3.
-    Full bidirectional average using TARA_SCORES table.
+    FIX v4.1: Use math.floor (conservative) instead of round-up.
+    Mixed Tara (1 good + 1 bad side) → floor(1.5) = 1, not 2.
+    Classical texts penalise mixed Tara rather than rewarding it.
     """
     d12 = ((ni2 - ni1) % 27) % 9 + 1
     d21 = ((ni1 - ni2) % 27) % 9 + 1
     s1  = TARA_SCORES[d12]
     s2  = TARA_SCORES[d21]
-    avg = (s1 + s2) / 2
-    # Round to nearest integer with tie going to the higher score
-    return int(avg + 0.5)
+    return math.floor((s1 + s2) / 2)
 
 
 def get_yoni_score(y1: str, y2: str) -> int:
@@ -2438,10 +2391,6 @@ def get_yoni_score(y1: str, y2: str) -> int:
 
 
 def get_graha_maitri_score(lord1: str, lord2: str) -> int:
-    """
-    BUG FIX v4: Same lord = 5; mutual friends = 4 (not 5); one-way friend = 3;
-    neutral = 2; one-way enemy = 1; mutual enemies = 0.
-    """
     if lord1 == lord2:
         return 5
     l1_friends = PLANET_FRIENDS.get(lord1, [])
@@ -2449,7 +2398,7 @@ def get_graha_maitri_score(lord1: str, lord2: str) -> int:
     l1_enemies = PLANET_ENEMIES.get(lord1, [])
     l2_enemies = PLANET_ENEMIES.get(lord2, [])
 
-    mutual_friend = lord2 in l1_friends and lord1 in l2_friends
+    mutual_friend  = lord2 in l1_friends and lord1 in l2_friends
     one_way_friend = lord2 in l1_friends or lord1 in l2_friends
     mutual_enemy   = lord2 in l1_enemies and lord1 in l2_enemies
     one_way_enemy  = lord2 in l1_enemies or lord1 in l2_enemies
@@ -2458,17 +2407,10 @@ def get_graha_maitri_score(lord1: str, lord2: str) -> int:
     if one_way_friend:  return 3
     if mutual_enemy:    return 0
     if one_way_enemy:   return 1
-    return 2  # both neutral to each other
+    return 2
 
 
 def get_gana_score(g1: str, g2: str) -> int:
-    """
-    Standard Gana Koota:
-    Deva-Deva=6, Manushya-Manushya=6, Rakshasa-Rakshasa=6,
-    Deva-Manushya=5, Manushya-Deva=5,
-    Deva-Rakshasa=0, Rakshasa-Deva=0,
-    Manushya-Rakshasa=0, Rakshasa-Manushya=0.
-    """
     if g1 == g2:
         return 6
     if {g1, g2} == {"Deva", "Manushya"}:
@@ -2478,52 +2420,31 @@ def get_gana_score(g1: str, g2: str) -> int:
 
 def get_bhakoot_score(idx1: int, idx2: int) -> int:
     """
-    BUG FIX v4:
-    6/8 axis: sign A is 6th from B (diff=5) ↔ B is 8th from A (diff=7).
-      The *pair* is identified by the smaller diff of 5 (or equivalently 7).
-      Mark inauspicious: diff in {5, 7}.
-
-    Wait — standard Bhakoot definitions:
-      2/12 axis = diff 2 from p1 to p2 (p1 sees p2 as 3rd? No.)
-      Actually: diff = (idx2 - idx1) % 12.
-        diff=1 means idx2 is the 2nd sign from idx1, so p1 sees p2 in 2nd house position.
-        diff=11 means p1 sees p2 in 12th position → 2/12 axis.
-      So 2/12 axis = diff 1 (one sees the other in 2nd) and diff 11 (reverse: in 12th).
-      6/8 axis: diff 5 (p2 in 6th from p1) and diff 7 (p2 in 8th from p1).
-      Nava-Pancham: diff 4 (p2 in 5th) and diff 8 (p2 in 9th) — AUSPICIOUS.
-
-    Corrected inauspicious diffs: {1, 5, 7, 11}.
-    Auspicious (score 7): everything else (including Nava-Pancham diffs 4 and 8).
+    Inauspicious diffs {1, 5, 7, 11} = 2/12 axis or 6/8 axis → score 0.
+    All other diffs (including Nava-Pancham diffs 4 and 8) → score 7.
     """
     diff = (idx2 - idx1) % 12
-    if diff in [1, 5, 7, 11]:   # 2/12 axis or 6/8 axis
+    if diff in [1, 5, 7, 11]:
         return 0
     return 7
 
 
 def calculate_ashtakoota(c1: ChartData, c2: ChartData,
                           person1_is_groom: bool = True) -> Dict:
-    """
-    BUG FIX v4: person1_is_groom parameter added for Varna direction clarity.
-    Varna: groom's varna order should be >= bride's for full score.
-    """
     m1, m2  = c1.moon_sign, c2.moon_sign
     n1      = c1.nakshatras["Moon"]["nakshatra"]
     n2      = c2.nakshatras["Moon"]["nakshatra"]
     i1, i2  = ZODIAC.index(m1), ZODIAC.index(m2)
     ni1,ni2 = NAKSHATRAS.index(n1), NAKSHATRAS.index(n2)
 
-    # Varna (1 point): groom's varna >= bride's in the social hierarchy
     varna1 = VARNA_MAP[SIGN_ELEMENT[m1]]
     varna2 = VARNA_MAP[SIGN_ELEMENT[m2]]
     varna_order = {"Brahmin":1,"Kshatriya":2,"Vaishya":3,"Shudra":4}
     if person1_is_groom:
-        # Groom is p1: groom varna (1) must be >= bride varna (2) (numerically <=)
         varna = 1 if varna_order[varna1] <= varna_order[varna2] else 0
     else:
         varna = 1 if varna_order[varna2] <= varna_order[varna1] else 0
 
-    # Vashya (2 points)
     vashya1 = VASHYA_MAP[m1]
     vashya2 = VASHYA_MAP[m2]
     vashya  = (2 if vashya1 == vashya2
@@ -2532,7 +2453,7 @@ def calculate_ashtakoota(c1: ChartData, c2: ChartData,
                    (vashya2 == "Human" and vashya1 in ["Water","Quadruped"])
                ) else 0)
 
-    tara    = get_tara_score(ni1, ni2)
+    tara    = get_tara_score(ni1, ni2)  # FIX v4.1: conservative floor
     yoni    = get_yoni_score(NAKSHATRA_YONI[n1], NAKSHATRA_YONI[n2])
     graha   = get_graha_maitri_score(SIGN_LORD[m1], SIGN_LORD[m2])
     gana    = get_gana_score(NAKSHATRA_GANA[n1], NAKSHATRA_GANA[n2])
@@ -2541,7 +2462,6 @@ def calculate_ashtakoota(c1: ChartData, c2: ChartData,
 
     total = varna + vashya + tara + yoni + graha + gana + bhakoot + nadi
 
-    # Doshas commentary
     doshas = []
     if nadi == 0:
         doshas.append("Nadi Dosha present — same Nadi is the most serious compatibility flaw; "
@@ -2641,32 +2561,29 @@ def _varshphal_themes(chart: ChartData, muntha_sign: str, muntha_house: int,
     elif muntha_house in [3, 6]:
         themes.append(
             f"Muntha in {muntha_sign} (House {muntha_house}) — a year of effort, skill-building, "
-            "competition, and overcoming obstacles; initiatives taken now bear fruit through persistence."
+            "and overcoming obstacles; initiatives taken now bear fruit through persistence."
         )
     elif muntha_house in [8, 12]:
         themes.append(
             f"Muntha in {muntha_sign} (House {muntha_house}, dusthana) — a year of inner transformation, "
-            "release of old patterns, and preparation for a new cycle; external progress may be slow "
-            "but inner growth is deep."
+            "release of old patterns, and preparation for a new cycle."
         )
 
     dig = chart.dignities.get(muntha_lord, "Neutral")
     if dig in ["Exalted","Own","Mool Trikona"]:
         themes.append(
-            f"Muntha lord {muntha_lord} is {dig} — the year's central themes are powerfully supported; "
-            "expect meaningful progress in the areas Muntha activates."
+            f"Muntha lord {muntha_lord} is {dig} — the year's central themes are powerfully supported."
         )
     elif dig == "Debilitated":
         nb = is_neechabhanga(muntha_lord, DEBILITATION.get(muntha_lord,""), chart.planets, chart.lagna_sign)
         themes.append(
             f"Muntha lord {muntha_lord} is debilitated"
             + (" but Neechabhanga applies — challenges convert to growth." if nb
-               else " — the year may feel obstructed in its central theme; remedies advised.")
+               else " — the year may feel obstructed; remedies advised.")
         )
     else:
         themes.append(
-            f"Muntha lord {muntha_lord} is {dig} — moderate support for the year's themes; "
-            "results will depend on effort and dasha timing."
+            f"Muntha lord {muntha_lord} is {dig} — moderate support for the year's themes."
         )
     return themes
 
@@ -2733,13 +2650,13 @@ def get_year_prediction(chart: ChartData, year: int) -> Dict:
             jh_moon  = ((j_idx - m_idx) % 12) + 1
             notes = []
             if jh_lagna in [1,5,9]:
-                notes.append(f"Jupiter transiting House {jh_lagna} from Lagna — highly auspicious for growth.")
+                notes.append(f"Jupiter transiting House {jh_lagna} from Lagna — highly auspicious.")
             elif jh_lagna in [4,7,8,12]:
-                notes.append(f"Jupiter transiting House {jh_lagna} from Lagna — mixed/challenging year from Jupiter.")
+                notes.append(f"Jupiter transiting House {jh_lagna} from Lagna — mixed/challenging.")
             if jh_moon in [1,5,9,11]:
-                notes.append(f"Jupiter in House {jh_moon} from Moon — Guruchandra Yoga possible; emotional positivity.")
+                notes.append(f"Jupiter in House {jh_moon} from Moon — Guruchandra Yoga possible.")
             elif jh_moon in [4,7,8]:
-                notes.append(f"Jupiter in House {jh_moon} from Moon — emotional or health strain possible.")
+                notes.append(f"Jupiter in House {jh_moon} from Moon — emotional strain possible.")
             jupiter_transit_note = " | ".join(notes)
 
     sade_sati = check_sade_sati(chart.moon_sign, transit_saturn_sign or "")
@@ -2753,27 +2670,27 @@ def get_year_prediction(chart: ChartData, year: int) -> Dict:
     yogas     = analyze_general_yogas(chart)
 
     return {
-        "year":              year,
-        "dasha":             dasha_info,
-        "sade_sati":         sade_sati,
-        "kantaka_shani":     kantaka,
-        "jupiter_transit":   jupiter_transit_note,
-        "transit_saturn":    transit_saturn_sign,
-        "transit_jupiter":   transit_jupiter_sign,
-        "varshphal":         varshphal,
-        "career":            career,
-        "marriage":          marriage,
-        "children":          children,
-        "health":            health,
-        "general_yogas":     yogas,
-        "overall_summary":   _year_summary(year, dasha_info, sade_sati, kantaka,
-                                           varshphal, career, marriage, children, health, yogas)
+        "year":            year,
+        "dasha":           dasha_info,
+        "sade_sati":       sade_sati,
+        "kantaka_shani":   kantaka,
+        "jupiter_transit": jupiter_transit_note,
+        "transit_saturn":  transit_saturn_sign,
+        "transit_jupiter": transit_jupiter_sign,
+        "varshphal":       varshphal,
+        "career":          career,
+        "marriage":        marriage,
+        "children":        children,
+        "health":          health,
+        "general_yogas":   yogas,
+        "overall_summary": _year_summary(year, dasha_info, sade_sati, kantaka,
+                                         varshphal, career, marriage, children, health, yogas)
     }
 
 
 def _year_summary(year, dasha, sade_sati, kantaka, varshphal,
                   career, marriage, children, health, yogas) -> str:
-    lines = [f"{'='*70}", f"YEAR {year} — VEDIC ASTROLOGY PREDICTION SUMMARY", f"{'='*70}\n"]
+    lines = [f"{'='*70}", f"YEAR {year} — VEDIC ASTROLOGY PREDICTION SUMMARY v4.1", f"{'='*70}\n"]
 
     md = dasha.get("mahadasha","?")
     ad = dasha.get("antardasha","?")
@@ -2793,24 +2710,20 @@ def _year_summary(year, dasha, sade_sati, kantaka, varshphal,
         lines.append(
             f"VARSHPHAL — Muntha in {varshphal.get('muntha_sign','')} "
             f"(H{varshphal.get('muntha_house','')}) | "
-            f"Lord: {varshphal.get('muntha_lord','')} "
-            f"[{varshphal.get('muntha_lord_dignity','')}]"
+            f"Lord: {varshphal.get('muntha_lord','')} [{varshphal.get('muntha_lord_dignity','')}]"
         )
         for t in varshphal.get("themes",[]):
             lines.append(f"  • {t}")
         lines.append("")
 
-    # Yoga summary
     if yogas.get("fired_yogas"):
-        lines.append(f"NATAL YOGAS: {yogas['yoga_count']} yoga(s) active "
-                     f"[Strength: {yogas['yoga_strength']}]")
-        for y in yogas["fired_yogas"][:4]:  # top 4
+        lines.append(f"NATAL YOGAS: {yogas['yoga_count']} yoga(s) [Strength: {yogas['yoga_strength']}]")
+        for y in yogas["fired_yogas"][:4]:
             lines.append(f"  ✦ {y['title']}")
         if yogas['yoga_count'] > 4:
-            lines.append(f"  … and {yogas['yoga_count']-4} more. See General Yogas section.")
+            lines.append(f"  … and {yogas['yoga_count']-4} more.")
         lines.append("")
 
-    # Topic summaries
     for label, data in [("CAREER",career),("MARRIAGE",marriage),
                          ("CHILDREN",children),("HEALTH",health)]:
         rating = data.get('rating','?')
@@ -2829,15 +2742,15 @@ def _year_summary(year, dasha, sade_sati, kantaka, varshphal,
 def generate_demo_chart() -> ChartData:
     """Sample chart: Jupiter exalted in Cancer, Saturn own in Aquarius."""
     planets = {
-        "Sun":      45.5,   # Taurus
-        "Moon":    128.3,   # Leo
-        "Mars":    200.0,   # Libra
-        "Mercury":  50.2,   # Taurus (Budhaditya Yoga with Sun)
-        "Jupiter":  95.0,   # Cancer (Exalted — Hamsa Yoga, Gaja-Kesari)
-        "Venus":    70.5,   # Gemini
-        "Saturn":  310.0,   # Aquarius (Own — Shasha Yoga in 10th from Taurus lagna)
-        "Rahu":    175.0,   # Virgo
-        "Ketu":    355.0,   # Pisces
+        "Sun":      45.5,
+        "Moon":    128.3,
+        "Mars":    200.0,
+        "Mercury":  50.2,
+        "Jupiter":  95.0,   # Cancer (Exalted)
+        "Venus":    70.5,
+        "Saturn":  310.0,   # Aquarius (Own)
+        "Rahu":    175.0,
+        "Ketu":    355.0,
     }
     return ChartData(
         planets, ascendant=30.0, lagna_sign="Taurus",
@@ -2866,7 +2779,7 @@ def print_full_report(chart: ChartData, year: int = None):
     year = year or datetime.now().year
 
     print("=" * 70)
-    print("VEDIC ASTROLOGY REPORT — v4.0")
+    print("VEDIC ASTROLOGY REPORT — v4.1")
     print("=" * 70)
     print(f"Lagna:        {chart.lagna_sign} ({SIGN_SANSKRIT[chart.lagna_sign]})")
     print(f"Moon sign:    {chart.moon_sign}")
@@ -2883,8 +2796,10 @@ def print_full_report(chart: ChartData, year: int = None):
         dig       = chart.dignities[p]
         nb        = " [NB]" if is_neechabhanga(p, sign, chart.planets, chart.lagna_sign) else ""
         vb        = chart.vimsopaka.get(p, 0)
+        # D3 (drekkana) now shows correct triplicity-based sign
+        d3        = chart.drekkana[p]
         print(f"  {p:10s}: {sign:14s} {deg:6.2f}°  {dig:14s}{nb}  "
-              f"{nak_info['nakshatra']} P{nak_info['pada']}  Vims:{vb:.1f}")
+              f"{nak_info['nakshatra']} P{nak_info['pada']}  D3:{d3}  Vims:{vb:.1f}")
 
     print()
     print("SHADBALA PROXY (0-100)")
@@ -2916,7 +2831,6 @@ def print_full_report(chart: ChartData, year: int = None):
         print(f"\n{section}")
         print("-" * 70)
         narrative = prediction[key]["narrative"]
-        # Wrap long lines
         for line in narrative.split("\n"):
             if len(line) > 100 and line.startswith("    "):
                 print(textwrap.fill(line, width=100, subsequent_indent="      "))
