@@ -14,7 +14,7 @@ from vedic_engine import (
     calculate_varshphal, analyze_career, analyze_marriage, analyze_children, analyze_health,
     ZODIAC, ZODIAC_SHORT, SIGN_SANSKRIT, SIGN_LORD, HOUSE_MEANINGS, NAKSHATRAS,
     generate_demo_chart, load_chart_from_file, longitude_to_sign,
-    SWISSEPH_AVAILABLE
+    SWISSEPH_AVAILABLE, NAKSHATRA_GANA, NAKSHATRA_NADI, NAKSHATRA_YONI
 )
 
 # ------------------------------------------------------------------
@@ -93,7 +93,7 @@ TIMEZONES = {
 TZ_KEYS = list(TIMEZONES.keys())
 
 # ------------------------------------------------------------------
-# CUSTOM CSS — LIGHT THEME ONLY
+# IMPROVED CUSTOM CSS — LIGHT THEME WITH ELEGANT SPACING
 # ------------------------------------------------------------------
 st.markdown("""
 <style>
@@ -114,16 +114,16 @@ h1, h2, h3, h4, h5, h6 {
     background: linear-gradient(90deg, #c25e00 0%, #9a4a00 100%);
     color: white;
     border: none;
-    border-radius: 10px;
+    border-radius: 12px;
     padding: 0.65rem 2rem;
     font-weight: 600;
     font-size: 1rem;
-    box-shadow: 0 4px 14px rgba(154, 74, 0, 0.25);
+    box-shadow: 0 2px 8px rgba(154, 74, 0, 0.15);
     transition: all 0.2s ease;
 }
 .stButton>button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(154, 74, 0, 0.35);
+    box-shadow: 0 6px 16px rgba(154, 74, 0, 0.25);
 }
 [data-testid="stSidebar"] {
     background: linear-gradient(180deg, #fff8f0 0%, #fef3c7 100%) !important;
@@ -131,17 +131,18 @@ h1, h2, h3, h4, h5, h6 {
 }
 .card {
     background: rgba(255, 255, 255, 0.95);
-    border: 1px solid rgba(212, 175, 55, 0.2);
-    border-radius: 16px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 20px;
     padding: 1.5rem;
     margin-bottom: 1.2rem;
-    box-shadow: 0 4px 24px rgba(107, 45, 15, 0.06);
+    box-shadow: 0 6px 20px rgba(107, 45, 15, 0.04);
+    transition: all 0.2s;
 }
 .card-title {
     font-family: 'Cinzel', serif;
     color: #92400e;
-    font-size: 1.15rem;
-    margin-bottom: 0.8rem;
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
     border-bottom: 2px solid #fcd34d;
     padding-bottom: 0.4rem;
     display: inline-block;
@@ -150,18 +151,20 @@ h1, h2, h3, h4, h5, h6 {
 .metric-box {
     background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
     border: 1px solid #fbbf24;
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 1rem;
     text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
 }
-.score-excellent { color: #15803d; font-weight: 700; }
+.score-excellent { color: #15803d; font-weight: 800; }
 .score-good { color: #65a30d; font-weight: 700; }
 .score-average { color: #ca8a04; font-weight: 700; }
 .score-challenging { color: #b91c1c; font-weight: 700; }
 hr { border-color: #d4af37 !important; opacity: 0.35; margin: 1.5rem 0; }
 .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div, .stDateInput>div>div>input {
-    border-radius: 8px !important;
-    border: 1px solid #d4af37 !important;
+    border-radius: 12px !important;
+    border: 1px solid #e2c28b !important;
+    background: white;
 }
 .stDownloadButton>button {
     background: linear-gradient(90deg, #059669 0%, #047857 100%) !important;
@@ -169,69 +172,69 @@ hr { border-color: #d4af37 !important; opacity: 0.35; margin: 1.5rem 0; }
 .badge-positive {
     background: #dcfce7;
     color: #166534;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
     font-weight: 600;
     border: 1px solid #bbf7d0;
 }
 .badge-caution {
     background: #fef3c7;
     color: #92400e;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
     font-weight: 600;
-    border: 1px solid #fde68a;
 }
 .badge-warning {
     background: #fee2e2;
     color: #991b1b;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
     font-weight: 600;
-    border: 1px solid #fecaca;
 }
 .badge-neutral {
     background: #f3f4f6;
     color: #4b5563;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
     font-weight: 600;
-    border: 1px solid #e5e7eb;
 }
 .badge-natal {
     background: #eff6ff;
     color: #1e40af;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
     font-weight: 600;
-    border: 1px solid #bfdbfe;
 }
 .badge-dasha {
     background: #f3e8ff;
     color: #6b21a8;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
     font-weight: 600;
-    border: 1px solid #e9d5ff;
 }
 .rule-card {
-    background: #fff;
-    border-left: 4px solid #d97706;
-    border-radius: 8px;
+    background: #ffffff;
+    border-left: 5px solid #d97706;
+    border-radius: 12px;
     padding: 1rem 1.2rem;
     margin-bottom: 0.8rem;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
 }
 .rule-card.positive { border-left-color: #16a34a; }
 .rule-card.caution { border-left-color: #ca8a04; }
 .rule-card.warning { border-left-color: #dc2626; }
 .rule-card.neutral { border-left-color: #6b7280; }
+div[data-testid="stDataFrame"] {
+    border-radius: 16px;
+    border: 1px solid #f0e6d2;
+    overflow: hidden;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -267,8 +270,6 @@ e.g. <i>Sitamarhi, Bihar, India</i> or <i>Muzaffarpur, Bihar, India</i>
 # ------------------------------------------------------------------
 def birth_input_form(key_prefix: str, default_name: str):
     """Reusable birth data form with session state persistence."""
-
-    # Use session state keys that persist across pages
     ss_name = f"birth_name"
     ss_date = f"birth_date"
     ss_time = f"birth_time"
@@ -319,7 +320,6 @@ def birth_input_form(key_prefix: str, default_name: str):
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
-        # Find index of current tz in TIMEZONES
         current_tz = st.session_state[ss_tz]
         tz_index = 0
         for idx, (k, v) in enumerate(TIMEZONES.items()):
@@ -348,20 +348,16 @@ def birth_input_form(key_prefix: str, default_name: str):
 
     return name, dob, tob, lat, lon, tz_val
 
-
 # ------------------------------------------------------------------
 # CHART COMPUTATION HELPER
 # ------------------------------------------------------------------
 def get_or_compute_chart(key_prefix: str, default_name: str, force_recompute: bool = False):
-    """Get chart from session state or compute new one. Returns (chart, name)."""
     ss_chart = "computed_chart"
     ss_name = "computed_chart_name"
 
-    # If we already have a computed chart and not forcing recompute, return it
     if not force_recompute and st.session_state.get(ss_chart) is not None:
         return st.session_state[ss_chart], st.session_state.get(ss_name, default_name)
 
-    # Otherwise compute from session state birth details
     name = st.session_state["birth_name"]
     date = st.session_state["birth_date"]
     time = st.session_state["birth_time"]
@@ -385,12 +381,12 @@ def get_or_compute_chart(key_prefix: str, default_name: str, force_recompute: bo
     st.session_state[ss_name] = name
     return chart, name
 
-
 # ------------------------------------------------------------------
-# CHART WHEEL — NORTH INDIAN (DIAMOND)
+# IMPROVED CHART WHEEL — NORTH INDIAN (DIAMOND) WITH POLISHED GEOMETRY
 # ------------------------------------------------------------------
 def draw_north_indian_chart(chart: ChartData, title: str):
-    fig, ax = plt.subplots(figsize=(10, 10))
+    """Draw a clean, elegant North Indian diamond chart with proper house divisions."""
+    fig, ax = plt.subplots(figsize=(11, 11))
     fig.patch.set_facecolor('#faf8f5')
     ax.set_facecolor('#faf8f5')
     ax.set_xlim(0, 10)
@@ -398,125 +394,156 @@ def draw_north_indian_chart(chart: ChartData, title: str):
     ax.set_aspect('equal')
     ax.axis('off')
 
+    # Define diamond vertices
     diamond_verts = [(5, 10), (10, 5), (5, 0), (0, 5)]
-    diamond = plt.Polygon(diamond_verts, fill=False, edgecolor='#92400e', linewidth=2.5)
+    diamond = plt.Polygon(diamond_verts, fill=False, edgecolor='#a05a2c', linewidth=2.5, linestyle='-', alpha=0.7)
     ax.add_patch(diamond)
-
-    ax.plot([5, 5], [10, 0], color='#92400e', linewidth=1.5)
-    ax.plot([0, 10], [5, 5], color='#92400e', linewidth=1.5)
-    ax.plot([2.5, 7.5], [7.5, 2.5], color='#92400e', linewidth=1.5)
-    ax.plot([2.5, 7.5], [2.5, 7.5], color='#92400e', linewidth=1.5)
-
-    houses = {
-        1:  (5.0, 7.5),
-        2:  (7.5, 7.5),
-        3:  (8.75, 5.0),
-        4:  (7.5, 2.5),
-        5:  (5.0, 2.5),
-        6:  (2.5, 2.5),
-        7:  (1.25, 5.0),
-        8:  (2.5, 7.5),
-        9:  (6.25, 6.25),
-        10: (6.25, 3.75),
-        11: (3.75, 3.75),
-        12: (3.75, 6.25),
+    
+    # Draw the main cross lines (vertical & horizontal)
+    ax.plot([5, 5], [10, 0], color='#a05a2c', linewidth=1.2, alpha=0.6)
+    ax.plot([0, 10], [5, 5], color='#a05a2c', linewidth=1.2, alpha=0.6)
+    # Draw diagonal lines to form 8 triangles (classic North Indian style)
+    ax.plot([2.5, 7.5], [7.5, 2.5], color='#a05a2c', linewidth=1, alpha=0.5, linestyle=':')
+    ax.plot([2.5, 7.5], [2.5, 7.5], color='#a05a2c', linewidth=1, alpha=0.5, linestyle=':')
+    
+    # House positions (coordinates manually adjusted for balance)
+    # Outer houses: 1 to 8
+    houses_pos = {
+        1:  (5.0, 8.2),    # Top
+        2:  (7.8, 7.8),    # Top-right
+        3:  (8.8, 5.0),    # Right
+        4:  (7.8, 2.2),    # Bottom-right
+        5:  (5.0, 1.8),    # Bottom
+        6:  (2.2, 2.2),    # Bottom-left
+        7:  (1.2, 5.0),    # Left
+        8:  (2.2, 7.8),    # Top-left
+        # Inner houses 9-12 (central square)
+        9:  (6.5, 6.5),
+        10: (6.5, 3.5),
+        11: (3.5, 3.5),
+        12: (3.5, 6.5),
     }
-
+    
     lagna_idx = ZODIAC.index(chart.lagna_sign)
-
+    
+    # Draw soft background fill for each house (using rectangles behind text? but we use text background)
     for house_num in range(1, 13):
         sign = ZODIAC[(lagna_idx + house_num - 1) % 12]
         short = ZODIAC_SHORT[(lagna_idx + house_num - 1) % 12]
-        pos = houses[house_num]
-
-        ax.text(pos[0], pos[1] + 0.35, str(house_num),
-                ha='center', va='center', fontsize=7, color='#9ca3af', fontweight='bold')
+        pos = houses_pos[house_num]
+        
+        # House number small
+        ax.text(pos[0], pos[1] + 0.45, str(house_num),
+                ha='center', va='center', fontsize=8, color='#9ca3af', fontweight='bold', alpha=0.7)
+        # Sign symbol (short)
         ax.text(pos[0], pos[1], short,
-                ha='center', va='center', fontsize=10, color='#92400e', fontweight='bold')
-        ax.text(pos[0], pos[1] - 0.35, SIGN_SANSKRIT[sign][:4],
-                ha='center', va='center', fontsize=7, color='#b45309')
-
+                ha='center', va='center', fontsize=13, color='#6b2d0f', fontweight='bold', fontfamily='sans-serif')
+        # Sanskrit name small below
+        ax.text(pos[0], pos[1] - 0.4, SIGN_SANSKRIT[sign][:4],
+                ha='center', va='center', fontsize=7, color='#b45309', alpha=0.8)
+    
+    # Planet symbols and colors
     planet_symbols = {"Sun": "☉", "Moon": "☽", "Mars": "♂", "Mercury": "☿",
                       "Jupiter": "♃", "Venus": "♀", "Saturn": "♄", "Rahu": "☊", "Ketu": "☋"}
     planet_colors = {"Sun": "#d97706", "Moon": "#6b7280", "Mars": "#dc2626",
                      "Mercury": "#059669", "Jupiter": "#92400e", "Venus": "#db2777",
                      "Saturn": "#4b5563", "Rahu": "#7c3aed", "Ketu": "#7c3aed"}
-
+    
+    # Place planets in houses
     house_planets = {i: [] for i in range(1, 13)}
     for p, lon in chart.planets.items():
         sign, _ = longitude_to_sign(lon)
         house = ((ZODIAC.index(sign) - lagna_idx) % 12) + 1
         house_planets[house].append(p)
-
+    
     for house_num, planets in house_planets.items():
         if not planets:
             continue
-        pos = houses[house_num]
+        pos = houses_pos[house_num]
         n = len(planets)
+        # Arrange planets horizontally with small offset to avoid overlap
+        start_x = pos[0] - (n-1)*0.22
         for i, p in enumerate(planets):
-            offset_x = (i - (n-1)/2) * 0.45
-            ax.text(pos[0] + offset_x, pos[1] - 0.7, planet_symbols.get(p, p),
-                    ha='center', va='center', fontsize=16,
+            ax.text(start_x + i*0.44, pos[1] - 0.85, planet_symbols.get(p, p),
+                    ha='center', va='center', fontsize=14,
                     color=planet_colors.get(p, '#1f2937'), fontweight='bold')
-
-    ax.set_title(title, fontsize=16, color='#6b2d0f', fontweight='bold',
-                 pad=20, fontfamily='serif')
+    
+    # Mark Lagna (Ascendant) clearly
+    ax.text(5.0, 9.0, "LAGNA", ha='center', va='center', fontsize=9, color='#dc2626', fontweight='bold', alpha=0.9)
+    ax.plot(5, 9.2, marker='^', color='#dc2626', markersize=8, alpha=0.8)
+    
+    # Title
+    ax.set_title(title, fontsize=18, color='#6b2d0f', fontweight='bold', pad=25, fontfamily='serif')
+    
+    # Add a subtle legend for planets
+    legend_elements = [mpatches.Patch(facecolor='none', edgecolor='none', label=f"{sym} {p}") 
+                       for p, sym in planet_symbols.items() if p in chart.planets][:6]
+    if legend_elements:
+        ax.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.08),
+                  ncol=6, fontsize=8, frameon=False, handlelength=0, handletextpad=0.5)
+    
     plt.tight_layout()
     return fig
 
-
 # ------------------------------------------------------------------
-# CHART WHEEL — SOUTH INDIAN (CIRCULAR)
+# IMPROVED CHART WHEEL — SOUTH INDIAN (CIRCULAR) WITH BETTER PLANET SPACING
 # ------------------------------------------------------------------
 def draw_circular_chart(chart: ChartData, title: str):
-    fig, ax = plt.subplots(figsize=(9, 9), subplot_kw=dict(projection='polar'))
+    """Elegant circular South Indian style chart with adaptive planet placement."""
+    fig, ax = plt.subplots(figsize=(10, 10), subplot_kw=dict(projection='polar'))
     fig.patch.set_facecolor('#faf8f5')
     ax.set_facecolor('#faf8f5')
-
-    colors = ['#fff8f0' if i % 2 == 0 else '#fef3c7' for i in range(12)]
+    ax.set_theta_offset(np.pi/2)
+    ax.set_theta_direction(-1)
+    
+    # Color scheme for signs
+    sign_colors = ['#fff4e6', '#fef3c7', '#ffedd5', '#fef9e3', '#fff7ed', '#fefce8',
+                   '#fff4e6', '#fef3c7', '#ffedd5', '#fef9e3', '#fff7ed', '#fefce8']
     for i in range(12):
-        theta = np.linspace(np.radians(i*30), np.radians((i+1)*30), 50)
-        ax.fill_between(theta, 0.35, 1.0, color=colors[i], alpha=0.95)
-        ax.plot([np.radians(i*30)]*2, [0.35, 1.0], color='#92400e', linewidth=1.2)
-
-    for i, sign in enumerate(ZODIAC):
+        theta_start = np.radians(i*30)
+        theta_end = np.radians((i+1)*30)
+        ax.fill_between(np.linspace(theta_start, theta_end, 30), 0.3, 1.0,
+                        color=sign_colors[i % len(sign_colors)], alpha=0.7, edgecolor='#d4af37', linewidth=0.5)
+        # Sign labels at outer rim
         angle = np.radians(i*30 + 15)
-        ax.text(angle, 0.92, f"{sign}\n{SIGN_SANSKRIT[sign]}",
-                ha='center', va='center', fontsize=7.5, color='#92400e',
-                fontweight='bold', fontfamily='sans-serif')
-
+        ax.text(angle, 0.92, f"{ZODIAC[i]}\n{SIGN_SANSKRIT[ZODIAC[i]]}",
+                ha='center', va='center', fontsize=7.5, color='#92400e', fontweight='bold')
+    
+    # Planet symbols
     symbols = {"Sun": "☉", "Moon": "☽", "Mars": "♂", "Mercury": "☿",
                "Jupiter": "♃", "Venus": "♀", "Saturn": "♄", "Rahu": "☊", "Ketu": "☋"}
     colors_p = {"Sun": "#d97706", "Moon": "#6b7280", "Mars": "#dc2626",
                 "Mercury": "#059669", "Jupiter": "#92400e", "Venus": "#db2777",
                 "Saturn": "#4b5563", "Rahu": "#7c3aed", "Ketu": "#7c3aed"}
-
+    
+    # Dynamic placement: avoid overlapping planets in same degree region
     used_bins = {}
     for planet, lon in chart.planets.items():
         base = lon % 360
-        bin_id = int(base / 6)
-        offset = used_bins.get(bin_id, 0) * 0.05
+        bin_id = int(base / 6)  # 6-degree bins for placement
+        offset = used_bins.get(bin_id, 0) * 0.06
         used_bins[bin_id] = used_bins.get(bin_id, 0) + 1
-        angle = np.radians(base + 90)
-        dist = 0.58 + offset
-        ax.text(angle, dist, symbols.get(planet, planet), fontsize=13,
+        angle = np.radians(base)
+        dist = 0.55 + offset
+        ax.text(angle, dist, symbols.get(planet, planet), fontsize=14,
                 ha='center', va='center', color=colors_p.get(planet, '#1f2937'),
-                fontweight='bold')
-
-    asc_angle = np.radians(chart.ascendant + 90)
-    ax.plot([asc_angle, asc_angle], [0.35, 1.0], color='#dc2626', linewidth=2.5, linestyle='--')
-    ax.text(asc_angle, 0.97, 'ASC ▲', ha='center', va='center', color='#dc2626',
-            fontsize=9, fontweight='bold')
-
-    ax.set_ylim(0, 1)
+                fontweight='bold', bbox=dict(facecolor='white', edgecolor='none', alpha=0.6, pad=1))
+    
+    # Ascendant line
+    asc_angle = np.radians(chart.ascendant)
+    ax.plot([asc_angle, asc_angle], [0.3, 1.0], color='#dc2626', linewidth=2.5, linestyle='--', alpha=0.8)
+    ax.text(asc_angle, 1.02, 'ASC ▲', ha='center', va='center', color='#dc2626', fontsize=9, fontweight='bold')
+    
+    # Inner circle styling
+    ax.set_ylim(0, 1.05)
     ax.set_yticks([])
     ax.set_xticks([])
     ax.spines['polar'].set_visible(False)
-    ax.set_title(title, fontsize=15, color='#6b2d0f', fontweight='bold',
-                 pad=20, fontfamily='serif')
+    ax.grid(False)
+    ax.set_title(title, fontsize=18, color='#6b2d0f', fontweight='bold', pad=30, fontfamily='serif')
+    
     plt.tight_layout()
     return fig
-
 
 def planet_table(chart: ChartData):
     rows = []
@@ -537,7 +564,6 @@ def planet_table(chart: ChartData):
             "Dignity": chart.dignities.get(p, "")
         })
     return pd.DataFrame(rows)
-
 
 # ------------------------------------------------------------------
 # SAVE CHART
@@ -585,7 +611,6 @@ CURRENT DASHA:
             use_container_width=True
         )
 
-
 # ------------------------------------------------------------------
 # RULE-BASED PREDICTION DISPLAY
 # ------------------------------------------------------------------
@@ -622,7 +647,6 @@ def render_fired_rules(fired_rules):
         </div>
         """, unsafe_allow_html=True)
 
-
 # ------------------------------------------------------------------
 # PAGES
 # ------------------------------------------------------------------
@@ -642,7 +666,6 @@ def _muntha_interpretation(muntha: str, lagna: str) -> str:
         "Pisces": "Year of spirituality, foreign connections, and intuition. Creative pursuits."
     }
     return interpretations.get(muntha, "Mixed results — maintain balance and adaptability.")
-
 
 if page == "🏠 Home":
     st.markdown("""
@@ -766,9 +789,13 @@ elif page == "📜 Horoscope":
 
         st.divider()
         if "North" in chart_style:
-            st.pyplot(draw_north_indian_chart(chart, f"{name}'s Horoscope (D1)"))
+            fig = draw_north_indian_chart(chart, f"{name}'s Horoscope (D1)")
+            st.pyplot(fig)
+            plt.close(fig)
         else:
-            st.pyplot(draw_circular_chart(chart, f"{name}'s Horoscope (D1)"))
+            fig = draw_circular_chart(chart, f"{name}'s Horoscope (D1)")
+            st.pyplot(fig)
+            plt.close(fig)
 
         c1, c2, c3 = st.columns(3)
         with c1:
