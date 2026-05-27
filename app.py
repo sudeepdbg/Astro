@@ -330,7 +330,7 @@ def birth_input_form(key_prefix: str):
         name = st.text_input("Name", st.session_state["birth_name"], key=f"{key_prefix}_name", placeholder="Full name")
         st.session_state["birth_name"] = name
     with c2:
-        dob = st.date_input("Date of birth", st.session_state["birth_date"], key=f"{key_prefix}_date")
+        dob = st.date_input("Date of birth", st.session_state["birth_date"], min_value=datetime(1901, 1, 1), key=f"{key_prefix}_date")
         st.session_state["birth_date"] = dob
     with c3:
         tob = st.time_input("Time of birth", st.session_state["birth_time"], step=60, key=f"{key_prefix}_time")
@@ -799,7 +799,7 @@ elif page == "Matchmaking":
     with c1:
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.5rem;">Person 1 · Groom</div>', unsafe_allow_html=True)
         n1 = st.text_input("Name", "Person 1", key="m1_name")
-        d1 = st.date_input("Date of birth", datetime(1990,1,1), key="m1_date")
+        d1 = st.date_input("Date of birth", datetime(1990,1,1), min_value=datetime(1901, 1, 1), key="m1_date")
         t1 = st.time_input("Time", datetime.strptime("08:00","%H:%M").time(), key="m1_time", step=60)
         lat1 = st.number_input("Lat", -90.0, 90.0, 25.42, key="m1_lat")
         lon1 = st.number_input("Lon", -180.0, 180.0, 86.13, key="m1_lon")
@@ -807,7 +807,7 @@ elif page == "Matchmaking":
     with c2:
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.5rem;">Person 2 · Bride</div>', unsafe_allow_html=True)
         n2 = st.text_input("Name", "Person 2", key="m2_name")
-        d2 = st.date_input("Date of birth", datetime(1992,6,15), key="m2_date")
+        d2 = st.date_input("Date of birth", datetime(1992,6,15), min_value=datetime(1901, 1, 1), key="m2_date")
         t2 = st.time_input("Time", datetime.strptime("10:30","%H:%M").time(), key="m2_time", step=60)
         lat2 = st.number_input("Lat", -90.0, 90.0, 28.61, key="m2_lat")
         lon2 = st.number_input("Lon", -180.0, 180.0, 77.20, key="m2_lon")
