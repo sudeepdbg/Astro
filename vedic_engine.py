@@ -3087,7 +3087,7 @@ def _varshphal_themes_v2(
             ),
             "classical_rule": "Jupiter's annual transit over the natal chart is the single most important transit for predicting the year's general fortune and timing of auspicious events.",
             "interpretation": (
-                + ("Highly auspicious: Jupiter transiting a trine/11th from Lagna — expansion, luck, and new opportunities." if jup_from_lagna in [1,5,9,11]
+                ("Highly auspicious: Jupiter transiting a trine/11th from Lagna — expansion, luck, and new opportunities." if jup_from_lagna in [1,5,9,11]
                    else "Challenging: Jupiter in 4th/8th/12th from Lagna — muted blessings; introspection and patience." if jup_from_lagna in [4,8,12]
                    else "Moderate Jupiter transit — some positive results, especially in Jupiter-ruled matters.")
                 + f" From Moon: House {jup_from_moon} "
