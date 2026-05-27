@@ -973,42 +973,96 @@ elif page == "Varshphal":
         if not varsh:
             st.error("Unable to calculate Varshphal. Check birth data."); st.stop()
 
+        # ── Header Card ──
         st.markdown(f"""
         <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:1.5rem; margin:1rem 0;">
             <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:{INK_MUTE}; margin-bottom:1rem;">Solar Return {year}</div>
             <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1rem;">
                 <div>
-                    <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Return date</div>
-                    <div style="font-size:1rem; font-weight:500; color:{INK}; margin-top:3px;">{varsh.get('varshphal_date','—')}</div>
+                    <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Muntha</div>
+                    <div style="font-size:1.1rem; font-weight:500; color:{INK}; margin-top:3px;">{varsh.get('muntha_sign','—')}</div>
+                    <div style="font-size:0.75rem; color:{INK_MUTE}; margin-top:2px;">House {varsh.get('muntha_house','—')}</div>
                 </div>
                 <div>
-                    <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Muntha</div>
-                    <div style="font-size:1rem; font-weight:500; color:{INK}; margin-top:3px;">{varsh.get('muntha_sign','—')}</div>
+                    <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Muntha Lord</div>
+                    <div style="font-size:1.1rem; font-weight:500; color:{INK}; margin-top:3px;">{varsh.get('muntha_lord','—')}</div>
+                    <div style="font-size:0.75rem; color:{INK_MUTE}; margin-top:2px;">{varsh.get('muntha_lord_dignity','—')}</div>
                 </div>
                 <div>
                     <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Varsha Lagna</div>
-                    <div style="font-size:1rem; font-weight:500; color:{INK}; margin-top:3px;">{varsh.get('varsha_lagna','—')}</div>
+                    <div style="font-size:1.1rem; font-weight:500; color:{INK}; margin-top:3px;">{varsh.get('varsha_lagna_sign','—')}</div>
+                    <div style="font-size:0.75rem; color:{INK_MUTE}; margin-top:2px;">Lord: {varsh.get('varsha_lagna_lord','—')}</div>
                 </div>
                 <div>
-                    <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Years elapsed</div>
-                    <div style="font-size:1rem; font-weight:500; color:{INK}; margin-top:3px;">{varsh.get('years_elapsed','—')}</div>
+                    <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Varshesha</div>
+                    <div style="font-size:1.1rem; font-weight:500; color:{INK}; margin-top:3px;">{varsh.get('varshesha','—')}</div>
+                    <div style="font-size:0.75rem; color:{INK_MUTE}; margin-top:2px;">{varsh.get('varshesha_dignity','—')}</div>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
+        # ── Tri-Pataki ──
+        tp = varsh.get("tri_pataki", {})
+        if tp:
+            st.markdown(f"""
+            <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1rem 1.25rem; margin:1rem 0;">
+                <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Tri-Pataki Chakra · Three-Phase Muntha Wheel</div>
+                <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem;">
+                    <div style="text-align:center; padding:0.75rem; background:{WARM}; border-radius:5px;">
+                        <div style="font-size:0.7rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Udaya · Rising (Months 1–4)</div>
+                        <div style="font-size:1.1rem; font-weight:500; color:{INK}; margin-top:4px;">{tp.get('udaya_muntha','—')}</div>
+                    </div>
+                    <div style="text-align:center; padding:0.75rem; background:{WARM}; border-radius:5px;">
+                        <div style="font-size:0.7rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Madhya · Peak (Months 5–8)</div>
+                        <div style="font-size:1.1rem; font-weight:500; color:{INK}; margin-top:4px;">{tp.get('madhya_muntha','—')}</div>
+                    </div>
+                    <div style="text-align:center; padding:0.75rem; background:{WARM}; border-radius:5px;">
+                        <div style="font-size:0.7rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Asta · Setting (Months 9–12)</div>
+                        <div style="font-size:1.1rem; font-weight:500; color:{INK}; margin-top:4px;">{tp.get('asta_muntha','—')}</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── Annual Themes ──
         themes = varsh.get("themes", [])
         if themes:
-            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin:1rem 0 0.5rem;">Annual themes</div>', unsafe_allow_html=True)
-            cols_t = st.columns(min(len(themes), 3))
-            for i, theme in enumerate(themes):
-                with cols_t[i % 3]:
-                    st.markdown(f"""
-                    <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:0.85rem; font-size:0.85rem; color:{INK_SOFT}; line-height:1.5;">
-                        {theme}
-                    </div>
-                    """, unsafe_allow_html=True)
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin:1.25rem 0 0.75rem;">Annual Themes</div>', unsafe_allow_html=True)
 
+            for theme in themes:
+                if not isinstance(theme, dict):
+                    continue
+
+                nature = theme.get("nature", "Neutral")
+                cat = theme.get("category", "")
+                interp = theme.get("interpretation", "")
+                calc = theme.get("calculation", "")
+                rule = theme.get("classical_rule", "")
+                modifier = theme.get("modifier", "")
+
+                # Color coding by nature
+                if nature == "Auspicious":
+                    accent = SAGE; bg = "#f0f5f2"; icon = "✦"
+                elif nature == "Challenging":
+                    accent = RUST; bg = "#fdf2ed"; icon = "⚠"
+                else:
+                    accent = INK_MUTE; bg = WARM; icon = "◈"
+
+                st.markdown(f"""
+                <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:1.25rem; margin-bottom:0.75rem; border-left:3px solid {accent};">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                        <div style="font-size:0.9rem; font-weight:500; color:{INK};">{icon} {cat}</div>
+                        <div style="font-size:0.72rem; color:{accent}; font-weight:500; text-transform:uppercase; letter-spacing:0.06em;">{nature}</div>
+                    </div>
+                    <div style="font-size:0.82rem; color:{INK_SOFT}; line-height:1.65; margin-bottom:0.5rem;">{interp}</div>
+                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid {BORDER};"><span style="font-weight:500;">Calculation:</span> {calc}</div>' if calc else ''}
+                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.4rem;"><span style="font-weight:500;">Classical Rule:</span> {rule}</div>' if rule else ''}
+                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.4rem;"><span style="font-weight:500;">Note:</span> {modifier}</div>' if modifier else ''}
+                </div>
+                """, unsafe_allow_html=True)
+
+        # ── Muntha Interpretation ──
         muntha = varsh.get("muntha_sign","")
         if muntha:
             lord = SIGN_LORD.get(muntha, "—")
@@ -1026,7 +1080,7 @@ elif page == "Varshphal":
             q = st.text_input("Question", placeholder="e.g. What does Muntha in Gemini mean for finances?", label_visibility="collapsed")
             if q and st.button("Ask AI about Varshphal", use_container_width=True):
                 with st.spinner("Analysing…"):
-                    ctx = f"{name}: Lagna {chart.lagna_sign}, Year {year}. Muntha {varsh.get('muntha_sign','')}, Varsha Lagna {varsh.get('varsha_lagna','')}. Themes: {', '.join(themes)}"
+                    ctx = f"{name}: Lagna {chart.lagna_sign}, Year {year}. Muntha {varsh.get('muntha_sign','')}, Varsha Lagna {varsh.get('varsha_lagna_sign','')}. Themes: {', '.join([t.get('category','') for t in themes if isinstance(t,dict)])}"
                     try:
                         r = requests.post("https://openrouter.ai/api/v1/chat/completions",
                             headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json"},
@@ -1042,10 +1096,6 @@ elif page == "Varshphal":
                         """, unsafe_allow_html=True)
                     except Exception as e:
                         st.warning(f"AI error: {e}")
-
-# ═══════════════════════════════════════════════════════════════
-# AI ASTROLOGER
-# ═══════════════════════════════════════════════════════════════
 elif page == "AI Astrologer":
     section_title("AI Astrologer", "Powered by OpenRouter · Gemini")
 
