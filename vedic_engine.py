@@ -2310,7 +2310,7 @@ PREDICTION_RULES: List[Dict] = [
         "title": "Graha Yuddha (Planetary War) — One Planet Eclipsed",
         "detail": lambda ctx: (
             f"CALCULATION: Planetary war detected. "
-            f"{[f'{g[\"winner\"]} wins over {g[\"loser\"]}' for g in ctx.get('graha_yuddha',[])]}. "
+            f"{[g['winner'] + " wins over " + g['loser'] for g in ctx.get('graha_yuddha',[])]}. "
             f"Logic: {[g['logic'] for g in ctx.get('graha_yuddha',[])]}. "
             f"In Graha Yuddha, the losing planet's significations are weakened for the lifetime. "
             f"\nINTERPRETATION: The loser in a planetary war loses signification strength. "
