@@ -2025,7 +2025,7 @@ PREDICTION_RULES: List[Dict] = [
             f"CALCULATION: Saturn in House {_house('Saturn',ctx)}. "
             f"Dignity: {_dignity('Saturn',ctx)}. Shadbala: {_strength('Saturn',ctx)}/100. "
             f"Retrograde: {_retro('Saturn',ctx)} "
-            f"({'increases Saturn's depth here' if _retro('Saturn',ctx) else 'direct'}). "
+            f"({'increases Saturn\'s depth here' if _retro('Saturn',ctx) else 'direct'}). "
             + (f"Neechabhanga applies: {'; '.join(_nb_conds('Saturn',ctx))}. " if _nb("Saturn",ctx) else "")
             + f"\nINTERPRETATION: "
             + ("Saturn in 6th: chronic conditions — joints, bones, teeth, skin, nervous system. "
