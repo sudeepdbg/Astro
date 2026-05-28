@@ -392,7 +392,6 @@ def draw_north_indian_chart(chart: ChartData, title=""):
     ax.set_xlim(0, 10); ax.set_ylim(0, 10)
     ax.set_aspect("equal"); ax.axis("off")
 
-    # House outline coords
     house_polys = {
         1:  [(5,10),(7.5,7.5),(5,5),(2.5,7.5)],
         2:  [(7.5,7.5),(10,5),(7.5,2.5),(5,5)],
@@ -404,46 +403,34 @@ def draw_north_indian_chart(chart: ChartData, title=""):
         8:  [(0,10),(2.5,7.5),(0,5)],
         9:  [(0,10),(5,10),(2.5,7.5)],
         10: [(5,10),(10,10),(7.5,7.5)],
-        11: [(0,5),(5,5),(2.5,2.5)],  # Note: adjusted
+        11: [(5,5),(2.5,2.5),(0,5)],
         12: [(0,0),(0,5),(2.5,2.5)],
     }
-    # Fix missing corner triangles
     house_polys[3]  = [(10,10),(10,5),(7.5,7.5)]
     house_polys[6]  = [(0,0),(5,0),(2.5,2.5)]
-    house_polys[8]  = [(0,10),(2.5,7.5),(0,5)]  # fix
+    house_polys[8]  = [(0,10),(2.5,7.5),(0,5)]
     house_polys[9]  = [(0,10),(5,10),(2.5,7.5)]
     house_polys[10] = [(5,10),(10,10),(7.5,7.5)]
     house_polys[11] = [(5,5),(2.5,2.5),(0,5)]
     house_polys[12] = [(0,0),(0,5),(2.5,2.5)]
 
     house_centers = {
-        1:  (5.0, 8.0), 2:  (7.7, 5.0), 3:  (9.0, 8.5),
-        4:  (8.5, 1.5), 5:  (5.0, 2.0), 6:  (1.5, 1.0),
-        7:  (2.3, 5.0), 8:  (1.0, 8.5), 9:  (1.5, 9.2),
-        10: (8.5, 9.2), 11: (1.5, 4.0), 12: (0.8, 1.2),
+        1:  (5.0, 8.0), 2:  (7.7, 5.0), 3:  (9.3, 8.3),
+        4:  (8.5, 1.5), 5:  (5.0, 2.0), 6:  (1.3, 0.7),
+        7:  (2.3, 5.0), 8:  (0.7, 7.5), 9:  (1.8, 9.1),
+        10: (8.2, 9.1), 11: (1.5, 4.2), 12: (0.7, 2.5),
     }
-    # Better centers for corner triangles
-    house_centers[3]  = (9.3, 8.3)
-    house_centers[6]  = (1.3, 0.7)
-    house_centers[8]  = (0.7, 7.5)
-    house_centers[9]  = (1.8, 9.1)
-    house_centers[10] = (8.2, 9.1)
-    house_centers[11] = (1.5, 4.2)
-    house_centers[12] = (0.7, 2.5)
 
     lagna_idx = ZODIAC.index(chart.lagna_sign)
 
-    # Draw each house
     for h, verts in house_polys.items():
         poly = plt.Polygon(verts, closed=True,
                            facecolor=CREAM, edgecolor=BORDER, linewidth=0.8, zorder=1)
         ax.add_patch(poly)
 
-    # Central diamond border
     diamond = plt.Polygon([(5,10),(10,5),(5,0),(0,5)], closed=True,
                           fill=False, edgecolor="#c8bfb4", linewidth=1.0, zorder=2)
     ax.add_patch(diamond)
-    # Cross lines
     ax.plot([5,5],[0,10], color=BORDER, lw=0.7, zorder=2)
     ax.plot([0,10],[5,5], color=BORDER, lw=0.7, zorder=2)
     ax.plot([5,10],[10,5], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
@@ -451,7 +438,6 @@ def draw_north_indian_chart(chart: ChartData, title=""):
     ax.plot([10,5],[5,0], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
     ax.plot([0,5],[5,0], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
 
-    # Place sign label + planets per house
     house_planets = {i: [] for i in range(1, 13)}
     for p, lon in chart.planets.items():
         sign, _ = longitude_to_sign(lon)
@@ -464,25 +450,20 @@ def draw_north_indian_chart(chart: ChartData, title=""):
         short = ZODIAC_SHORT[(lagna_idx + h - 1) % 12]
         skt = SIGN_SANSKRIT[sign][:3]
 
-        # Lagna marker
         if h == 1:
             ax.text(cx, cy + 0.6, "▲", ha="center", va="center",
                     fontsize=7, color=RUST, zorder=4)
 
-        # House number (tiny, muted)
         ax.text(cx, cy + 0.32, str(h), ha="center", va="center",
                 fontsize=6, color=INK_MUTE, zorder=4, fontweight="normal")
 
-        # Sign short name
         ax.text(cx, cy, short, ha="center", va="center",
                 fontsize=9, color=INK_SOFT, zorder=4, fontweight="normal",
                 fontfamily="serif")
 
-        # Sanskrit name (tiny)
         ax.text(cx, cy - 0.28, skt, ha="center", va="center",
                 fontsize=5.5, color=INK_MUTE, zorder=4)
 
-        # Planets
         planets_here = house_planets[h]
         if planets_here:
             n = len(planets_here)
@@ -509,8 +490,6 @@ def draw_navamsa_chart(chart: ChartData):
     ax.set_xlim(0, 10); ax.set_ylim(0, 10)
     ax.set_aspect("equal"); ax.axis("off")
 
-    # Simple 3×4 south-indian style grid for D9
-    # Use north-indian diamond same as main but with navamsa data
     house_polys = {
         1:  [(5,10),(7.5,7.5),(5,5),(2.5,7.5)],
         2:  [(7.5,7.5),(10,5),(7.5,2.5),(5,5)],
@@ -544,7 +523,6 @@ def draw_navamsa_chart(chart: ChartData):
     for line in [([5,10],[10,5]),([5,0],[10,5]),([10,5],[5,0]),([0,5],[5,0])]:
         ax.plot(line[0], line[1], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
 
-    # Navamsa planet placement
     nav_planets = {i: [] for i in range(1, 13)}
     nav_lagna = chart.navamsa.get("Lagna", chart.navamsa.get("Moon", "Aries"))
     nav_lagna_idx = ZODIAC.index(nav_lagna) if nav_lagna in ZODIAC else 0
@@ -580,6 +558,15 @@ def draw_navamsa_chart(chart: ChartData):
                  fontfamily="serif", fontweight="normal", style="italic")
     plt.tight_layout(pad=0.3)
     return fig
+
+# ─── FIGURE → BYTES ──────────────────────────────────────────────
+def fig_to_bytes(fig, dpi=150) -> bytes:
+    """Convert a matplotlib figure to PNG bytes for download."""
+    buf = BytesIO()
+    fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight",
+                facecolor=fig.get_facecolor())
+    buf.seek(0)
+    return buf.getvalue()
 
 # ─── PLANET TABLE ────────────────────────────────────────────────
 def planet_table(chart: ChartData) -> pd.DataFrame:
@@ -704,16 +691,31 @@ if page == "Horoscope":
         # ── CHARTS side by side ──
         ch1, ch2 = st.columns(2)
         with ch1:
-            if "North" in chart_style:
-                fig = draw_north_indian_chart(chart, f"{name} · D1 Rashi")
-            else:
-                fig = draw_north_indian_chart(chart, f"{name} · D1 Rashi")
+            fig = draw_north_indian_chart(chart, f"{name} · D1 Rashi")
             st.pyplot(fig, use_container_width=True)
+            d1_bytes = fig_to_bytes(fig)
             plt.close(fig)
+            st.download_button(
+                "↓ Download D1 Rashi chart (PNG)",
+                data=d1_bytes,
+                file_name=f"{name.replace(' ','_')}_D1_rashi.png",
+                mime="image/png",
+                use_container_width=True,
+                key="dl_d1",
+            )
         with ch2:
             fig2 = draw_navamsa_chart(chart)
             st.pyplot(fig2, use_container_width=True)
+            d9_bytes = fig_to_bytes(fig2)
             plt.close(fig2)
+            st.download_button(
+                "↓ Download D9 Navamsa chart (PNG)",
+                data=d9_bytes,
+                file_name=f"{name.replace(' ','_')}_D9_navamsa.png",
+                mime="image/png",
+                use_container_width=True,
+                key="dl_d9",
+            )
 
         st.divider()
 
@@ -973,6 +975,52 @@ elif page == "Varshphal":
         if not varsh:
             st.error("Unable to calculate Varshphal. Check birth data."); st.stop()
 
+        # ── Varshphal download ──
+        varsh_lines = [
+            f"VARSHPHAL — {name} · Year {year}",
+            "=" * 50,
+            f"Muntha Sign    : {varsh.get('muntha_sign','—')} (House {varsh.get('muntha_house','—')})",
+            f"Muntha Lord    : {varsh.get('muntha_lord','—')} — {varsh.get('muntha_lord_dignity','—')}",
+            f"Varsha Lagna   : {varsh.get('varsha_lagna_sign','—')} (Lord: {varsh.get('varsha_lagna_lord','—')})",
+            f"Varshesha      : {varsh.get('varshesha','—')} — {varsh.get('varshesha_dignity','—')}",
+            "",
+        ]
+        tp_dl = varsh.get("tri_pataki", {})
+        if tp_dl:
+            varsh_lines += [
+                "TRI-PATAKI CHAKRA:",
+                f"  Udaya  (Months 1–4) : {tp_dl.get('udaya_muntha','—')}",
+                f"  Madhya (Months 5–8) : {tp_dl.get('madhya_muntha','—')}",
+                f"  Asta   (Months 9–12): {tp_dl.get('asta_muntha','—')}",
+                "",
+            ]
+        themes_dl = varsh.get("themes", [])
+        if themes_dl:
+            varsh_lines.append("ANNUAL THEMES:")
+            for t in themes_dl:
+                if isinstance(t, dict):
+                    varsh_lines.append(
+                        f"  [{t.get('nature','—')}] {t.get('category','')}: {t.get('interpretation','')}"
+                    )
+                    if t.get("calculation"):
+                        varsh_lines.append(f"    Calculation: {t['calculation']}")
+                    if t.get("classical_rule"):
+                        varsh_lines.append(f"    Classical Rule: {t['classical_rule']}")
+            varsh_lines.append("")
+        muntha_sign = varsh.get("muntha_sign","")
+        if muntha_sign:
+            varsh_lines += [
+                f"MUNTHA IN {muntha_sign.upper()}:",
+                _muntha_interpretation(muntha_sign),
+            ]
+
+        st.download_button(
+            "↓ Download Varshphal summary (TXT)",
+            data="\n".join(varsh_lines),
+            file_name=f"{name.replace(' ','_')}_varshphal_{year}.txt",
+            mime="text/plain",
+        )
+
         # ── Header Card ──
         st.markdown(f"""
         <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:1.5rem; margin:1rem 0;">
@@ -1041,7 +1089,6 @@ elif page == "Varshphal":
                 rule = theme.get("classical_rule", "")
                 modifier = theme.get("modifier", "")
 
-                # Color coding by nature
                 if nature == "Auspicious":
                     accent = SAGE; bg = "#f0f5f2"; icon = "✦"
                 elif nature == "Challenging":
@@ -1096,6 +1143,10 @@ elif page == "Varshphal":
                         """, unsafe_allow_html=True)
                     except Exception as e:
                         st.warning(f"AI error: {e}")
+
+# ═══════════════════════════════════════════════════════════════
+# AI ASTROLOGER
+# ═══════════════════════════════════════════════════════════════
 elif page == "AI Astrologer":
     section_title("AI Astrologer", "Powered by OpenRouter · Gemini")
 
@@ -1227,9 +1278,8 @@ elif page == "Ram Shalaka":
                         st.warning(f"Error: {e}")
 
 # ═══════════════════════════════════════════════════════════════
-# HOME — Load chart page (accessible from sidebar)
+# HOME
 # ═══════════════════════════════════════════════════════════════
-# (If none matched we show a clean home)
 else:
     section_title("Jyotish", "Vedic Astrology Suite · v5.0")
     st.markdown(f"""
