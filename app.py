@@ -36,8 +36,6 @@ def init_session_state():
         "birth_lon": 86.13,
         "birth_tz": 5.5,
         "birth_city": "",
-        "birth_geo_suggestions": [],
-        "birth_geo_selected": None,
         "computed_chart": None,
         "computed_chart_name": "",
         "ai_ctx": "",
@@ -59,21 +57,16 @@ def get_geolocator():
         return None
 
 def geocode_city(name: str):
-    """Return a list of (lat, lon, display_name) tuples for all matches."""
     geo = get_geolocator()
     if not geo or not name.strip():
-        return []
+        return None
     try:
-        locations = geo.geocode(name, language="en", exactly_one=False, limit=5)
-        if not locations:
-            return []
-        results = []
-        for loc in locations:
-            display = loc.address if hasattr(loc, 'address') else loc.raw.get('display_name', str(loc))
-            results.append((loc.latitude, loc.longitude, display))
-        return results
+        loc = geo.geocode(name, language="en")
+        if loc:
+            return (loc.latitude, loc.longitude)
     except Exception:
-        return []
+        pass
+    return None
 
 # ─── TIMEZONE MAP ─────────────────────────────────────────────────
 TIMEZONES = {
@@ -351,33 +344,14 @@ def birth_input_form(key_prefix: str):
         st.write("")
         if st.button("Find", key=f"{key_prefix}_find"):
             with st.spinner("Locating…"):
-                suggestions = geocode_city(city_name)
-                if suggestions:
-                    st.session_state["birth_geo_suggestions"] = suggestions
-                    st.session_state["birth_geo_selected"] = 0
-                    st.toast(f"✓ Found {len(suggestions)} location(s)")
+                coords = geocode_city(city_name)
+                if coords:
+                    st.session_state["birth_lat"] = round(coords[0], 4)
+                    st.session_state["birth_lon"] = round(coords[1], 4)
+                    st.session_state["birth_geo_ok"] = True
+                    st.toast(f"✓ {coords[0]:.4f}, {coords[1]:.4f}")
                 else:
-                    st.session_state["birth_geo_suggestions"] = []
-                    st.session_state["birth_geo_selected"] = None
                     st.error("City not found. Enter coordinates manually.")
-
-    # ── SUGGESTION DROPDOWN ──
-    suggestions = st.session_state.get("birth_geo_suggestions", [])
-    if suggestions:
-        options = [f"{s[2]}  ({s[0]:.4f}, {s[1]:.4f})" for s in suggestions]
-        selected_idx = st.selectbox(
-            "Select location",
-            range(len(options)),
-            format_func=lambda i: options[i],
-            index=st.session_state.get("birth_geo_selected", 0),
-            key=f"{key_prefix}_suggestion",
-        )
-        st.session_state["birth_geo_selected"] = selected_idx
-
-        lat, lon, display = suggestions[selected_idx]
-        st.session_state["birth_lat"] = round(lat, 4)
-        st.session_state["birth_lon"] = round(lon, 4)
-        st.success(f"Selected: {display}")
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
@@ -641,8 +615,7 @@ def save_chart_ui(chart: ChartData, name: str):
             lines += ["", "DASHA:",
                       f"  MD: {current['mahadasha']} ({current['mahadasha_start']}→{current['mahadasha_end']})",
                       f"  AD: {current['antardasha']} ({current['antardasha_start']}→{current['antardasha_end']})"]
-        st.download_button("↓ Summary TXT", "
-".join(lines),
+        st.download_button("↓ Summary TXT", "\n".join(lines),
                            file_name=f"{name.replace(' ','_')}_summary.txt",
                            mime="text/plain", use_container_width=True)
 
@@ -928,37 +901,6 @@ elif page == "Yearly Predictions":
         varsh = pred.get("varshphal", {})
         sade  = pred.get("sade_sati", {})
         sade_txt = sade.get("phase","") if isinstance(sade, dict) else str(sade)
-
-        # ── Download button for predictions ──
-        pred_lines = [
-            f"YEARLY PREDICTIONS — {name} · Year {year}",
-            "=" * 50,
-            f"Dasha: {dasha.get('mahadasha','—')} / {dasha.get('antardasha','—')}",
-            f"Transit Saturn: {pred.get('transit_saturn','—')}",
-            f"Transit Jupiter: {pred.get('transit_jupiter','—')}",
-            f"Muntha: {varsh.get('muntha_sign','—')}",
-        ]
-        if sade_txt:
-            pred_lines.append(f"Sade Sati: {sade_txt}")
-        pred_lines += ["", f"Overall: {pred.get('overall_summary','')}", ""]
-
-        topics_to_save = ["Career","Marriage","Children","Health"]
-        for t in topics_to_save:
-            data = pred.get(t.lower(), {})
-            pred_lines += [
-                f"{t.upper()}: {data.get('rating','—')} (Score: {data.get('net_score',0)})",
-                "",
-            ]
-            for r in data.get("fired_rules", []):
-                pred_lines.append(f"  • {r.get('title','')}: {r.get('detail','')} [{r.get('score',0)}]")
-            pred_lines.append("")
-
-        st.download_button(
-            "↓ Download predictions (TXT)",
-            data="\n".join(pred_lines),
-            file_name=f"{name.replace(' ','_')}_predictions_{year}.txt",
-            mime="text/plain",
-        )
 
         st.markdown(f"""
         <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:1.25rem 1.5rem; margin:1rem 0;">
