@@ -56,17 +56,43 @@ def get_geolocator():
     except Exception:
         return None
 
-def geocode_city(name: str):
+def geocode_suggestions(name: str, limit: int = 5):
+    """Return list of dicts with lat, lon, and a readable location string (city, state, country)."""
     geo = get_geolocator()
     if not geo or not name.strip():
-        return None
+        return []
     try:
-        loc = geo.geocode(name, language="en")
-        if loc:
-            return (loc.latitude, loc.longitude)
+        # Get multiple results
+        locations = geo.geocode(name, exactly_one=False, language="en", limit=limit)
+        if not locations:
+            return []
+        suggestions = []
+        for loc in locations:
+            # Extract best available address parts
+            address = loc.raw.get('display_name', '')
+            # Try to build a cleaner string: city, state, country
+            parts = []
+            addr_dict = loc.raw.get('address', {})
+            city = addr_dict.get('city') or addr_dict.get('town') or addr_dict.get('village') or ''
+            state = addr_dict.get('state') or ''
+            country = addr_dict.get('country') or ''
+            if city and state and country:
+                location_str = f"{city}, {state}, {country}"
+            elif city and country:
+                location_str = f"{city}, {country}"
+            elif country:
+                location_str = country
+            else:
+                location_str = address.split(',')[0]  # fallback
+            suggestions.append({
+                "lat": loc.latitude,
+                "lon": loc.longitude,
+                "display": location_str,
+                "full_address": address
+            })
+        return suggestions
     except Exception:
-        pass
-    return None
+        return []
 
 # ─── TIMEZONE MAP ─────────────────────────────────────────────────
 TIMEZONES = {
@@ -325,6 +351,10 @@ def pill(text, color=INK_MUTE):
 
 # ─── BIRTH INPUT FORM ─────────────────────────────────────────────
 def birth_input_form(key_prefix: str):
+    # initialise city_previous if not exists
+    if f"{key_prefix}_city_previous" not in st.session_state:
+        st.session_state[f"{key_prefix}_city_previous"] = ""
+
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
         name = st.text_input("Name", st.session_state["birth_name"], key=f"{key_prefix}_name", placeholder="Full name")
@@ -339,19 +369,54 @@ def birth_input_form(key_prefix: str):
     cc1, cc2 = st.columns([4, 1])
     with cc1:
         city_name = st.text_input("City", st.session_state["birth_city"], key=f"{key_prefix}_city", placeholder="City, State, Country")
+        # Clear suggestions when city input changes
+        if st.session_state.get(f"{key_prefix}_city_previous") != city_name:
+            st.session_state[f"{key_prefix}_geo_suggestions"] = None
+            st.session_state[f"{key_prefix}_city_previous"] = city_name
         st.session_state["birth_city"] = city_name
     with cc2:
         st.write("")
         if st.button("Find", key=f"{key_prefix}_find"):
-            with st.spinner("Locating…"):
-                coords = geocode_city(city_name)
-                if coords:
-                    st.session_state["birth_lat"] = round(coords[0], 4)
-                    st.session_state["birth_lon"] = round(coords[1], 4)
-                    st.session_state["birth_geo_ok"] = True
-                    st.toast(f"✓ {coords[0]:.4f}, {coords[1]:.4f}")
+            with st.spinner("Searching locations…"):
+                suggestions = geocode_suggestions(city_name)
+                if suggestions:
+                    # Store suggestions in session state for this prefix
+                    st.session_state[f"{key_prefix}_geo_suggestions"] = suggestions
+                    if len(suggestions) == 1:
+                        # Auto-select
+                        lat, lon = suggestions[0]["lat"], suggestions[0]["lon"]
+                        st.session_state["birth_lat"] = round(lat, 4)
+                        st.session_state["birth_lon"] = round(lon, 4)
+                        st.toast(f"✓ {suggestions[0]['display']}")
+                        # Clear suggestions to avoid leftover dropdown
+                        st.session_state[f"{key_prefix}_geo_suggestions"] = None
+                    else:
+                        st.toast(f"📍 {len(suggestions)} locations found. Select from the dropdown below.")
                 else:
-                    st.error("City not found. Enter coordinates manually.")
+                    st.error("No results found. Enter coordinates manually.")
+                    st.session_state[f"{key_prefix}_geo_suggestions"] = None
+
+    # --- Show location selection if multiple suggestions ---
+    suggestions_key = f"{key_prefix}_geo_suggestions"
+    suggestions = st.session_state.get(suggestions_key)
+    if suggestions and len(suggestions) > 1:
+        # Build selection options
+        options = {f"{s['display']} ({s['lat']:.4f}, {s['lon']:.4f})": s for s in suggestions}
+        selected_label = st.selectbox(
+            "Select the correct location",
+            list(options.keys()),
+            key=f"{key_prefix}_geo_select"
+        )
+        if selected_label:
+            selected = options[selected_label]
+            lat = selected["lat"]
+            lon = selected["lon"]
+            st.session_state["birth_lat"] = round(lat, 4)
+            st.session_state["birth_lon"] = round(lon, 4)
+            st.toast(f"✓ Set location: {selected['display']}")
+            # Clear suggestions after selection
+            st.session_state[suggestions_key] = None
+            st.rerun()  # Refresh to remove dropdown
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
