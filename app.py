@@ -304,6 +304,8 @@ def _city_on_change(key_prefix: str):
             st.session_state["birth_lon"] = round(suggestions[0]["lon"], 4)
             st.session_state[f"{key_prefix}_geo_suggestions"] = None
             st.session_state[f"{key_prefix}_geo_autofilled"] = suggestions[0]["display"]
+            # Flag to sync widgets
+            st.session_state[f"{key_prefix}_sync_coords"] = True
         else:
             st.session_state[f"{key_prefix}_geo_suggestions"] = suggestions
             st.session_state[f"{key_prefix}_geo_autofilled"] = None
