@@ -72,7 +72,7 @@ def geocode_suggestions(name: str, limit: int = 8):
         )
         if not locations:
             return []
-        
+
         suggestions = []
         seen = set()
 
@@ -112,6 +112,7 @@ def geocode_suggestions(name: str, limit: int = 8):
     except Exception:
         return []
 
+
 def _city_on_change(key_prefix: str):
     """
     on_change callback for the city text input.
@@ -121,7 +122,7 @@ def _city_on_change(key_prefix: str):
     """
     typed = st.session_state.get(f"{key_prefix}_city_input", "").strip()
     last_searched = st.session_state.get(f"{key_prefix}_city_last_searched", "")
-    
+
     # Only search if ≥3 chars and the value actually changed since last search
     if len(typed) < 3 or typed.lower() == last_searched.lower():
         if len(typed) < 3:
@@ -214,7 +215,7 @@ html, body, [class*="css"] {{
 }}
 
 /* Typography */
-h1 {{ font-family: 'Cormorant Garamond', serif !important; font-weight: 500 !important; font-size: 2.4rem !important;  color: {INK} !important; letter-spacing: -0.02em; line-height: 1.1; }}
+h1 {{ font-family: 'Cormorant Garamond', serif !important; font-weight: 500 !important; font-size: 2.4rem !important; color: {INK} !important; letter-spacing: -0.02em; line-height: 1.1; }}
 h2 {{ font-family: 'Cormorant Garamond', serif !important; font-weight: 500 !important; font-size: 1.7rem !important; color: {INK} !important; letter-spacing: -0.01em; }}
 h3 {{ font-family: 'DM Sans', sans-serif !important; font-weight: 500 !important; font-size: 0.8rem !important; color: {INK_MUTE} !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }}
 p {{ color: {INK_SOFT}; line-height: 1.65; font-size: 0.95rem; }}
@@ -332,9 +333,10 @@ with st.sidebar:
         <div style="font-size: 0.72rem; color: {INK_MUTE}; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px;">Vedic Astrology · v5.0</div>
     </div>
     """, unsafe_allow_html=True)
+
     st.divider()
 
-    page = st.radio(" ", [
+    page = st.radio("", [
         "Horoscope",
         "Matchmaking",
         "Yearly Predictions",
@@ -355,12 +357,12 @@ with st.sidebar:
 
     st.markdown(f"""
     <div style="margin-top: 3rem; font-size: 0.75rem; color: {INK_MUTE}; line-height: 1.7;">
-        Tip: Use <em>City, State, Country</em> format<br>
-        e.g. Narsinghpur, Chhattisgarh, India
+        Tip: Use <em>City, State, Country</em> format<br>e.g. Narsinghpur, Chhattisgarh, India
     </div>
     """, unsafe_allow_html=True)
 
 # ─── HELPERS ─────────────────────────────────────────────────────
+
 def label(text):
     st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.3rem; margin-top:1rem;">{text}</div>', unsafe_allow_html=True)
 
@@ -388,7 +390,7 @@ def render_fired_rules(fired_rules):
         st.markdown(f'<div style="color:{INK_MUTE}; font-size:0.875rem; padding:1rem 0;">No significant indicators found.</div>', unsafe_allow_html=True)
         return
     for r in fired_rules:
-        rule_row(r["title"], r["detail"], r["score"], r.get("severity", "neutral"))
+        rule_row(r["title"], r["detail"], r["score"], r.get("severity","neutral"))
 
 def section_title(text, sub=""):
     st.markdown(f"""
@@ -461,7 +463,7 @@ def birth_input_form(key_prefix: str):
             unsafe_allow_html=True,
         )
         option_labels = [
-            f"{s['display']} ({s['lat']:.3f}°, {s['lon']:.3f}°)"
+            f"{s['display']}  ({s['lat']:.3f}°, {s['lon']:.3f}°)"
             for s in suggestions
         ]
         choice = st.selectbox(
@@ -528,26 +530,26 @@ def draw_north_indian_chart(chart: ChartData, title=""):
     ax.set_facecolor(CREAM)
     ax.set_xlim(0, 10); ax.set_ylim(0, 10)
     ax.set_aspect("equal"); ax.axis("off")
-    
+
     house_polys = {
-        1: [(5,10),(7.5,7.5),(5,5),(2.5,7.5)],
-        2: [(7.5,7.5),(10,5),(7.5,2.5),(5,5)],
-        3: [(10,10),(10,5),(7.5,7.5)],
-        4: [(10,5),(10,0),(5,0),(7.5,2.5)], 
-        5: [(7.5,2.5),(5,0),(2.5,2.5),(5,5)],
-        6: [(0,0),(5,0),(2.5,2.5)],
-        7: [(0,5),(2.5,2.5),(5,5),(2.5,7.5)],
-        8: [(0,10),(2.5,7.5),(0,5)],
-        9: [(0,10),(5,10),(2.5,7.5)],
+        1:  [(5,10),(7.5,7.5),(5,5),(2.5,7.5)],
+        2:  [(7.5,7.5),(10,5),(7.5,2.5),(5,5)],
+        3:  [(10,10),(10,5),(7.5,7.5)],
+        4:  [(10,5),(10,0),(5,0),(7.5,2.5)],
+        5:  [(7.5,2.5),(5,0),(2.5,2.5),(5,5)],
+        6:  [(0,0),(5,0),(2.5,2.5)],
+        7:  [(0,5),(2.5,2.5),(5,5),(2.5,7.5)],
+        8:  [(0,10),(2.5,7.5),(0,5)],
+        9:  [(0,10),(5,10),(2.5,7.5)],
         10: [(5,10),(10,10),(7.5,7.5)],
         11: [(5,5),(2.5,2.5),(0,5)],
         12: [(0,0),(0,5),(2.5,2.5)],
     }
 
     house_centers = {
-        1: (5.0, 8.0), 2: (7.7, 5.0), 3: (9.3, 8.3),
-        4: (8.5, 1.5), 5: (5.0, 2.0), 6: (1.3, 0.7),
-        7: (2.3, 5.0), 8: (0.7, 7.5), 9: (1.8, 9.1),
+        1:  (5.0, 8.0), 2:  (7.7, 5.0), 3:  (9.3, 8.3),
+        4:  (8.5, 1.5), 5:  (5.0, 2.0), 6:  (1.3, 0.7),
+        7:  (2.3, 5.0), 8:  (0.7, 7.5), 9:  (1.8, 9.1),
         10: (8.2, 9.1), 11: (1.5, 4.2), 12: (0.7, 2.5),
     }
 
@@ -576,9 +578,9 @@ def draw_north_indian_chart(chart: ChartData, title=""):
 
     for h in range(1, 13):
         cx, cy = house_centers[h]
-        sign = ZODIAC[(lagna_idx + h - 1) % 12]
+        sign  = ZODIAC[(lagna_idx + h - 1) % 12]
         short = ZODIAC_SHORT[(lagna_idx + h - 1) % 12]
-        skt = SIGN_SANSKRIT[sign][:3]
+        skt   = SIGN_SANSKRIT[sign][:3]
 
         if h == 1:
             ax.text(cx, cy + 0.6, "▲", ha="center", va="center",
@@ -593,11 +595,11 @@ def draw_north_indian_chart(chart: ChartData, title=""):
 
         planets_here = house_planets[h]
         if planets_here:
-            n = len(planets_here)
+            n  = len(planets_here)
             xs = np.linspace(cx - (n-1)*0.3, cx + (n-1)*0.3, n)
             for i, p in enumerate(planets_here):
-                abbr = PLANET_ABBR.get(p, p[:2])
-                retro = chart.retrograde.get(p, False)
+                abbr   = PLANET_ABBR.get(p, p[:2])
+                retro  = chart.retrograde.get(p, False)
                 label_p = f"{'℞' if retro else ''}{abbr}"
                 ax.text(xs[i], cy - 0.65, label_p, ha="center", va="center",
                         fontsize=7.5, color=PLANET_COLORS.get(p, INK),
@@ -610,23 +612,24 @@ def draw_north_indian_chart(chart: ChartData, title=""):
     plt.tight_layout(pad=0.3)
     return fig
 
+
 def draw_navamsa_chart(chart: ChartData):
     """Draw compact D9 Navamsa chart."""
     fig, ax = plt.subplots(figsize=(5.5, 5.5), facecolor=CREAM)
     ax.set_facecolor(CREAM)
     ax.set_xlim(0, 10); ax.set_ylim(0, 10)
     ax.set_aspect("equal"); ax.axis("off")
-    
+
     house_polys = {
-        1: [(5,10),(7.5,7.5),(5,5),(2.5,7.5)],
-        2: [(7.5,7.5),(10,5),(7.5,2.5),(5,5)],
-        3: [(10,10),(10,5),(7.5,7.5)],
-        4: [(10,5),(10,0),(5,0),(7.5,2.5)], 
-        5: [(7.5,2.5),(5,0),(2.5,2.5),(5,5)],
-        6: [(0,0),(5,0),(2.5,2.5)],
-        7: [(0,5),(2.5,2.5),(5,5),(2.5,7.5)],
-        8: [(0,10),(2.5,7.5),(0,5)],
-        9: [(0,10),(5,10),(2.5,7.5)],
+        1:  [(5,10),(7.5,7.5),(5,5),(2.5,7.5)],
+        2:  [(7.5,7.5),(10,5),(7.5,2.5),(5,5)],
+        3:  [(10,10),(10,5),(7.5,7.5)],
+        4:  [(10,5),(10,0),(5,0),(7.5,2.5)],
+        5:  [(7.5,2.5),(5,0),(2.5,2.5),(5,5)],
+        6:  [(0,0),(5,0),(2.5,2.5)],
+        7:  [(0,5),(2.5,2.5),(5,5),(2.5,7.5)],
+        8:  [(0,10),(2.5,7.5),(0,5)],
+        9:  [(0,10),(5,10),(2.5,7.5)],
         10: [(5,10),(10,10),(7.5,7.5)],
         11: [(5,5),(2.5,2.5),(0,5)],
         12: [(0,0),(0,5),(2.5,2.5)],
@@ -642,7 +645,6 @@ def draw_navamsa_chart(chart: ChartData):
         poly = plt.Polygon(verts, closed=True,
                            facecolor=CREAM, edgecolor=BORDER, linewidth=0.8, zorder=1)
         ax.add_patch(poly)
-        
     diamond = plt.Polygon([(5,10),(10,5),(5,0),(0,5)], closed=True,
                           fill=False, edgecolor="#c8bfb4", linewidth=1.0, zorder=2)
     ax.add_patch(diamond)
@@ -651,18 +653,18 @@ def draw_navamsa_chart(chart: ChartData):
     for line in [([5,10],[10,5]),([5,0],[10,5]),([10,5],[5,0]),([0,5],[5,0])]:
         ax.plot(line[0], line[1], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
 
-    nav_planets = {i: [] for i in range(1, 13)}
-    nav_lagna = chart.navamsa.get("Lagna", chart.navamsa.get("Moon", "Aries"))
+    nav_planets  = {i: [] for i in range(1, 13)}
+    nav_lagna    = chart.navamsa.get("Lagna", chart.navamsa.get("Moon", "Aries"))
     nav_lagna_idx = ZODIAC.index(nav_lagna) if nav_lagna in ZODIAC else 0
 
-    for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
+    for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
         nav_sign = chart.navamsa.get(p, "Aries")
         h = ((ZODIAC.index(nav_sign) - nav_lagna_idx) % 12) + 1 if nav_sign in ZODIAC else 1
         nav_planets[h].append(p)
 
     for h in range(1, 13):
         cx, cy = house_centers[h]
-        sign = ZODIAC[(nav_lagna_idx + h - 1) % 12]
+        sign  = ZODIAC[(nav_lagna_idx + h - 1) % 12]
         short = ZODIAC_SHORT[(nav_lagna_idx + h - 1) % 12]
 
         ax.text(cx, cy + 0.32, str(h), ha="center", va="center",
@@ -672,10 +674,10 @@ def draw_navamsa_chart(chart: ChartData):
 
         planets_here = nav_planets[h]
         if planets_here:
-            n = len(planets_here)
+            n  = len(planets_here)
             xs = np.linspace(cx-(n-1)*0.3, cx+(n-1)*0.3, n)
             for i, p in enumerate(planets_here):
-                ax.text(xs[i], cy-0.6, PLANET_ABBR.get(p, "?"),
+                ax.text(xs[i], cy-0.6, PLANET_ABBR.get(p,"?"),
                         ha="center", va="center", fontsize=7.5,
                         color=PLANET_COLORS.get(p, INK), zorder=5)
 
@@ -696,155 +698,27 @@ def fig_to_bytes(fig, dpi=150) -> bytes:
 def planet_table(chart: ChartData) -> pd.DataFrame:
     rows = []
     lagna_idx = ZODIAC.index(chart.lagna_sign)
-    for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
+    for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
         sign, deg = longitude_to_sign(chart.planets[p])
-        nak = chart.nakshatras[p]
+        nak   = chart.nakshatras[p]
         house = ((ZODIAC.index(sign) - lagna_idx) % 12) + 1
         retro = "℞" if chart.retrograde.get(p, False) else ""
         rows.append({
-            "Planet": f"{p} {retro}".strip(),
-            "Sign": sign,
-            "°": f"{deg:.1f}",
-            "House": house,
+            "Planet":    f"{p} {retro}".strip(),
+            "Sign":      sign,
+            "°":         f"{deg:.1f}",
+            "House":     house,
             "Nakshatra": nak["nakshatra"],
-            "Pada": nak["pada"],
-            "Lord": nak["lord"],
-            "Navamsa": chart.navamsa.get(p, "—"),
-            "Dignity": chart.dignities.get(p, "—"),
+            "Pada":      nak["pada"],
+            "Lord":      nak["lord"],
+            "Navamsa":   chart.navamsa.get(p,"—"),
+            "Dignity":   chart.dignities.get(p,"—"),
         })
     return pd.DataFrame(rows)
-
-# ─── ADVANCED VEDIC HELPERS ──────────────────────────────────────
-
-def get_panchanga(chart: ChartData) -> dict:
-    """Extracts Panchanga elements if available in chart object."""
-    return {
-        "Tithi": getattr(chart, 'tithi', "N/A"),
-        "Vara": getattr(chart, 'vara', "N/A"),
-        "Nakshatra": chart.nakshatras.get("Moon", {}).get("nakshatra", "N/A"),
-        "Yoga": getattr(chart, 'yoga', "N/A"),
-        "Karana": getattr(chart, 'karana', "N/A")
-    }
-
-def get_shadbala_table(chart: ChartData) -> pd.DataFrame:
-    """Returns Shadbala breakdown if available in chart object."""
-    if not hasattr(chart, 'shadbala') or not chart.shadbala:
-        return pd.DataFrame() 
-    
-    rows = []
-    planets = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
-    components = ["Sthana", "Dig", "Kala", "Chesta", "Naisargika", "Drik"]
-    
-    for p in planets:
-        if p in chart.shadbala:
-            row = {"Planet": p}
-            total = 0
-            for comp in components:
-                val = chart.shadbala[p].get(comp, 0)
-                row[comp] = f"{val:.2f}"
-                total += val
-            row["Total"] = f"{total:.2f}"
-            min_req = {"Sun": 390, "Moon": 360, "Mars": 300, "Mercury": 390, "Jupiter": 390, "Venus": 390, "Saturn": 300}
-            req = min_req.get(p, 300)
-            row["Required"] = req
-            row["Status"] = "Strong" if total >= req else "Weak"
-            rows.append(row)
-            
-    return pd.DataFrame(rows)
-
-def get_chara_karakas(chart: ChartData) -> pd.DataFrame:
-    """Returns Jaimini Chara Karakas if available."""
-    if not hasattr(chart, 'chara_karakas') or not chart.chara_karakas:
-        return pd.DataFrame()
-        
-    rows = []
-    karaka_names = ["AK (Atma)", "AmK (Amatya)", "BK (Bhratri)", "MK (Matri)", "PiK (Pitri)", "GK (Gnati)", "DK (Dara)"]
-    
-    for k in karaka_names:
-        key = k.split()[0] 
-        planet = chart.chara_karakas.get(key, "—")
-        rows.append({"Karaka": k, "Planet": planet})
-        
-    return pd.DataFrame(rows)
-
-def render_advanced_details(chart: ChartData):
-    """Renders the advanced Vedic details in the UI."""
-    
-    # 1. Panchanga
-    st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem; margin-top:1.5rem;">Panchanga (5 Limbs)</div>', unsafe_allow_html=True)
-    panchanga = get_panchanga(chart)
-    p_cols = st.columns(5)
-    p_keys = ["Tithi", "Vara", "Nakshatra", "Yoga", "Karana"]
-    for i, key in enumerate(p_keys):
-        with p_cols[i]:
-            st.metric(label=key, value=panchanga.get(key, "—"))
-
-    # 2. Graha Avastha & Mrityubhaga & Gan
-    st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem; margin-top:1.5rem;">Planetary States & Critical Degrees</div>', unsafe_allow_html=True)
-    
-    avastha_rows = []
-    planets = ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]
-    for p in planets:
-        avastha = getattr(chart, 'avasthas', {}).get(p, "—")
-        gan = getattr(chart, 'gans', {}).get(p, "—")
-        mrityu = getattr(chart, 'mrityubhaga', {}).get(p, "—")
-        
-        nak = chart.nakshatras.get(p, {}).get("nakshatra", "")
-        mool_naks = ["Ashwini", "Ashlesha", "Jyeshtha", "Revati"] 
-        is_mool = "Yes" if nak in mool_naks else "No"
-        remedy = "Chant Mahamrityunjaya Mantra" if is_mool == "Yes" else "—"
-
-        avastha_rows.append({
-            "Planet": p,
-            "Avastha": avastha,
-            "Gan": gan,
-            "Mool Nakshatra": is_mool,
-            "Mrityubhaga": mrityu,
-            "Remedy": remedy
-        })
-    
-    st.dataframe(pd.DataFrame(avastha_rows), hide_index=True, use_container_width=True)
-
-    # 3. Shadbala
-    shadbala_df = get_shadbala_table(chart)
-    if not shadbala_df.empty:
-        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem; margin-top:1.5rem;">Shadbala (Six-Fold Strength)</div>', unsafe_allow_html=True)
-        st.dataframe(shadbala_df, hide_index=True, use_container_width=True)
-
-    # 4. Chara Karakas
-    ck_df = get_chara_karakas(chart)
-    if not ck_df.empty:
-        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem; margin-top:1.5rem;">Chara Karakas (Jaimini)</div>', unsafe_allow_html=True)
-        st.dataframe(ck_df, hide_index=True, use_container_width=True)
-
-    # 5. Argala & Ashtamesh (Text Summary)
-    st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem; margin-top:1.5rem;">Special Analyses</div>', unsafe_allow_html=True)
-    
-    argala_info = getattr(chart, 'argala', {})
-    ashtamesh_info = getattr(chart, 'ashtamesh', "Not Calculated")
-    
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.markdown(f"**Ashtamesh (8th Lord):** `{ashtamesh_info}`")
-        if hasattr(chart, 'pushkara_navamsa'):
-             st.markdown(f"**Pushkara Navamsa:** `{chart.pushkara_navamsa}`")
-             
-    with col_b:
-        if argala_info:
-            st.markdown("**Argala Interventions:**")
-            for house, planets in argala_info.items():
-                st.caption(f"H{house}: {', '.join(planets)}")
-        else:
-            st.caption("Argala analysis not available in current engine output.")
-
-    # 6. Graha Drishti
-    if hasattr(chart, 'drishti_strength'):
-        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem; margin-top:1.5rem;">Graha Drishti (Aspect Strength)</div>', unsafe_allow_html=True)
-        st.json(chart.drishti_strength) 
 
 # ─── SAVE CHART ──────────────────────────────────────────────────
 def save_chart_ui(chart: ChartData, name: str):
-    c1, c2 = st.columns(2)
+    c1, c2, c3 = st.columns(3)
     with c1:
         js = json.dumps(chart.to_dict(), indent=2, ensure_ascii=False)
         st.download_button("↓ Chart JSON", js,
@@ -859,7 +733,7 @@ def save_chart_ui(chart: ChartData, name: str):
             f"Nakshatra: {chart.nakshatras['Moon']['nakshatra']} pada {chart.nakshatras['Moon']['pada']}",
             "", "PLANETS:"
         ]
-        for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
+        for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
             sign, deg = longitude_to_sign(chart.planets[p])
             lines.append(f"  {p}: {sign} {deg:.1f}° — {chart.nakshatras[p]['nakshatra']} p{chart.nakshatras[p]['pada']}")
         current = chart.get_current_dasha_info()
@@ -867,24 +741,56 @@ def save_chart_ui(chart: ChartData, name: str):
             lines += ["", "DASHA:",
                       f"  MD: {current['mahadasha']} ({current['mahadasha_start']}→{current['mahadasha_end']})",
                       f"  AD: {current['antardasha']} ({current['antardasha_start']}→{current['antardasha_end']})"]
+
+        # v8.0 additions to TXT
+        if chart.panchanga:
+            p = chart.panchanga
+            lines += ["", "PANCHANGA:",
+                      f"  Vara: {p['vara']['name']} ({p['vara']['nature']})",
+                      f"  Tithi: {p['tithi']['full_name']} ({p['tithi']['nature']})",
+                      f"  Nakshatra: {p['nakshatra']['name']} P{p['nakshatra']['pada']} ({p['nakshatra']['gana']})",
+                      f"  Yoga: {p['yoga']['name']} ({p['yoga']['nature']})",
+                      f"  Karana: {p['karana']['name']} ({p['karana']['nature']})",
+                      f"  Overall: {p['panchanga_quality']}"]
+
+        if chart.mool_nakshatra.get("is_mool"):
+            m = chart.mool_nakshatra
+            lines += ["", "MOOL NAKSHATRA:", f"  {m['nakshatra']} P{m['pada']} — {m['severity']}", f"  {m['effect']}"]
+
+        if chart.chara_karakas:
+            lines += ["", "CHARA KARAKAS:"]
+            for karaka, data in chart.chara_karakas.items():
+                lines.append(f"  {karaka}: {data['planet']} ({data['sign']})")
+
+        if chart.shadbala_extended:
+            lines += ["", "SHADBALA:"]
+            for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn"]:
+                d = chart.shadbala_extended.get(p)
+                if d:
+                    lines.append(f"  {p}: {d['total_rupas']:.1f}/{d['requisite_rupas']} Rupas ({d['adequacy_pct']:.1f}%) — {d['status']}")
+
         st.download_button("↓ Summary TXT", "\n".join(lines),
                            file_name=f"{name.replace(' ','_')}_summary.txt",
                            mime="text/plain", use_container_width=True)
-
+    with c3:
+        ext_report = chart.get_extended_report()
+        st.download_button("↓ Extended V8 Report (TXT)", ext_report,
+                           file_name=f"{name.replace(' ','_')}_extended_v8.txt",
+                           mime="text/plain", use_container_width=True)
 def _muntha_interpretation(muntha: str) -> str:
     interp = {
-        "Aries": "New beginnings, courage, self-development.",
-        "Taurus": "Financial growth, stability, material comfort.",
-        "Gemini": "Communication, learning, networking and travel.",
-        "Cancer": "Emotional growth, family matters, home improvements.",
-        "Leo": "Recognition, creativity, leadership opportunities.",
-        "Virgo": "Health focus, service, analytical success.",
-        "Libra": "Relationships, partnerships, balance and deals.",
-        "Scorpio": "Transformation, research, hidden gains.",
+        "Aries":       "New beginnings, courage, self-development.",
+        "Taurus":      "Financial growth, stability, material comfort.",
+        "Gemini":      "Communication, learning, networking and travel.",
+        "Cancer":      "Emotional growth, family matters, home improvements.",
+        "Leo":         "Recognition, creativity, leadership opportunities.",
+        "Virgo":       "Health focus, service, analytical success.",
+        "Libra":       "Relationships, partnerships, balance and deals.",
+        "Scorpio":     "Transformation, research, hidden gains.",
         "Sagittarius": "Wisdom, travel, fortune and higher education.",
-        "Capricorn": "Hard work, discipline, long-term career gains.",
-        "Aquarius": "Innovation, social causes, technology.",
-        "Pisces": "Spirituality, foreign connections, creative pursuits.",
+        "Capricorn":   "Hard work, discipline, long-term career gains.",
+        "Aquarius":    "Innovation, social causes, technology.",
+        "Pisces":      "Spirituality, foreign connections, creative pursuits.",
     }
     return interp.get(muntha, "Mixed results — maintain balance and adaptability.")
 
@@ -893,7 +799,7 @@ def _muntha_interpretation(muntha: str) -> str:
 # ═══════════════════════════════════════════════════════════════
 if page == "Horoscope":
     section_title("Free Horoscope", "Sidereal chart · Lahiri Ayanamsa")
-    
+
     if "loaded_chart_data" in st.session_state:
         if st.button("Use loaded chart"):
             try:
@@ -906,7 +812,7 @@ if page == "Horoscope":
                     retrograde=data.get("retrograde",{})
                 )
                 st.session_state["computed_chart"] = chart
-                st.session_state["computed_chart_name"] = data.get("name", "Loaded Chart")
+                st.session_state["computed_chart_name"] = data.get("name","Loaded Chart")
                 st.success("Chart loaded.")
             except Exception as e:
                 st.error(str(e))
@@ -934,7 +840,7 @@ if page == "Horoscope":
 
     if st.session_state.get("computed_chart"):
         chart = st.session_state["computed_chart"]
-        name = st.session_state["computed_chart_name"]
+        name  = st.session_state["computed_chart_name"]
 
         st.divider()
         save_chart_ui(chart, name)
@@ -1008,28 +914,21 @@ if page == "Horoscope":
             """, unsafe_allow_html=True)
 
         st.divider()
-        
-        # ── NEW: Advanced Vedic Details ──
-        render_advanced_details(chart)
-        
-        st.divider()
-        
-        # ── Planetary positions (Existing Table) ──
-        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Planetary Positions (Detailed)</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Planetary positions</div>', unsafe_allow_html=True)
         st.dataframe(planet_table(chart), hide_index=True, use_container_width=True)
 
         st.divider()
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Divisional charts (Varga)</div>', unsafe_allow_html=True)
         varga = []
-        for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
+        for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
             varga.append({
                 "Planet":        p,
                 "D1":            longitude_to_sign(chart.planets[p])[0],
-                "D9 Navamsa":    chart.navamsa.get(p, "—"),
-                "D3 Drekkana":   chart.drekkana.get(p, "—"),
-                "D7 Saptamsa":   chart.saptamsa.get(p, "—"),
-                "D10 Dasamsa":   chart.dasamsa.get(p, "—"),
-                "D12 Dwadasamsa":chart.dwadasamsa.get(p, "—"),
+                "D9 Navamsa":    chart.navamsa.get(p,"—"),
+                "D3 Drekkana":   chart.drekkana.get(p,"—"),
+                "D7 Saptamsa":   chart.saptamsa.get(p,"—"),
+                "D10 Dasamsa":   chart.dasamsa.get(p,"—"),
+                "D12 Dwadasamsa":chart.dwadasamsa.get(p,"—"),
             })
         st.dataframe(pd.DataFrame(varga), hide_index=True, use_container_width=True)
 
@@ -1040,21 +939,299 @@ if page == "Horoscope":
             "Start":  p.start_date.strftime("%d %b %Y"),
             "End":    p.end_date.strftime("%d %b %Y"),
             "Years":  f"{p.years:.1f}",
-            " ":        "← now" if p.start_date <= datetime.now() < p.end_date else "",
+            "":       "← now" if p.start_date <= datetime.now() < p.end_date else "",
         } for p in chart.dasha_periods])
         st.dataframe(dasha_df, hide_index=True, use_container_width=True)
+# ═══════════════════════════════════════════════════════════════
+        # V8.0 EXTENDED ANALYSIS
+        # ═══════════════════════════════════════════════════════════════
+
+        # ── Panchanga ──
+        st.divider()
+        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Panchanga · Five Limbs of Birth</div>', unsafe_allow_html=True)
+
+        p = chart.panchanga
+        if p:
+            panchanga_cols = st.columns(5)
+            panchanga_items = [
+                ("Tithi", f"{p['tithi']['full_name']}", p['tithi']['nature'], p['tithi']['detail']),
+                ("Vara", f"{p['vara']['name']}", p['vara']['nature'], p['vara']['detail']),
+                ("Nakshatra", f"{p['nakshatra']['name']} P{p['nakshatra']['pada']}", p['nakshatra']['gana'], f"Lord: {p['nakshatra']['lord']} · Nadi: {p['nakshatra']['nadi']} · Yoni: {p['nakshatra']['yoni']}"),
+                ("Yoga", f"{p['yoga']['name']}", p['yoga']['nature'], p['yoga']['detail']),
+                ("Karana", f"{p['karana']['name']}", p['karana']['nature'], p['karana']['detail']),
+            ]
+            for col, (label, value, nature, detail) in zip(panchanga_cols, panchanga_items):
+                with col:
+                    nature_color = SAGE if nature == "Auspicious" else RUST if nature == "Inauspicious" else INK_MUTE
+                    st.markdown(f"""
+                    <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:0.75rem; text-align:center; height:100%;">
+                        <div style="font-size:0.65rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.4rem;">{label}</div>
+                        <div style="font-size:0.9rem; font-weight:500; color:{INK}; margin-bottom:0.3rem;">{value}</div>
+                        <div style="font-size:0.7rem; color:{nature_color}; font-weight:500; margin-bottom:0.4rem;">{nature}</div>
+                        <div style="font-size:0.72rem; color:{INK_MUTE}; line-height:1.4;">{detail}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            st.markdown(f"""
+            <div style="text-align:center; margin-top:0.5rem;">
+                <span style="background:{WARM}; color:{INK}; font-size:0.75rem; padding:4px 14px; border-radius:20px; border:1px solid {BORDER};">
+                    Overall Quality: <strong>{p['panchanga_quality']}</strong>
+                </span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── Nitya Yoga ──
+        ny = chart.nitya_yoga
+        if ny:
+            st.markdown(f"""
+            <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1rem 1.25rem; margin-top:1rem;">
+                <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.5rem;">Nitya Yoga · Birth Day Yoga</div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <span style="font-size:1rem; font-weight:500; color:{INK};">{ny['name']}</span>
+                        <span style="font-size:0.75rem; color:{INK_MUTE}; margin-left:0.5rem;">({ny['index']}/27)</span>
+                    </div>
+                    <span style="background:{WARM}; color:{SAGE if ny['nature']=='Auspicious' else RUST if ny['nature']=='Inauspicious' else INK_MUTE}; font-size:0.75rem; padding:3px 12px; border-radius:20px; font-weight:500;">{ny['nature']}</span>
+                </div>
+                <div style="font-size:0.82rem; color:{INK_SOFT}; margin-top:0.4rem; line-height:1.5;">{ny['detail']}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── Mool Nakshatra ──
+        m = chart.mool_nakshatra
+        if m.get("is_mool"):
+            st.markdown(f"""
+            <div style="background:#fff; border:1px solid {RUST}; border-radius:6px; padding:1rem 1.25rem; margin-top:1rem; border-left:3px solid {RUST};">
+                <div style="font-size:0.72rem; color:{RUST}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.5rem;">⚠ Ganda Mool Nakshatra Alert</div>
+                <div style="font-size:0.9rem; font-weight:500; color:{INK}; margin-bottom:0.3rem;">{m['nakshatra']} · Pada {m['pada']} · Severity: {m['severity']}</div>
+                <div style="font-size:0.82rem; color:{INK_SOFT}; line-height:1.6; margin-bottom:0.5rem;">{m['effect']}</div>
+                <div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6;">
+                    <strong>Deity:</strong> {m.get('deity','—')}<br/>
+                    <strong>Remedy:</strong> {m.get('remedy','—')}<br/>
+                    <strong>Pacification:</strong> Days {', '.join(str(d) for d in m.get('pacification_milestones', {}).keys())}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:0.75rem 1rem; margin-top:1rem;">
+                <span style="font-size:0.82rem; color:{SAGE};">✓ Moon not in Mool Nakshatra — no special concern</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── Chara Karakas (Jaimini) ──
+        if chart.chara_karakas:
+            st.divider()
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Chara Karakas · Jaimini Soul-Purpose Planets</div>', unsafe_allow_html=True)
+            ck_cols = st.columns(7)
+            for col, (karaka, data) in zip(ck_cols, chart.chara_karakas.items()):
+                with col:
+                    short_name = karaka.split("(")[1].replace(")", "") if "(" in karaka else karaka[:2]
+                    st.markdown(f"""
+                    <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:0.6rem; text-align:center; height:100%;">
+                        <div style="font-size:0.65rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:0.3rem;">{short_name}</div>
+                        <div style="font-size:1rem; font-weight:500; color:{INK}; margin-bottom:0.2rem;">{data['planet']}</div>
+                        <div style="font-size:0.72rem; color:{INK_MUTE};">{data['sign']}</div>
+                        <div style="font-size:0.65rem; color:{INK_MUTE}; margin-top:0.3rem; line-height:1.3;">{data['meaning'][:25]}...</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # ── Planet Ganas ──
+        if chart.planet_ganas:
+            st.divider()
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Gana · Nakshatra Temperament</div>', unsafe_allow_html=True)
+            gana_cols = st.columns(9)
+            gana_colors = {"Deva": SAGE, "Manushya": GOLD, "Rakshasa": RUST}
+            for col, (planet, gana) in zip(gana_cols, chart.planet_ganas.items()):
+                with col:
+                    st.markdown(f"""
+                    <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:0.5rem; text-align:center;">
+                        <div style="font-size:0.75rem; font-weight:500; color:{INK};">{planet}</div>
+                        <div style="font-size:0.72rem; color:{gana_colors.get(gana, INK_MUTE)}; font-weight:500; margin-top:0.2rem;">{gana}</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # ── Graha Avastha (Baladi + Deeptadi + Jagrat) ──
+        st.divider()
+        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Graha Avastha · Planetary States</div>', unsafe_allow_html=True)
+
+        avastha_data = []
+        for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
+            if p not in chart.planets:
+                continue
+            bal = chart.baladi_avasthas.get(p, {})
+            dee = chart.deeptadi_avasthas.get(p, {})
+            jss_raw = chart.deeptadi_avasthas.get(p, {}).get("effect", "")
+            jss = "Jagrat" if "Awake" in str(jss_raw) else "Svapna" if "Dreaming" in str(jss_raw) else "Sushupti"
+            avastha_data.append({
+                "Planet": p,
+                "Baladi": f"{bal.get('state','—')} ({bal.get('strength_pct',0)}%)",
+                "Deeptadi": f"{dee.get('state','—')} ({dee.get('strength',0)}%)",
+                "Jagrat State": jss,
+                "Dignity": chart.dignities.get(p, "—"),
+            })
+        st.dataframe(pd.DataFrame(avastha_data), hide_index=True, use_container_width=True)
+
+        # ── Mrityubhaga ──
+        mb_flagged = {p: d for p, d in chart.mrityubhaga_flags.items() if d.get("has_mrityubhaga")}
+        if mb_flagged:
+            st.divider()
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">⚠ Mrityubhaga · Critical Death Degrees</div>', unsafe_allow_html=True)
+            for p, d in mb_flagged.items():
+                st.markdown(f"""
+                <div style="background:#fff; border:1px solid {RUST}; border-radius:6px; padding:0.85rem 1rem; margin-bottom:0.5rem; border-left:3px solid {RUST};">
+                    <div style="font-size:0.85rem; font-weight:500; color:{INK};">{p} at {d['planet_degree']}° {d['sign']}</div>
+                    <div style="font-size:0.78rem; color:{RUST}; margin-top:0.2rem;">Critical degree: {d['critical_degree']}° · Orb: {d['orb']}° · {d['severity']}</div>
+                    <div style="font-size:0.78rem; color:{INK_MUTE}; margin-top:0.3rem; line-height:1.5;">{d['interpretation']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # ── Pushkara Navamsa/Bhaga ──
+        pk_found = {p: d for p, d in chart.pushkara_analysis.items() 
+                    if d.get("is_pushkara_navamsa") or d.get("is_pushkara_bhaga")}
+        if pk_found:
+            st.divider()
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">✦ Pushkara · Auspicious Positions</div>', unsafe_allow_html=True)
+            for p, d in pk_found.items():
+                tags = []
+                if d.get("is_pushkara_navamsa"): tags.append("Pushkara Navamsa")
+                if d.get("is_pushkara_bhaga"): tags.append("Pushkara Bhaga")
+                st.markdown(f"""
+                <div style="background:#fff; border:1px solid {SAGE}; border-radius:6px; padding:0.85rem 1rem; margin-bottom:0.5rem; border-left:3px solid {SAGE};">
+                    <div style="font-size:0.85rem; font-weight:500; color:{INK};">{p} in {d['sign']} · Navamsa {d['navamsa_number']}</div>
+                    <div style="font-size:0.78rem; color:{SAGE}; font-weight:500; margin-top:0.2rem;">{' · '.join(tags)}</div>
+                    <div style="font-size:0.78rem; color:{INK_MUTE}; margin-top:0.3rem;">{d['interpretation']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+        # ── Shadbala Extended (6 components) ──
+        if chart.shadbala_extended:
+            st.divider()
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Shadbala · Six-Component Strength</div>', unsafe_allow_html=True)
+
+            shadbala_rows = []
+            for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn"]:
+                d = chart.shadbala_extended.get(p, {})
+                if not d:
+                    continue
+                shadbala_rows.append({
+                    "Planet": p,
+                    "Sthana": f"{d.get('sthana_bala',0):.1f}",
+                    "Dig": f"{d.get('dig_bala',0):.1f}",
+                    "Kala": f"{d.get('kala_bala',0):.1f}",
+                    "Chesta": f"{d.get('chesta_bala',0):.1f}",
+                    "Naisargika": f"{d.get('naisargika_bala',0):.1f}",
+                    "Drik": f"{d.get('drik_bala',0):.1f}",
+                    "Total": f"{d.get('total_rupas',0):.1f}",
+                    "Req": d.get('requisite_rupas',0),
+                    "%": f"{d.get('adequacy_pct',0):.1f}%",
+                    "Status": d.get('status','—'),
+                })
+            st.dataframe(pd.DataFrame(shadbala_rows), hide_index=True, use_container_width=True)
+
+        # ── Argala Analysis ──
+        if chart.argala:
+            st.divider()
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Argala · Planetary Intervention</div>', unsafe_allow_html=True)
+
+            sorted_argala = sorted(chart.argala.items(), key=lambda x: x[1]["net_score"], reverse=True)
+            argala_cols = st.columns(3)
+            count = 0
+            for h, data in sorted_argala[:6]:
+                if data["net_score"] == 0 and data["status"] == "Weak/Neutral":
+                    continue
+                with argala_cols[count % 3]:
+                    count += 1
+                    status_color = SAGE if "Strong" in data["status"] else GOLD if "Moderate" in data["status"] else INK_MUTE
+                    argala_srcs = ''.join(f'<div style="font-size:0.72rem; color:{SAGE}; line-height:1.4;">+ {src}</div>' for src in data.get('argala_sources',[])[:2])
+                    virodha_srcs = ''.join(f'<div style="font-size:0.72rem; color:{RUST}; line-height:1.4;">− {vir}</div>' for vir in data.get('virodha_sources',[])[:1])
+                    st.markdown(f"""
+                    <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:0.75rem; margin-bottom:0.5rem;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+                            <span style="font-size:0.85rem; font-weight:500; color:{INK};">House {h}</span>
+                            <span style="font-size:0.72rem; color:{status_color}; font-weight:500;">{data['status']}</span>
+                        </div>
+                        <div style="font-size:0.75rem; color:{INK_MUTE}; margin-bottom:0.3rem;">Net score: {data['net_score']:+.1f}</div>
+                        {argala_srcs}
+                        {virodha_srcs}
+                    </div>
+                    """, unsafe_allow_html=True)
+
+        # ── Graha Drishti Strength ──
+        if chart.graha_drishti_strength:
+            st.divider()
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Graha Drishti · Aspect Strength by House</div>', unsafe_allow_html=True)
+
+            drishti_data = []
+            for h in range(1, 13):
+                strength = chart.graha_drishti_strength.get(h, 0)
+                bar = "█" * int(strength * 2)
+                drishti_data.append({
+                    "House": f"H{h}",
+                    "Strength": f"{strength:.1f}",
+                    "Visual": bar,
+                })
+            st.dataframe(pd.DataFrame(drishti_data), hide_index=True, use_container_width=True)
+
+        # ── Ashtamesh (8th Lord) ──
+        am = chart.ashtamesh
+        if am:
+            st.divider()
+            st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Ashtamesh · 8th Lord Analysis</div>', unsafe_allow_html=True)
+
+            am_color = SAGE if am.get('longevity_quality') == 'Strong' else GOLD if am.get('longevity_quality') == 'Moderate' else RUST
+            note_html = f'<div style="font-size:0.78rem; color:{SAGE}; font-weight:500; margin-top:0.4rem;">✦ {am.get("note","")}</div>' if am.get('note') else ''
+            vip_html = f'<div style="font-size:0.75rem; color:{INK_MUTE}; margin-top:0.4rem;">Viparita Raja Yoga detected</div>' if am.get('is_viparita_raja_yoga') else ''
+
+            st.markdown(f"""
+            <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1rem 1.25rem;">
+                <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:0.75rem;">
+                    <div>
+                        <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">8th Sign</div>
+                        <div style="font-size:1rem; font-weight:500; color:{INK}; margin-top:2px;">{am.get('eighth_sign','—')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Ashtamesh</div>
+                        <div style="font-size:1rem; font-weight:500; color:{INK}; margin-top:2px;">{am.get('ashtamesh','—')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">House</div>
+                        <div style="font-size:1rem; font-weight:500; color:{INK}; margin-top:2px;">H{am.get('ashtamesh_house','—')}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em;">Longevity</div>
+                        <div style="font-size:1rem; font-weight:500; color:{am_color}; margin-top:2px;">{am.get('longevity_quality','—')}</div>
+                    </div>
+                </div>
+                <div style="font-size:0.82rem; color:{INK_SOFT}; line-height:1.6; margin-bottom:0.5rem;">{am.get('interpretation','')}</div>
+                {note_html}
+                {vip_html}
+            </div>
+            """, unsafe_allow_html=True)
+
+        # ── Extended Report Download ──
+        st.divider()
+        ext_report = chart.get_extended_report()
+        st.download_button(
+            "↓ Download Extended V8 Report (TXT)",
+            data=ext_report,
+            file_name=f"{name.replace(' ','_')}_extended_v8.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
 
 # ═══════════════════════════════════════════════════════════════
 # MATCHMAKING PAGE
 # ═══════════════════════════════════════════════════════════════
 elif page == "Matchmaking":
     section_title("Ashtakoota Matchmaking", "36-point Koota compatibility analysis")
+
     c1, c2 = st.columns(2)
     with c1:
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.5rem;">Person 1 · Groom</div>', unsafe_allow_html=True)
         n1   = st.text_input("Name", "Person 1", key="m1_name")
         d1   = st.date_input("Date of birth", datetime(1990,1,1), min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31), key="m1_date")
-        t1   = st.time_input("Time", datetime.strptime("08:00", "%H:%M").time(), key="m1_time", step=60)
+        t1   = st.time_input("Time", datetime.strptime("08:00","%H:%M").time(), key="m1_time", step=60)
         lat1 = st.number_input("Lat", -90.0, 90.0, 25.42, key="m1_lat")
         lon1 = st.number_input("Lon", -180.0, 180.0, 86.13, key="m1_lon")
         tz1  = st.number_input("TZ offset", -12.0, 14.0, 5.5, key="m1_tz")
@@ -1062,7 +1239,7 @@ elif page == "Matchmaking":
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.5rem;">Person 2 · Bride</div>', unsafe_allow_html=True)
         n2   = st.text_input("Name", "Person 2", key="m2_name")
         d2   = st.date_input("Date of birth", datetime(1992,6,15), min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31), key="m2_date")
-        t2   = st.time_input("Time", datetime.strptime("10:30", "%H:%M").time(), key="m2_time", step=60)
+        t2   = st.time_input("Time", datetime.strptime("10:30","%H:%M").time(), key="m2_time", step=60)
         lat2 = st.number_input("Lat", -90.0, 90.0, 28.61, key="m2_lat")
         lon2 = st.number_input("Lon", -180.0, 180.0, 77.20, key="m2_lon")
         tz2  = st.number_input("TZ offset", -12.0, 14.0, 5.5, key="m2_tz")
@@ -1090,7 +1267,7 @@ elif page == "Matchmaking":
 
         st.markdown(f"""
         <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:2rem; text-align:center; margin:1.5rem 0;">
-            <div style="font-family:'Cormorant Garamond',serif; font-size:3.5rem; font-weight:500; color:{INK}; line-height:1;">{res['total']} <span style="font-size:1.5rem; color:{INK_MUTE};">/36</span></div>
+            <div style="font-family:'Cormorant Garamond',serif; font-size:3.5rem; font-weight:500; color:{INK}; line-height:1;">{res['total']}<span style="font-size:1.5rem; color:{INK_MUTE};">/36</span></div>
             <div style="display:inline-block; background:{score_bg}; color:{score_color}; font-size:0.875rem; font-weight:500; padding:6px 20px; border-radius:20px; margin-top:0.75rem;">{res['verdict']} · {pct}%</div>
             <div style="background:{WARM}; border-radius:4px; height:6px; width:60%; margin:1.25rem auto 0;">
                 <div style="background:{score_color}; width:{pct}%; height:100%; border-radius:4px;"></div>
@@ -1098,8 +1275,8 @@ elif page == "Matchmaking":
         </div>
         """, unsafe_allow_html=True)
 
-        kootas = ["varna", "vashya", "tara", "yoni", "graha_maitri", "gana", "bhakoot", "nadi"]
-        names  = ["Varna", "Vashya", "Tara", "Yoni", "Graha Maitri", "Gana", "Bhakoot", "Nadi"]
+        kootas = ["varna","vashya","tara","yoni","graha_maitri","gana","bhakoot","nadi"]
+        names  = ["Varna","Vashya","Tara","Yoni","Graha Maitri","Gana","Bhakoot","Nadi"]
         maxes  = [1, 2, 3, 4, 5, 6, 7, 8]
         cols = st.columns(4)
         for idx, (k, label_k, mx) in enumerate(zip(kootas, names, maxes)):
@@ -1109,7 +1286,7 @@ elif page == "Matchmaking":
                 st.markdown(f"""
                 <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:0.85rem; margin-bottom:0.6rem; text-align:center;">
                     <div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:4px;">{label_k}</div>
-                    <div style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; color:{c}; font-weight:500; line-height:1;">{s} <span style="font-size:0.9rem; color:{INK_MUTE};">/{mx}</span></div>
+                    <div style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; color:{c}; font-weight:500; line-height:1;">{s}<span style="font-size:0.9rem; color:{INK_MUTE};">/{mx}</span></div>
                     <div style="font-size:0.72rem; color:{INK_MUTE}; margin-top:4px;">{res[k]['detail']}</div>
                 </div>
                 """, unsafe_allow_html=True)
@@ -1118,10 +1295,10 @@ elif page == "Matchmaking":
         st.markdown(f"""
         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1rem 1.25rem;">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.85rem; color:{INK_SOFT};">
-                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Moon signs</span> <br/>{chart1.moon_sign} · {chart2.moon_sign}</div>
-                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Nakshatras</span> <br/>{chart1.nakshatras['Moon']['nakshatra']} · {chart2.nakshatras['Moon']['nakshatra']}</div>
-                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Gana</span> <br/>{NAKSHATRA_GANA[chart1.nakshatras['Moon']['nakshatra']]} · {NAKSHATRA_GANA[chart2.nakshatras['Moon']['nakshatra']]}</div>
-                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Nadi</span> <br/>{NAKSHATRA_NADI[chart1.nakshatras['Moon']['nakshatra']]} · {NAKSHATRA_NADI[chart2.nakshatras['Moon']['nakshatra']]}</div>
+                <div><span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Moon signs</span><br/>{chart1.moon_sign} · {chart2.moon_sign}</div>
+                <div><span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Nakshatras</span><br/>{chart1.nakshatras['Moon']['nakshatra']} · {chart2.nakshatras['Moon']['nakshatra']}</div>
+                <div><span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Gana</span><br/>{NAKSHATRA_GANA[chart1.nakshatras['Moon']['nakshatra']]} · {NAKSHATRA_GANA[chart2.nakshatras['Moon']['nakshatra']]}</div>
+                <div><span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Nadi</span><br/>{NAKSHATRA_NADI[chart1.nakshatras['Moon']['nakshatra']]} · {NAKSHATRA_NADI[chart2.nakshatras['Moon']['nakshatra']]}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1131,13 +1308,14 @@ elif page == "Matchmaking":
 # ═══════════════════════════════════════════════════════════════
 elif page == "Yearly Predictions":
     section_title("Yearly Predictions", "Dasha · Transit · Varshphal synthesis")
+
     name, date, time, lat, lon, tz = birth_input_form("pred")
 
     c1, c2 = st.columns([1, 2])
     with c1:
         year = st.selectbox("Year", list(range(2024, 2036)))
     with c2:
-        topic = st.segmented_control("Topic", ["Career", "Marriage", "Children", "Health", "All"], default="All")
+        topic = st.segmented_control("Topic", ["Career","Marriage","Children","Health","All"], default="All")
 
     if st.button("Generate predictions", use_container_width=True):
         with st.spinner("Analysing Dasha, Transit & Varshphal…"):
@@ -1151,23 +1329,52 @@ elif page == "Yearly Predictions":
         dasha = pred["dasha"]
         varsh = pred.get("varshphal", {})
         sade  = pred.get("sade_sati", {})
-        sade_txt = sade.get("phase", " ") if isinstance(sade, dict) else str(sade)
+        sade_txt = sade.get("phase","") if isinstance(sade, dict) else str(sade)
 
         st.markdown(f"""
         <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:1.25rem 1.5rem; margin:1rem 0;">
             <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.07em; color:{INK_MUTE}; margin-bottom:0.75rem;">Year {year} · Overview</div>
             <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; font-size:0.875rem;">
-                <div> <div style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Dasha</div> <div style="color:{INK}; font-weight:500; margin-top:2px;">{dasha.get('mahadasha','—')} / {dasha.get('antardasha','—')}</div> </div>
-                <div> <div style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Transit</div> <div style="color:{INK}; font-weight:500; margin-top:2px;">♄ {pred.get('transit_saturn','—')} ♃ {pred.get('transit_jupiter','—')}</div> </div>
-                <div> <div style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Muntha</div> <div style="color:{INK}; font-weight:500; margin-top:2px;">{varsh.get('muntha_sign','—')}</div> </div>
+                <div><div style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Dasha</div><div style="color:{INK}; font-weight:500; margin-top:2px;">{dasha.get('mahadasha','—')} / {dasha.get('antardasha','—')}</div></div>
+                <div><div style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Transit</div><div style="color:{INK}; font-weight:500; margin-top:2px;">♄ {pred.get('transit_saturn','—')}  ♃ {pred.get('transit_jupiter','—')}</div></div>
+                <div><div style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Muntha</div><div style="color:{INK}; font-weight:500; margin-top:2px;">{varsh.get('muntha_sign','—')}</div></div>
             </div>
             {f'<div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid {BORDER}; font-size:0.82rem; color:#8b1a1a;">{sade_txt}</div>' if sade_txt else ''}
             <div style="margin-top:0.75rem; padding-top:0.75rem; border-top:1px solid {BORDER}; font-size:0.82rem; color:{INK_SOFT}; line-height:1.6;">{pred.get('overall_summary','')[:400]}</div>
         </div>
         """, unsafe_allow_html=True)
 
-        topics_to_show = ["Career", "Marriage", "Children", "Health"] if topic=="All" else [topic]
-        rating_color   = {"Excellent": "#1a6031", "Good": "#3a6031", "Average": "#7d5a00", "Challenging": "#8b1a1a"}
+
+        # ── Download full prediction ──
+        pred_lines = [f"YEARLY PREDICTION — {name} · Year {year}", "="*50]
+        pred_lines += [
+            f"Dasha: {dasha.get('mahadasha','—')} / {dasha.get('antardasha','—')}",
+            f"Transit: Saturn {pred.get('transit_saturn','—')} · Jupiter {pred.get('transit_jupiter','—')}",
+            f"Muntha: {varsh.get('muntha_sign','—')}",
+            "",
+        ]
+        if sade_txt:
+            pred_lines.append(f"Sade Sati: {sade_txt}")
+        for t in ["Career","Marriage","Children","Health"]:
+            data = pred[t.lower()]
+            pred_lines += [
+                f"",
+                f"{t.upper()}: {data['rating']} (Score: {data['net_score']:+d})",
+                f"  {data.get('summary','')}",
+            ]
+            for r in data.get("fired_rules", [])[:5]:
+                pred_lines.append(f"  • [{r.get('severity','')}] {r.get('title','')}: {r.get('detail','')[:100]}")
+
+        st.download_button(
+            "↓ Download Yearly Prediction (TXT)",
+            data="\n".join(pred_lines),
+            file_name=f"{name.replace(' ','_')}_yearly_{year}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
+
+        topics_to_show = ["Career","Marriage","Children","Health"] if topic=="All" else [topic]
+        rating_color   = {"Excellent":"#1a6031","Good":"#3a6031","Average":"#7d5a00","Challenging":"#8b1a1a"}
 
         for t in topics_to_show:
             data = pred[t.lower()]
@@ -1176,7 +1383,7 @@ elif page == "Yearly Predictions":
             <div style="border-top:2px solid {BORDER}; padding-top:1.25rem; margin-top:1.25rem;">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem;">
                     <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:500; color:{INK};">{t}</div>
-                    <div style="font-size:0.8rem; color:{rc}; font-weight:500;">{data['rating']} · {'+' if data['net_score'] >0 else ''}{data['net_score']}</div>
+                    <div style="font-size:0.8rem; color:{rc}; font-weight:500;">{data['rating']} · {'+' if data['net_score']>0 else ''}{data['net_score']}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1191,10 +1398,10 @@ elif page == "Yearly Predictions":
                     ctx = f"Lagna {chart.lagna_sign}, Moon {chart.moon_sign}, MD {dasha.get('mahadasha','')}, Year {year}. {pred.get('overall_summary','')[:400]}"
                     try:
                         r = requests.post("https://openrouter.ai/api/v1/chat/completions",
-                            headers={"Authorization":f"Bearer {api_key}", "Content-Type":"application/json"},
-                            json={"model": "google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
-                                {"role": "system", "content": "You are an expert Vedic Astrologer. Answer concisely and practically."},
-                                {"role": "user", "content":f"Context: {ctx}\n\nQuestion: {user_query}"}]}, timeout=30)
+                            headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json"},
+                            json={"model":"google/gemini-2.0-flash-lite-preview-02-05:free","messages":[
+                                {"role":"system","content":"You are an expert Vedic Astrologer. Answer concisely and practically."},
+                                {"role":"user","content":f"Context: {ctx}\n\nQuestion: {user_query}"}]}, timeout=30)
                         ai = r.json()["choices"][0]["message"]["content"]
                         st.markdown(f"""
                         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1.25rem; margin-top:0.75rem;">
@@ -1210,6 +1417,7 @@ elif page == "Yearly Predictions":
 # ═══════════════════════════════════════════════════════════════
 elif page == "Varshphal":
     section_title("Varshphal", "Tajaka · Annual Solar Return chart")
+
     name, date, time, lat, lon, tz = birth_input_form("varsh")
     year = st.selectbox("Year for Varshphal", list(range(2024, 2036)))
 
@@ -1231,7 +1439,7 @@ elif page == "Varshphal":
             f"Muntha Sign    : {varsh.get('muntha_sign','—')} (House {varsh.get('muntha_house','—')})",
             f"Muntha Lord    : {varsh.get('muntha_lord','—')} — {varsh.get('muntha_lord_dignity','—')}",
             f"Varsha Lagna   : {varsh.get('varsha_lagna_sign','—')} (Lord: {varsh.get('varsha_lagna_lord','—')})",
-            f"Varshesha      : {varsh.get('varshesha','—')} — {varsh.get('varshesha_dignity','—')}", " ",
+            f"Varshesha      : {varsh.get('varshesha','—')} — {varsh.get('varshesha_dignity','—')}", "",
         ]
         tp_dl = varsh.get("tri_pataki", {})
         if tp_dl:
@@ -1239,7 +1447,7 @@ elif page == "Varshphal":
                 "TRI-PATAKI CHAKRA:",
                 f"  Udaya  (Months 1–4) : {tp_dl.get('udaya_muntha','—')}",
                 f"  Madhya (Months 5–8) : {tp_dl.get('madhya_muntha','—')}",
-                f"  Asta   (Months 9–12): {tp_dl.get('asta_muntha','—')}", " ",
+                f"  Asta   (Months 9–12): {tp_dl.get('asta_muntha','—')}", "",
             ]
         themes_dl = varsh.get("themes", [])
         if themes_dl:
@@ -1253,11 +1461,11 @@ elif page == "Varshphal":
                         varsh_lines.append(f"    Calculation: {t['calculation']}")
                     if t.get("classical_rule"):
                         varsh_lines.append(f"    Classical Rule: {t['classical_rule']}")
-            varsh_lines.append(" ")
-        muntha_sign = varsh.get("muntha_sign", " ")
+            varsh_lines.append("")
+        muntha_sign = varsh.get("muntha_sign","")
         if muntha_sign:
             varsh_lines += [
-                f"MUNTHA IN {muntha_sign.upper()}: ",
+                f"MUNTHA IN {muntha_sign.upper()}:",
                 _muntha_interpretation(muntha_sign),
             ]
 
@@ -1329,11 +1537,11 @@ elif page == "Varshphal":
                 if not isinstance(theme, dict):
                     continue
                 nature   = theme.get("nature", "Neutral")
-                cat      = theme.get("category", " ")
-                interp   = theme.get("interpretation", " ")
-                calc     = theme.get("calculation", " ")
-                rule     = theme.get("classical_rule", " ")
-                modifier = theme.get("modifier", " ")
+                cat      = theme.get("category", "")
+                interp   = theme.get("interpretation", "")
+                calc     = theme.get("calculation", "")
+                rule     = theme.get("classical_rule", "")
+                modifier = theme.get("modifier", "")
 
                 if nature == "Auspicious":
                     accent = SAGE; icon = "✦"
@@ -1356,7 +1564,7 @@ elif page == "Varshphal":
                 """, unsafe_allow_html=True)
 
         # ── Muntha Interpretation ──
-        muntha = varsh.get("muntha_sign", " ")
+        muntha = varsh.get("muntha_sign","")
         if muntha:
             lord   = SIGN_LORD.get(muntha, "—")
             interp = _muntha_interpretation(muntha)
@@ -1376,10 +1584,10 @@ elif page == "Varshphal":
                     ctx = f"{name}: Lagna {chart.lagna_sign}, Year {year}. Muntha {varsh.get('muntha_sign','')}, Varsha Lagna {varsh.get('varsha_lagna_sign','')}. Themes: {', '.join([t.get('category','') for t in themes if isinstance(t,dict)])}"
                     try:
                         r = requests.post("https://openrouter.ai/api/v1/chat/completions",
-                            headers={"Authorization":f"Bearer {api_key}", "Content-Type":"application/json"},
-                            json={"model": "google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
-                                {"role": "system", "content": "You are a Vedic astrologer specialising in Tajaka (Varshphal)."},
-                                {"role": "user", "content":f"Context: {ctx}\n\nQuestion: {q}"}]}, timeout=30)
+                            headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json"},
+                            json={"model":"google/gemini-2.0-flash-lite-preview-02-05:free","messages":[
+                                {"role":"system","content":"You are a Vedic astrologer specialising in Tajaka (Varshphal)."},
+                                {"role":"user","content":f"Context: {ctx}\n\nQuestion: {q}"}]}, timeout=30)
                         ai = r.json()["choices"][0]["message"]["content"]
                         st.markdown(f"""
                         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1.25rem; margin-top:0.75rem;">
@@ -1395,6 +1603,7 @@ elif page == "Varshphal":
 # ═══════════════════════════════════════════════════════════════
 elif page == "AI Astrologer":
     section_title("AI Astrologer", "Powered by OpenRouter · Gemini")
+
     c1, c2 = st.columns([1, 2])
     with c1:
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Your birth data</div>', unsafe_allow_html=True)
@@ -1407,7 +1616,7 @@ elif page == "AI Astrologer":
                 st.session_state["ai_ctx"] = (
                     f"{name}: Lagna {chart.lagna_sign}, Moon {chart.moon_sign} "
                     f"in {chart.nakshatras['Moon']['nakshatra']} pada {chart.nakshatras['Moon']['pada']}, "
-                    f"MD {cur.get('mahadasha','—')}, AD {cur.get('antardasha','—')}, PD {cur.get('pratyantardasha','—')}. "
+                    f"MD {cur.get('mahadasha','—')}, AD {cur.get('antardasha','—')}, PD {cur.get('pratyantardasha','—')}."
                 )
                 st.success("Context loaded.")
             except RuntimeError as e:
@@ -1422,7 +1631,7 @@ elif page == "AI Astrologer":
 
     with c2:
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Your question</div>', unsafe_allow_html=True)
-        question = st.text_area(" ", "What does my chart say about career in 2026?",
+        question = st.text_area("", "What does my chart say about career in 2026?",
                                 height=120, label_visibility="collapsed")
         if st.button("Ask Astrologer", use_container_width=True):
             if not api_key:
@@ -1433,10 +1642,10 @@ elif page == "AI Astrologer":
                 with st.spinner("Consulting the stars…"):
                     try:
                         r = requests.post("https://openrouter.ai/api/v1/chat/completions",
-                            headers={"Authorization":f"Bearer {api_key}", "Content-Type":"application/json"},
-                            json={"model": "google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
-                                {"role": "system", "content":f"You are a wise Vedic Astrologer. Chart: {st.session_state['ai_ctx']}"},
-                                {"role": "user", "content":question}]}, timeout=30)
+                            headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json"},
+                            json={"model":"google/gemini-2.0-flash-lite-preview-02-05:free","messages":[
+                                {"role":"system","content":f"You are a wise Vedic Astrologer. Chart: {st.session_state['ai_ctx']}"},
+                                {"role":"user","content":question}]}, timeout=30)
                         ans = r.json()["choices"][0]["message"]["content"]
                         st.markdown(f"""
                         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1.5rem; margin-top:1rem;">
@@ -1452,6 +1661,7 @@ elif page == "AI Astrologer":
 # ═══════════════════════════════════════════════════════════════
 elif page == "Ram Shalaka":
     section_title("Ram Shalaka", "Divine guidance from Shri Ram Charit Manas")
+
     SHALAKA = [
         {"text": "Sunu siya satya aseesa hamari, pujahi mana kamana tumhari",
          "meaning": "Your wish will be fulfilled by divine grace.", "type": "Auspicious"},
@@ -1509,9 +1719,9 @@ elif page == "Ram Shalaka":
                     prompt = f"Ram Shalaka verse: '{verse['text']}' meaning: {verse['meaning']}. User asks: {follow_up}. Provide compassionate, practical Vedic guidance."
                     try:
                         r = requests.post("https://openrouter.ai/api/v1/chat/completions",
-                            headers={"Authorization":f"Bearer {api_key}", "Content-Type":"application/json"},
-                            json={"model": "google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
-                                {"role": "user", "content":prompt}]}, timeout=30)
+                            headers={"Authorization":f"Bearer {api_key}","Content-Type":"application/json"},
+                            json={"model":"google/gemini-2.0-flash-lite-preview-02-05:free","messages":[
+                                {"role":"user","content":prompt}]}, timeout=30)
                         ans = r.json()["choices"][0]["message"]["content"]
                         st.markdown(f"""
                         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1.25rem; margin-top:0.75rem; max-width:640px; margin-left:auto; margin-right:auto;">
@@ -1549,6 +1759,7 @@ else:
         Select a section from the sidebar to begin. Enable Demo mode if pyswisseph is not installed.
     </div>
     """, unsafe_allow_html=True)
+
     st.divider()
     st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Load a saved chart</div>', unsafe_allow_html=True)
     uploaded = st.file_uploader("Upload chart JSON", type=["json"], label_visibility="collapsed")
