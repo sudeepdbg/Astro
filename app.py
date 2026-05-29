@@ -36,8 +36,6 @@ def init_session_state():
         "birth_lon": 86.13,
         "birth_tz": 5.5,
         "birth_city": "",
-        "birth_geo_suggestions": None,
-        "birth_geo_selected": None,
         "computed_chart": None,
         "computed_chart_name": "",
         "ai_ctx": "",
@@ -58,40 +56,58 @@ def get_geolocator():
     except Exception:
         return None
 
-def geocode_suggestions(name: str, limit: int = 5):
-    """Return list of dicts with lat, lon, and a readable location string (city, state, country)."""
+def geocode_suggestions(name: str, limit: int = 8):
+    """
+    Return list of dicts with lat, lon, display string (city, district, state, country).
+    Passes addressdetails=True so the raw address dict is always populated.
+    Deduplicates near-identical results.
+    """
     geo = get_geolocator()
     if not geo or not name.strip():
         return []
     try:
-        # Get multiple results
-        locations = geo.geocode(name, exactly_one=False, language="en", limit=limit)
+        locations = geo.geocode(
+            name, exactly_one=False, language="en",
+            limit=limit, addressdetails=True
+        )
         if not locations:
             return []
+
         suggestions = []
+        seen = set()
+
         for loc in locations:
-            # Extract best available address parts
-            address = loc.raw.get('display_name', '')
-            # Try to build a cleaner string: city, state, country
-            parts = []
-            addr_dict = loc.raw.get('address', {})
-            city = addr_dict.get('city') or addr_dict.get('town') or addr_dict.get('village') or ''
-            state = addr_dict.get('state') or ''
-            country = addr_dict.get('country') or ''
-            if city and state and country:
-                location_str = f"{city}, {state}, {country}"
-            elif city and country:
-                location_str = f"{city}, {country}"
-            elif country:
-                location_str = country
-            else:
-                location_str = address.split(',')[0]  # fallback
+            addr = loc.raw.get('address', {})
+
+            city = (addr.get('city') or addr.get('town') or addr.get('village')
+                    or addr.get('municipality') or addr.get('suburb') or '')
+            district = (addr.get('county') or addr.get('district')
+                        or addr.get('state_district') or '')
+            state   = addr.get('state') or ''
+            country = addr.get('country') or ''
+
+            # Build display: city → district → state → country (skip blanks)
+            parts = [p for p in [city, district, state, country] if p]
+            # Remove consecutive duplicates (e.g. when city == state)
+            deduped = []
+            for p in parts:
+                if not deduped or p.lower() != deduped[-1].lower():
+                    deduped.append(p)
+
+            display = ', '.join(deduped) if deduped else loc.raw.get('display_name', '')[:80]
+
+            key = display.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+
             suggestions.append({
                 "lat": loc.latitude,
                 "lon": loc.longitude,
-                "display": location_str,
-                "full_address": address
+                "display": display,
+                "full_address": loc.raw.get('display_name', ''),
             })
+
         return suggestions
     except Exception:
         return []
@@ -305,7 +321,7 @@ with st.sidebar:
 
     st.markdown(f"""
     <div style="margin-top: 3rem; font-size: 0.75rem; color: {INK_MUTE}; line-height: 1.7;">
-        Tip: Use <em>City, State, Country</em> format<br>e.g. Sitamarhi, Bihar, India
+        Tip: Use <em>City, State, Country</em> format<br>e.g. Narsinghpur, Chhattisgarh, India
     </div>
     """, unsafe_allow_html=True)
 
@@ -353,16 +369,19 @@ def pill(text, color=INK_MUTE):
 
 # ─── BIRTH INPUT FORM ─────────────────────────────────────────────
 def birth_input_form(key_prefix: str):
-    # initialise city_previous if not exists
-    if f"{key_prefix}_city_previous" not in st.session_state:
-        st.session_state[f"{key_prefix}_city_previous"] = ""
+    # Initialise per-prefix state keys
+    for _k in [f"{key_prefix}_city_previous", f"{key_prefix}_geo_suggestions"]:
+        if _k not in st.session_state:
+            st.session_state[_k] = None if _k.endswith("_geo_suggestions") else ""
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
         name = st.text_input("Name", st.session_state["birth_name"], key=f"{key_prefix}_name", placeholder="Full name")
         st.session_state["birth_name"] = name
     with c2:
-        dob = st.date_input("Date of birth", st.session_state["birth_date"], min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31), key=f"{key_prefix}_date")
+        dob = st.date_input("Date of birth", st.session_state["birth_date"],
+                            min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31),
+                            key=f"{key_prefix}_date")
         st.session_state["birth_date"] = dob
     with c3:
         tob = st.time_input("Time of birth", st.session_state["birth_time"], step=60, key=f"{key_prefix}_time")
@@ -370,55 +389,68 @@ def birth_input_form(key_prefix: str):
 
     cc1, cc2 = st.columns([4, 1])
     with cc1:
-        city_name = st.text_input("City", st.session_state["birth_city"], key=f"{key_prefix}_city", placeholder="City, State, Country")
-        # Clear suggestions when city input changes
+        city_name = st.text_input(
+            "City",
+            st.session_state["birth_city"],
+            key=f"{key_prefix}_city",
+            placeholder="City, State, Country  e.g. Narsinghpur, Chhattisgarh, India",
+        )
+        # Clear cached suggestions whenever the search text changes
         if st.session_state.get(f"{key_prefix}_city_previous") != city_name:
             st.session_state[f"{key_prefix}_geo_suggestions"] = None
             st.session_state[f"{key_prefix}_city_previous"] = city_name
         st.session_state["birth_city"] = city_name
+
     with cc2:
         st.write("")
         if st.button("Find", key=f"{key_prefix}_find"):
-            with st.spinner("Searching locations…"):
-                suggestions = geocode_suggestions(city_name)
+            if not city_name.strip():
+                st.warning("Enter a city name first.")
+            else:
+                with st.spinner("Searching locations…"):
+                    suggestions = geocode_suggestions(city_name, limit=8)
                 if suggestions:
-                    # Store suggestions in session state for this prefix
-                    st.session_state[f"{key_prefix}_geo_suggestions"] = suggestions
                     if len(suggestions) == 1:
-                        # Auto-select
-                        lat, lon = suggestions[0]["lat"], suggestions[0]["lon"]
-                        st.session_state["birth_lat"] = round(lat, 4)
-                        st.session_state["birth_lon"] = round(lon, 4)
-                        st.toast(f"✓ {suggestions[0]['display']}")
-                        # Clear suggestions to avoid leftover dropdown
+                        # Unambiguous — auto-select
+                        st.session_state["birth_lat"] = round(suggestions[0]["lat"], 4)
+                        st.session_state["birth_lon"] = round(suggestions[0]["lon"], 4)
                         st.session_state[f"{key_prefix}_geo_suggestions"] = None
+                        st.toast(f"✓ {suggestions[0]['display']}")
+                        st.rerun()
                     else:
-                        st.toast(f"📍 {len(suggestions)} locations found. Select from the dropdown below.")
+                        # Ambiguous — show dropdown
+                        st.session_state[f"{key_prefix}_geo_suggestions"] = suggestions
                 else:
-                    st.error("No results found. Enter coordinates manually.")
+                    st.error("No results found. Try adding state/country, or enter coordinates manually.")
                     st.session_state[f"{key_prefix}_geo_suggestions"] = None
 
-    # --- Show location selection if multiple suggestions ---
+    # ── Location selection dropdown (persists until user picks) ──
     suggestions_key = f"{key_prefix}_geo_suggestions"
     suggestions = st.session_state.get(suggestions_key)
     if suggestions and len(suggestions) > 1:
-        # Build selection options
-        options = {f"{s['display']} ({s['lat']:.4f}, {s['lon']:.4f})": s for s in suggestions}
-        selected_label = st.selectbox(
-            "Select the correct location",
-            list(options.keys()),
-            key=f"{key_prefix}_geo_select"
+        st.markdown(
+            f'<div style="font-size:0.78rem; color:{INK_MUTE}; margin-top:4px; margin-bottom:2px;">'
+            f'📍 {len(suggestions)} locations found — select the correct one:</div>',
+            unsafe_allow_html=True,
         )
-        if selected_label:
-            selected = options[selected_label]
-            lat = selected["lat"]
-            lon = selected["lon"]
-            st.session_state["birth_lat"] = round(lat, 4)
-            st.session_state["birth_lon"] = round(lon, 4)
-            st.toast(f"✓ Set location: {selected['display']}")
-            # Clear suggestions after selection
-            st.session_state[suggestions_key] = None
-            st.rerun()  # Refresh to remove dropdown
+        option_labels = [
+            f"{s['display']}  ({s['lat']:.3f}°, {s['lon']:.3f}°)"
+            for s in suggestions
+        ]
+        choice = st.selectbox(
+            "Select location",
+            ["— select a location —"] + option_labels,
+            key=f"{key_prefix}_geo_select",
+            label_visibility="collapsed",
+        )
+        if choice and choice != "— select a location —":
+            idx = option_labels.index(choice)
+            selected = suggestions[idx]
+            st.session_state["birth_lat"] = round(selected["lat"], 4)
+            st.session_state["birth_lon"] = round(selected["lon"], 4)
+            st.session_state[suggestions_key] = None   # clear only after explicit pick
+            st.toast(f"✓ {selected['display']}")
+            st.rerun()
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
@@ -473,13 +505,6 @@ def draw_north_indian_chart(chart: ChartData, title=""):
         11: [(5,5),(2.5,2.5),(0,5)],
         12: [(0,0),(0,5),(2.5,2.5)],
     }
-    house_polys[3]  = [(10,10),(10,5),(7.5,7.5)]
-    house_polys[6]  = [(0,0),(5,0),(2.5,2.5)]
-    house_polys[8]  = [(0,10),(2.5,7.5),(0,5)]
-    house_polys[9]  = [(0,10),(5,10),(2.5,7.5)]
-    house_polys[10] = [(5,10),(10,10),(7.5,7.5)]
-    house_polys[11] = [(5,5),(2.5,2.5),(0,5)]
-    house_polys[12] = [(0,0),(0,5),(2.5,2.5)]
 
     house_centers = {
         1:  (5.0, 8.0), 2:  (7.7, 5.0), 3:  (9.3, 8.3),
@@ -513,9 +538,9 @@ def draw_north_indian_chart(chart: ChartData, title=""):
 
     for h in range(1, 13):
         cx, cy = house_centers[h]
-        sign = ZODIAC[(lagna_idx + h - 1) % 12]
+        sign  = ZODIAC[(lagna_idx + h - 1) % 12]
         short = ZODIAC_SHORT[(lagna_idx + h - 1) % 12]
-        skt = SIGN_SANSKRIT[sign][:3]
+        skt   = SIGN_SANSKRIT[sign][:3]
 
         if h == 1:
             ax.text(cx, cy + 0.6, "▲", ha="center", va="center",
@@ -523,21 +548,18 @@ def draw_north_indian_chart(chart: ChartData, title=""):
 
         ax.text(cx, cy + 0.32, str(h), ha="center", va="center",
                 fontsize=6, color=INK_MUTE, zorder=4, fontweight="normal")
-
         ax.text(cx, cy, short, ha="center", va="center",
-                fontsize=9, color=INK_SOFT, zorder=4, fontweight="normal",
-                fontfamily="serif")
-
+                fontsize=9, color=INK_SOFT, zorder=4, fontweight="normal", fontfamily="serif")
         ax.text(cx, cy - 0.28, skt, ha="center", va="center",
                 fontsize=5.5, color=INK_MUTE, zorder=4)
 
         planets_here = house_planets[h]
         if planets_here:
-            n = len(planets_here)
+            n  = len(planets_here)
             xs = np.linspace(cx - (n-1)*0.3, cx + (n-1)*0.3, n)
             for i, p in enumerate(planets_here):
-                abbr = PLANET_ABBR.get(p, p[:2])
-                retro = chart.retrograde.get(p, False)
+                abbr   = PLANET_ABBR.get(p, p[:2])
+                retro  = chart.retrograde.get(p, False)
                 label_p = f"{'℞' if retro else ''}{abbr}"
                 ax.text(xs[i], cy - 0.65, label_p, ha="center", va="center",
                         fontsize=7.5, color=PLANET_COLORS.get(p, INK),
@@ -549,6 +571,7 @@ def draw_north_indian_chart(chart: ChartData, title=""):
 
     plt.tight_layout(pad=0.3)
     return fig
+
 
 def draw_navamsa_chart(chart: ChartData):
     """Draw compact D9 Navamsa chart."""
@@ -590,21 +613,18 @@ def draw_navamsa_chart(chart: ChartData):
     for line in [([5,10],[10,5]),([5,0],[10,5]),([10,5],[5,0]),([0,5],[5,0])]:
         ax.plot(line[0], line[1], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
 
-    nav_planets = {i: [] for i in range(1, 13)}
-    nav_lagna = chart.navamsa.get("Lagna", chart.navamsa.get("Moon", "Aries"))
+    nav_planets  = {i: [] for i in range(1, 13)}
+    nav_lagna    = chart.navamsa.get("Lagna", chart.navamsa.get("Moon", "Aries"))
     nav_lagna_idx = ZODIAC.index(nav_lagna) if nav_lagna in ZODIAC else 0
 
     for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
         nav_sign = chart.navamsa.get(p, "Aries")
-        if nav_sign in ZODIAC:
-            h = ((ZODIAC.index(nav_sign) - nav_lagna_idx) % 12) + 1
-        else:
-            h = 1
+        h = ((ZODIAC.index(nav_sign) - nav_lagna_idx) % 12) + 1 if nav_sign in ZODIAC else 1
         nav_planets[h].append(p)
 
     for h in range(1, 13):
         cx, cy = house_centers[h]
-        sign = ZODIAC[(nav_lagna_idx + h - 1) % 12]
+        sign  = ZODIAC[(nav_lagna_idx + h - 1) % 12]
         short = ZODIAC_SHORT[(nav_lagna_idx + h - 1) % 12]
 
         ax.text(cx, cy + 0.32, str(h), ha="center", va="center",
@@ -614,7 +634,7 @@ def draw_navamsa_chart(chart: ChartData):
 
         planets_here = nav_planets[h]
         if planets_here:
-            n = len(planets_here)
+            n  = len(planets_here)
             xs = np.linspace(cx-(n-1)*0.3, cx+(n-1)*0.3, n)
             for i, p in enumerate(planets_here):
                 ax.text(xs[i], cy-0.6, PLANET_ABBR.get(p,"?"),
@@ -628,7 +648,6 @@ def draw_navamsa_chart(chart: ChartData):
 
 # ─── FIGURE → BYTES ──────────────────────────────────────────────
 def fig_to_bytes(fig, dpi=150) -> bytes:
-    """Convert a matplotlib figure to PNG bytes for download."""
     buf = BytesIO()
     fig.savefig(buf, format="png", dpi=dpi, bbox_inches="tight",
                 facecolor=fig.get_facecolor())
@@ -641,19 +660,19 @@ def planet_table(chart: ChartData) -> pd.DataFrame:
     lagna_idx = ZODIAC.index(chart.lagna_sign)
     for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
         sign, deg = longitude_to_sign(chart.planets[p])
-        nak = chart.nakshatras[p]
+        nak   = chart.nakshatras[p]
         house = ((ZODIAC.index(sign) - lagna_idx) % 12) + 1
         retro = "℞" if chart.retrograde.get(p, False) else ""
         rows.append({
-            "Planet": f"{p} {retro}".strip(),
-            "Sign": sign,
-            "°": f"{deg:.1f}",
-            "House": house,
+            "Planet":    f"{p} {retro}".strip(),
+            "Sign":      sign,
+            "°":         f"{deg:.1f}",
+            "House":     house,
             "Nakshatra": nak["nakshatra"],
-            "Pada": nak["pada"],
-            "Lord": nak["lord"],
-            "Navamsa": chart.navamsa.get(p,"—"),
-            "Dignity": chart.dignities.get(p,"—"),
+            "Pada":      nak["pada"],
+            "Lord":      nak["lord"],
+            "Navamsa":   chart.navamsa.get(p,"—"),
+            "Dignity":   chart.dignities.get(p,"—"),
         })
     return pd.DataFrame(rows)
 
@@ -688,18 +707,18 @@ def save_chart_ui(chart: ChartData, name: str):
 
 def _muntha_interpretation(muntha: str) -> str:
     interp = {
-        "Aries": "New beginnings, courage, self-development.",
-        "Taurus": "Financial growth, stability, material comfort.",
-        "Gemini": "Communication, learning, networking and travel.",
-        "Cancer": "Emotional growth, family matters, home improvements.",
-        "Leo": "Recognition, creativity, leadership opportunities.",
-        "Virgo": "Health focus, service, analytical success.",
-        "Libra": "Relationships, partnerships, balance and deals.",
-        "Scorpio": "Transformation, research, hidden gains.",
+        "Aries":       "New beginnings, courage, self-development.",
+        "Taurus":      "Financial growth, stability, material comfort.",
+        "Gemini":      "Communication, learning, networking and travel.",
+        "Cancer":      "Emotional growth, family matters, home improvements.",
+        "Leo":         "Recognition, creativity, leadership opportunities.",
+        "Virgo":       "Health focus, service, analytical success.",
+        "Libra":       "Relationships, partnerships, balance and deals.",
+        "Scorpio":     "Transformation, research, hidden gains.",
         "Sagittarius": "Wisdom, travel, fortune and higher education.",
-        "Capricorn": "Hard work, discipline, long-term career gains.",
-        "Aquarius": "Innovation, social causes, technology.",
-        "Pisces": "Spirituality, foreign connections, creative pursuits.",
+        "Capricorn":   "Hard work, discipline, long-term career gains.",
+        "Aquarius":    "Innovation, social causes, technology.",
+        "Pisces":      "Spirituality, foreign connections, creative pursuits.",
     }
     return interp.get(muntha, "Mixed results — maintain balance and adaptability.")
 
@@ -755,7 +774,7 @@ if page == "Horoscope":
         save_chart_ui(chart, name)
         st.divider()
 
-        # ── CHARTS side by side ──
+        # ── Charts side by side ──
         ch1, ch2 = st.columns(2)
         with ch1:
             fig = draw_north_indian_chart(chart, f"{name} · D1 Rashi")
@@ -763,12 +782,9 @@ if page == "Horoscope":
             d1_bytes = fig_to_bytes(fig)
             plt.close(fig)
             st.download_button(
-                "↓ Download D1 Rashi chart (PNG)",
-                data=d1_bytes,
+                "↓ Download D1 Rashi chart (PNG)", data=d1_bytes,
                 file_name=f"{name.replace(' ','_')}_D1_rashi.png",
-                mime="image/png",
-                use_container_width=True,
-                key="dl_d1",
+                mime="image/png", use_container_width=True, key="dl_d1",
             )
         with ch2:
             fig2 = draw_navamsa_chart(chart)
@@ -776,12 +792,9 @@ if page == "Horoscope":
             d9_bytes = fig_to_bytes(fig2)
             plt.close(fig2)
             st.download_button(
-                "↓ Download D9 Navamsa chart (PNG)",
-                data=d9_bytes,
+                "↓ Download D9 Navamsa chart (PNG)", data=d9_bytes,
                 file_name=f"{name.replace(' ','_')}_D9_navamsa.png",
-                mime="image/png",
-                use_container_width=True,
-                key="dl_d9",
+                mime="image/png", use_container_width=True, key="dl_d9",
             )
 
         st.divider()
@@ -837,13 +850,13 @@ if page == "Horoscope":
         varga = []
         for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
             varga.append({
-                "Planet": p,
-                "D1": longitude_to_sign(chart.planets[p])[0],
-                "D9 Navamsa": chart.navamsa.get(p,"—"),
-                "D3 Drekkana": chart.drekkana.get(p,"—"),
-                "D7 Saptamsa": chart.saptamsa.get(p,"—"),
-                "D10 Dasamsa": chart.dasamsa.get(p,"—"),
-                "D12 Dwadasamsa": chart.dwadasamsa.get(p,"—"),
+                "Planet":        p,
+                "D1":            longitude_to_sign(chart.planets[p])[0],
+                "D9 Navamsa":    chart.navamsa.get(p,"—"),
+                "D3 Drekkana":   chart.drekkana.get(p,"—"),
+                "D7 Saptamsa":   chart.saptamsa.get(p,"—"),
+                "D10 Dasamsa":   chart.dasamsa.get(p,"—"),
+                "D12 Dwadasamsa":chart.dwadasamsa.get(p,"—"),
             })
         st.dataframe(pd.DataFrame(varga), hide_index=True, use_container_width=True)
 
@@ -851,10 +864,10 @@ if page == "Horoscope":
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Vimshottari Dasha timeline</div>', unsafe_allow_html=True)
         dasha_df = pd.DataFrame([{
             "Planet": p.planet,
-            "Start": p.start_date.strftime("%d %b %Y"),
-            "End": p.end_date.strftime("%d %b %Y"),
-            "Years": f"{p.years:.1f}",
-            "": "← now" if p.start_date <= datetime.now() < p.end_date else "",
+            "Start":  p.start_date.strftime("%d %b %Y"),
+            "End":    p.end_date.strftime("%d %b %Y"),
+            "Years":  f"{p.years:.1f}",
+            "":       "← now" if p.start_date <= datetime.now() < p.end_date else "",
         } for p in chart.dasha_periods])
         st.dataframe(dasha_df, hide_index=True, use_container_width=True)
 
@@ -867,17 +880,17 @@ elif page == "Matchmaking":
     c1, c2 = st.columns(2)
     with c1:
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.5rem;">Person 1 · Groom</div>', unsafe_allow_html=True)
-        n1 = st.text_input("Name", "Person 1", key="m1_name")
-        d1 = st.date_input("Date of birth", datetime(1990,1,1), min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31), key="m1_date")
-        t1 = st.time_input("Time", datetime.strptime("08:00","%H:%M").time(), key="m1_time", step=60)
+        n1   = st.text_input("Name", "Person 1", key="m1_name")
+        d1   = st.date_input("Date of birth", datetime(1990,1,1), min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31), key="m1_date")
+        t1   = st.time_input("Time", datetime.strptime("08:00","%H:%M").time(), key="m1_time", step=60)
         lat1 = st.number_input("Lat", -90.0, 90.0, 25.42, key="m1_lat")
         lon1 = st.number_input("Lon", -180.0, 180.0, 86.13, key="m1_lon")
         tz1  = st.number_input("TZ offset", -12.0, 14.0, 5.5, key="m1_tz")
     with c2:
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.5rem;">Person 2 · Bride</div>', unsafe_allow_html=True)
-        n2 = st.text_input("Name", "Person 2", key="m2_name")
-        d2 = st.date_input("Date of birth", datetime(1992,6,15), min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31), key="m2_date")
-        t2 = st.time_input("Time", datetime.strptime("10:30","%H:%M").time(), key="m2_time", step=60)
+        n2   = st.text_input("Name", "Person 2", key="m2_name")
+        d2   = st.date_input("Date of birth", datetime(1992,6,15), min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31), key="m2_date")
+        t2   = st.time_input("Time", datetime.strptime("10:30","%H:%M").time(), key="m2_time", step=60)
         lat2 = st.number_input("Lat", -90.0, 90.0, 28.61, key="m2_lat")
         lon2 = st.number_input("Lon", -180.0, 180.0, 77.20, key="m2_lon")
         tz2  = st.number_input("TZ offset", -12.0, 14.0, 5.5, key="m2_tz")
@@ -908,7 +921,7 @@ elif page == "Matchmaking":
             <div style="font-family:'Cormorant Garamond',serif; font-size:3.5rem; font-weight:500; color:{INK}; line-height:1;">{res['total']}<span style="font-size:1.5rem; color:{INK_MUTE};">/36</span></div>
             <div style="display:inline-block; background:{score_bg}; color:{score_color}; font-size:0.875rem; font-weight:500; padding:6px 20px; border-radius:20px; margin-top:0.75rem;">{res['verdict']} · {pct}%</div>
             <div style="background:{WARM}; border-radius:4px; height:6px; width:60%; margin:1.25rem auto 0;">
-                <div style="background:{score_color}; width:{pct}%; height:100%; border-radius:4px; transition:width 0.4s;"></div>
+                <div style="background:{score_color}; width:{pct}%; height:100%; border-radius:4px;"></div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -983,11 +996,11 @@ elif page == "Yearly Predictions":
         """, unsafe_allow_html=True)
 
         topics_to_show = ["Career","Marriage","Children","Health"] if topic=="All" else [topic]
-        rating_color = {"Excellent":"#1a6031","Good":"#3a6031","Average":"#7d5a00","Challenging":"#8b1a1a"}
+        rating_color   = {"Excellent":"#1a6031","Good":"#3a6031","Average":"#7d5a00","Challenging":"#8b1a1a"}
 
         for t in topics_to_show:
             data = pred[t.lower()]
-            rc = rating_color.get(data["rating"], INK_SOFT)
+            rc   = rating_color.get(data["rating"], INK_SOFT)
             st.markdown(f"""
             <div style="border-top:2px solid {BORDER}; padding-top:1.25rem; margin-top:1.25rem;">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem;">
@@ -997,25 +1010,6 @@ elif page == "Yearly Predictions":
             </div>
             """, unsafe_allow_html=True)
             render_fired_rules(data.get("fired_rules",[]))
-
-        # ── Download prediction summary ──
-        st.divider()
-        pred_lines = [
-            f"YEARLY PREDICTION — {name} · {year}",
-            "=" * 50,
-            f"Dasha: {dasha.get('mahadasha','—')} / {dasha.get('antardasha','—')}",
-            f"Transit Saturn: {pred.get('transit_saturn','—')}  |  Transit Jupiter: {pred.get('transit_jupiter','—')}",
-            f"Muntha: {varsh.get('muntha_sign','—')} (House {varsh.get('muntha_house','—')})",
-            "",
-            pred.get('overall_summary',''),
-        ]
-        st.download_button(
-            "↓ Download Yearly Prediction (TXT)",
-            data="\n".join(pred_lines),
-            file_name=f"{name.replace(' ','_')}_yearly_{year}.txt",
-            mime="text/plain",
-            use_container_width=True,
-        )
 
         if api_key:
             st.divider()
@@ -1063,13 +1057,11 @@ elif page == "Varshphal":
 
         # ── Varshphal download ──
         varsh_lines = [
-            f"VARSHPHAL — {name} · Year {year}",
-            "=" * 50,
+            f"VARSHPHAL — {name} · Year {year}", "=" * 50,
             f"Muntha Sign    : {varsh.get('muntha_sign','—')} (House {varsh.get('muntha_house','—')})",
             f"Muntha Lord    : {varsh.get('muntha_lord','—')} — {varsh.get('muntha_lord_dignity','—')}",
             f"Varsha Lagna   : {varsh.get('varsha_lagna_sign','—')} (Lord: {varsh.get('varsha_lagna_lord','—')})",
-            f"Varshesha      : {varsh.get('varshesha','—')} — {varsh.get('varshesha_dignity','—')}",
-            "",
+            f"Varshesha      : {varsh.get('varshesha','—')} — {varsh.get('varshesha_dignity','—')}", "",
         ]
         tp_dl = varsh.get("tri_pataki", {})
         if tp_dl:
@@ -1077,8 +1069,7 @@ elif page == "Varshphal":
                 "TRI-PATAKI CHAKRA:",
                 f"  Udaya  (Months 1–4) : {tp_dl.get('udaya_muntha','—')}",
                 f"  Madhya (Months 5–8) : {tp_dl.get('madhya_muntha','—')}",
-                f"  Asta   (Months 9–12): {tp_dl.get('asta_muntha','—')}",
-                "",
+                f"  Asta   (Months 9–12): {tp_dl.get('asta_muntha','—')}", "",
             ]
         themes_dl = varsh.get("themes", [])
         if themes_dl:
@@ -1167,20 +1158,19 @@ elif page == "Varshphal":
             for theme in themes:
                 if not isinstance(theme, dict):
                     continue
-
-                nature = theme.get("nature", "Neutral")
-                cat = theme.get("category", "")
-                interp = theme.get("interpretation", "")
-                calc = theme.get("calculation", "")
-                rule = theme.get("classical_rule", "")
+                nature   = theme.get("nature", "Neutral")
+                cat      = theme.get("category", "")
+                interp   = theme.get("interpretation", "")
+                calc     = theme.get("calculation", "")
+                rule     = theme.get("classical_rule", "")
                 modifier = theme.get("modifier", "")
 
                 if nature == "Auspicious":
-                    accent = SAGE; bg = "#f0f5f2"; icon = "✦"
+                    accent = SAGE; icon = "✦"
                 elif nature == "Challenging":
-                    accent = RUST; bg = "#fdf2ed"; icon = "⚠"
+                    accent = RUST; icon = "⚠"
                 else:
-                    accent = INK_MUTE; bg = WARM; icon = "◈"
+                    accent = INK_MUTE; icon = "◈"
 
                 st.markdown(f"""
                 <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:1.25rem; margin-bottom:0.75rem; border-left:3px solid {accent};">
@@ -1198,7 +1188,7 @@ elif page == "Varshphal":
         # ── Muntha Interpretation ──
         muntha = varsh.get("muntha_sign","")
         if muntha:
-            lord = SIGN_LORD.get(muntha, "—")
+            lord   = SIGN_LORD.get(muntha, "—")
             interp = _muntha_interpretation(muntha)
             st.markdown(f"""
             <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1rem 1.25rem; margin-top:1rem;">
@@ -1315,8 +1305,8 @@ elif page == "Ram Shalaka":
 
     type_colors = {
         "Very Auspicious": (SAGE, "#1a3d30"),
-        "Auspicious": (GOLD, "#5c3d00"),
-        "Neutral": (INK_MUTE, "#3a3530"),
+        "Auspicious":      (GOLD, "#5c3d00"),
+        "Neutral":         (INK_MUTE, "#3a3530"),
     }
 
     st.markdown(f"""
