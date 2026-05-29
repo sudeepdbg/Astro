@@ -539,6 +539,9 @@ def _chart_db_load_into_form(chart):
     for key in list(st.session_state.keys()):
         if "geo_suggestions" in key or "geo_autofilled" in key or "city_last_searched" in key:
             st.session_state[key] = None if "suggestions" in key else ""
+    # FLAG: sync all form widget keys on next run
+    for prefix in ["chart", "pred", "varsh", "ai", "db"]:
+        st.session_state[f"{prefix}_sync_coords"] = True
 
 def _chart_db_render_card(chart, idx):
     """Render a single chart card in the database."""
@@ -651,7 +654,39 @@ def birth_input_form(key_prefix: str, prefill_data=None):
         if k not in st.session_state:
             st.session_state[k] = v
 
-    # If prefill data is provided (from chart DB), use it
+    # ── CRITICAL FIX: Sync global lat/lon/tz into widget keys BEFORE widgets render ──
+    # When geocoding or "Load" updates birth_lat/birth_lon in session_state,
+    # the number_input widgets won't see the change unless we also update their keyed state.
+    # We do this BEFORE any widget is instantiated so the widget picks up the new value.
+    lat_widget_key = f"{key_prefix}_lat"
+    lon_widget_key = f"{key_prefix}_lon"
+    tz_widget_key  = f"{key_prefix}_tz"
+
+    # Only sync if the global value differs from what the widget last saw
+    # This prevents overriding user manual edits when they haven't triggered a geocode
+    global_lat = st.session_state.get("birth_lat", 25.42)
+    global_lon = st.session_state.get("birth_lon", 86.13)
+    global_tz  = st.session_state.get("birth_tz", 5.5)
+
+    # Check if this sync was triggered by a geocode/load action (via a flag)
+    sync_flag = f"{key_prefix}_sync_coords"
+    needs_sync = st.session_state.get(sync_flag, False)
+
+    if needs_sync:
+        st.session_state[lat_widget_key] = global_lat
+        st.session_state[lon_widget_key] = global_lon
+        st.session_state[tz_widget_key] = global_tz
+        st.session_state[sync_flag] = False
+    else:
+        # On first run or if widget key doesn't exist, seed it from global
+        if lat_widget_key not in st.session_state:
+            st.session_state[lat_widget_key] = global_lat
+        if lon_widget_key not in st.session_state:
+            st.session_state[lon_widget_key] = global_lon
+        if tz_widget_key not in st.session_state:
+            st.session_state[tz_widget_key] = global_tz
+
+    # If prefill data is provided (from chart DB edit), use it
     if prefill_data:
         name_default = prefill_data.get("name", st.session_state["birth_name"])
         date_default = datetime.fromisoformat(prefill_data["birth_date"]) if isinstance(prefill_data["birth_date"], str) else prefill_data["birth_date"]
@@ -660,13 +695,17 @@ def birth_input_form(key_prefix: str, prefill_data=None):
         lon_default = prefill_data.get("birth_lon", st.session_state["birth_lon"])
         tz_default = prefill_data.get("birth_tz", st.session_state["birth_tz"])
         city_default = prefill_data.get("birth_city", st.session_state["birth_city"])
+        # Also seed widget keys for prefill
+        st.session_state[lat_widget_key] = lat_default
+        st.session_state[lon_widget_key] = lon_default
+        st.session_state[tz_widget_key] = tz_default
     else:
         name_default = st.session_state["birth_name"]
         date_default = st.session_state["birth_date"]
         time_default = st.session_state["birth_time"]
-        lat_default = st.session_state["birth_lat"]
-        lon_default = st.session_state["birth_lon"]
-        tz_default = st.session_state["birth_tz"]
+        lat_default = st.session_state.get(lat_widget_key, st.session_state["birth_lat"])
+        lon_default = st.session_state.get(lon_widget_key, st.session_state["birth_lon"])
+        tz_default = st.session_state.get(tz_widget_key, st.session_state["birth_tz"])
         city_default = st.session_state["birth_city"]
 
     c1, c2, c3 = st.columns([2, 1, 1])
@@ -734,6 +773,8 @@ def birth_input_form(key_prefix: str, prefill_data=None):
             st.session_state[suggestions_key] = None
             st.session_state[f"{key_prefix}_geo_autofilled"] = selected["display"]
             st.session_state[f"{key_prefix}_city_last_searched"] = city_name
+            # FLAG: tell the next run to sync widget keys
+            st.session_state[f"{key_prefix}_sync_coords"] = True
             st.rerun()
 
     elif len(city_name.strip()) >= 3 and not autofilled and not suggestions:
@@ -747,21 +788,18 @@ def birth_input_form(key_prefix: str, prefill_data=None):
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
-        cur_tz = tz_default
-        tz_idx = 0
-        for i, (k, v) in enumerate(TIMEZONES.items()):
-            if v == cur_tz:
-                tz_idx = i; break
-        tz_choice = st.selectbox("Timezone", TZ_KEYS, index=tz_idx, key=f"{key_prefix}_tz")
+        # Use session_state key directly so widget reads from our synced value
+        tz_choice = st.selectbox("Timezone", TZ_KEYS, key=tz_widget_key)
+        # Map selected label back to value
         tz_val = TIMEZONES[tz_choice]
         if tz_val is None:
-            tz_val = st.number_input("UTC offset", -12.0, 14.0, cur_tz, 0.5, key=f"{key_prefix}_tz_custom")
+            tz_val = st.number_input("UTC offset", -12.0, 14.0, 0.0, 0.5, key=f"{key_prefix}_tz_custom")
         st.session_state["birth_tz"] = tz_val
     with lat_col:
-        lat = st.number_input("Lat", -90.0, 90.0, value=lat_default, key=f"{key_prefix}_lat")
+        lat = st.number_input("Lat", -90.0, 90.0, key=lat_widget_key)
         st.session_state["birth_lat"] = lat
     with lon_col:
-        lon = st.number_input("Lon", -180.0, 180.0, value=lon_default, key=f"{key_prefix}_lon")
+        lon = st.number_input("Lon", -180.0, 180.0, key=lon_widget_key)
         st.session_state["birth_lon"] = lon
 
     return name, dob, tob, lat, lon, tz_val
