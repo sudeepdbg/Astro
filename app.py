@@ -36,6 +36,8 @@ def init_session_state():
         "birth_lon": 86.13,
         "birth_tz": 5.5,
         "birth_city": "",
+        "birth_geo_suggestions": None,
+        "birth_geo_selected": None,
         "computed_chart": None,
         "computed_chart_name": "",
         "ai_ctx": "",
@@ -995,6 +997,25 @@ elif page == "Yearly Predictions":
             </div>
             """, unsafe_allow_html=True)
             render_fired_rules(data.get("fired_rules",[]))
+
+        # ── Download prediction summary ──
+        st.divider()
+        pred_lines = [
+            f"YEARLY PREDICTION — {name} · {year}",
+            "=" * 50,
+            f"Dasha: {dasha.get('mahadasha','—')} / {dasha.get('antardasha','—')}",
+            f"Transit Saturn: {pred.get('transit_saturn','—')}  |  Transit Jupiter: {pred.get('transit_jupiter','—')}",
+            f"Muntha: {varsh.get('muntha_sign','—')} (House {varsh.get('muntha_house','—')})",
+            "",
+            pred.get('overall_summary',''),
+        ]
+        st.download_button(
+            "↓ Download Yearly Prediction (TXT)",
+            data="\n".join(pred_lines),
+            file_name=f"{name.replace(' ','_')}_yearly_{year}.txt",
+            mime="text/plain",
+            use_container_width=True,
+        )
 
         if api_key:
             st.divider()
