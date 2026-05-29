@@ -112,6 +112,42 @@ def geocode_suggestions(name: str, limit: int = 8):
     except Exception:
         return []
 
+
+def _city_on_change(key_prefix: str):
+    """
+    on_change callback for the city text input.
+    Fires a geocode search whenever the typed value reaches 3+ chars
+    and differs from the last searched value.
+    Results are stored in session state; the form re-renders with the dropdown.
+    """
+    typed = st.session_state.get(f"{key_prefix}_city_input", "").strip()
+    last_searched = st.session_state.get(f"{key_prefix}_city_last_searched", "")
+
+    # Only search if ≥3 chars and the value actually changed since last search
+    if len(typed) < 3 or typed.lower() == last_searched.lower():
+        if len(typed) < 3:
+            # Clear stale suggestions when user deletes back below threshold
+            st.session_state[f"{key_prefix}_geo_suggestions"] = None
+        return
+
+    suggestions = geocode_suggestions(typed, limit=8)
+    st.session_state[f"{key_prefix}_city_last_searched"] = typed
+    st.session_state["birth_city"] = typed
+
+    if suggestions:
+        if len(suggestions) == 1:
+            # Single unambiguous result — auto-apply, no dropdown needed
+            st.session_state["birth_lat"] = round(suggestions[0]["lat"], 4)
+            st.session_state["birth_lon"] = round(suggestions[0]["lon"], 4)
+            st.session_state[f"{key_prefix}_geo_suggestions"] = None
+            st.session_state[f"{key_prefix}_geo_autofilled"] = suggestions[0]["display"]
+        else:
+            st.session_state[f"{key_prefix}_geo_suggestions"] = suggestions
+            st.session_state[f"{key_prefix}_geo_autofilled"] = None
+    else:
+        st.session_state[f"{key_prefix}_geo_suggestions"] = None
+        st.session_state[f"{key_prefix}_geo_autofilled"] = None
+
 # ─── TIMEZONE MAP ─────────────────────────────────────────────────
 TIMEZONES = {
     "IST (India, UTC+5:30)": 5.5,
@@ -369,14 +405,21 @@ def pill(text, color=INK_MUTE):
 
 # ─── BIRTH INPUT FORM ─────────────────────────────────────────────
 def birth_input_form(key_prefix: str):
-    # Initialise per-prefix state keys
-    for _k in [f"{key_prefix}_city_previous", f"{key_prefix}_geo_suggestions"]:
-        if _k not in st.session_state:
-            st.session_state[_k] = None if _k.endswith("_geo_suggestions") else ""
+    # ── Initialise all per-prefix state keys ──
+    state_defaults = {
+        f"{key_prefix}_geo_suggestions":    None,
+        f"{key_prefix}_city_last_searched": "",
+        f"{key_prefix}_city_input":         st.session_state.get("birth_city", ""),
+        f"{key_prefix}_geo_autofilled":     None,
+    }
+    for k, v in state_defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
-        name = st.text_input("Name", st.session_state["birth_name"], key=f"{key_prefix}_name", placeholder="Full name")
+        name = st.text_input("Name", st.session_state["birth_name"],
+                             key=f"{key_prefix}_name", placeholder="Full name")
         st.session_state["birth_name"] = name
     with c2:
         dob = st.date_input("Date of birth", st.session_state["birth_date"],
@@ -384,53 +427,39 @@ def birth_input_form(key_prefix: str):
                             key=f"{key_prefix}_date")
         st.session_state["birth_date"] = dob
     with c3:
-        tob = st.time_input("Time of birth", st.session_state["birth_time"], step=60, key=f"{key_prefix}_time")
+        tob = st.time_input("Time of birth", st.session_state["birth_time"],
+                            step=60, key=f"{key_prefix}_time")
         st.session_state["birth_time"] = tob
 
-    cc1, cc2 = st.columns([4, 1])
-    with cc1:
-        city_name = st.text_input(
-            "City",
-            st.session_state["birth_city"],
-            key=f"{key_prefix}_city",
-            placeholder="City, State, Country  e.g. Narsinghpur, Chhattisgarh, India",
+    # ── City auto-suggest input (full width) ──
+    st.text_input(
+        "City",
+        key=f"{key_prefix}_city_input",
+        placeholder="Type 3+ letters — e.g. Nar, Mum, Del, Narsinghpur…",
+        on_change=_city_on_change,
+        args=(key_prefix,),
+    )
+    city_name = st.session_state.get(f"{key_prefix}_city_input", "")
+    st.session_state["birth_city"] = city_name
+
+    # ── Auto-filled single-result banner ──
+    autofilled = st.session_state.get(f"{key_prefix}_geo_autofilled")
+    if autofilled:
+        st.markdown(
+            f'<div style="font-size:0.78rem; color:{SAGE}; margin-top:2px;">'
+            f'✓ Location set: <strong>{autofilled}</strong></div>',
+            unsafe_allow_html=True,
         )
-        # Clear cached suggestions whenever the search text changes
-        if st.session_state.get(f"{key_prefix}_city_previous") != city_name:
-            st.session_state[f"{key_prefix}_geo_suggestions"] = None
-            st.session_state[f"{key_prefix}_city_previous"] = city_name
-        st.session_state["birth_city"] = city_name
 
-    with cc2:
-        st.write("")
-        if st.button("Find", key=f"{key_prefix}_find"):
-            if not city_name.strip():
-                st.warning("Enter a city name first.")
-            else:
-                with st.spinner("Searching locations…"):
-                    suggestions = geocode_suggestions(city_name, limit=8)
-                if suggestions:
-                    if len(suggestions) == 1:
-                        # Unambiguous — auto-select
-                        st.session_state["birth_lat"] = round(suggestions[0]["lat"], 4)
-                        st.session_state["birth_lon"] = round(suggestions[0]["lon"], 4)
-                        st.session_state[f"{key_prefix}_geo_suggestions"] = None
-                        st.toast(f"✓ {suggestions[0]['display']}")
-                        st.rerun()
-                    else:
-                        # Ambiguous — show dropdown
-                        st.session_state[f"{key_prefix}_geo_suggestions"] = suggestions
-                else:
-                    st.error("No results found. Try adding state/country, or enter coordinates manually.")
-                    st.session_state[f"{key_prefix}_geo_suggestions"] = None
-
-    # ── Location selection dropdown (persists until user picks) ──
+    # ── Multi-result dropdown (persists until user picks) ──
     suggestions_key = f"{key_prefix}_geo_suggestions"
     suggestions = st.session_state.get(suggestions_key)
-    if suggestions and len(suggestions) > 1:
+
+    if suggestions and len(suggestions) > 0:
+        typed = city_name.strip()
         st.markdown(
             f'<div style="font-size:0.78rem; color:{INK_MUTE}; margin-top:4px; margin-bottom:2px;">'
-            f'📍 {len(suggestions)} locations found — select the correct one:</div>',
+            f'📍 {len(suggestions)} locations found for <em>"{typed}"</em> — select the correct one:</div>',
             unsafe_allow_html=True,
         )
         option_labels = [
@@ -448,9 +477,20 @@ def birth_input_form(key_prefix: str):
             selected = suggestions[idx]
             st.session_state["birth_lat"] = round(selected["lat"], 4)
             st.session_state["birth_lon"] = round(selected["lon"], 4)
-            st.session_state[suggestions_key] = None   # clear only after explicit pick
-            st.toast(f"✓ {selected['display']}")
+            st.session_state[suggestions_key] = None
+            st.session_state[f"{key_prefix}_geo_autofilled"] = selected["display"]
+            st.session_state[f"{key_prefix}_city_last_searched"] = city_name  # prevent re-search
             st.rerun()
+
+    elif len(city_name.strip()) >= 3 and not autofilled and not suggestions:
+        # Nothing found — show a subtle hint
+        last = st.session_state.get(f"{key_prefix}_city_last_searched", "")
+        if last.lower() == city_name.strip().lower():
+            st.markdown(
+                f'<div style="font-size:0.78rem; color:{RUST}; margin-top:2px;">'
+                f'No results found — try adding state or country, or enter coordinates below.</div>',
+                unsafe_allow_html=True,
+            )
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
