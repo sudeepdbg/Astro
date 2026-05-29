@@ -8,6 +8,8 @@ import requests
 import os
 import random
 import json
+import sqlite3
+import uuid
 from datetime import datetime, timedelta
 from io import BytesIO
 from vedic_engine import (
@@ -17,6 +19,160 @@ from vedic_engine import (
     generate_demo_chart, load_chart_from_file, longitude_to_sign,
     SWISSEPH_AVAILABLE, NAKSHATRA_GANA, NAKSHATRA_NADI, NAKSHATRA_YONI
 )
+
+# ─── DATABASE SETUP ─────────────────────────────────────────────────
+DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "charts.db")
+
+def init_db():
+    """Initialize SQLite database for persistent chart storage."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS saved_charts (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            birth_date TEXT NOT NULL,
+            birth_time TEXT NOT NULL,
+            birth_lat REAL NOT NULL,
+            birth_lon REAL NOT NULL,
+            birth_tz REAL NOT NULL,
+            birth_city TEXT,
+            notes TEXT,
+            is_starred INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def add_chart_to_db(name, birth_date, birth_time, lat, lon, tz, city="", notes=""):
+    """Add a new chart entry to the database."""
+    chart_id = str(uuid.uuid4())[:8]
+    now = datetime.now().isoformat()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        INSERT INTO saved_charts (id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (chart_id, name, birth_date.isoformat(), birth_time.strftime("%H:%M"), lat, lon, tz, city, notes, 0, now, now))
+    conn.commit()
+    conn.close()
+    return chart_id
+
+def update_chart_in_db(chart_id, name, birth_date, birth_time, lat, lon, tz, city="", notes=""):
+    """Update an existing chart entry."""
+    now = datetime.now().isoformat()
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        UPDATE saved_charts 
+        SET name=?, birth_date=?, birth_time=?, birth_lat=?, birth_lon=?, birth_tz=?, birth_city=?, notes=?, updated_at=?
+        WHERE id=?
+    """, (name, birth_date.isoformat(), birth_time.strftime("%H:%M"), lat, lon, tz, city, notes, now, chart_id))
+    conn.commit()
+    conn.close()
+
+def delete_chart_from_db(chart_id):
+    """Delete a chart entry from the database."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM saved_charts WHERE id=?", (chart_id,))
+    conn.commit()
+    conn.close()
+
+def toggle_star_chart(chart_id, is_starred):
+    """Toggle the starred status of a chart."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE saved_charts SET is_starred=? WHERE id=?", (1 if is_starred else 0, chart_id))
+    conn.commit()
+    conn.close()
+
+def get_all_charts():
+    """Retrieve all saved charts from the database."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
+        FROM saved_charts ORDER BY updated_at DESC
+    """)
+    rows = c.fetchall()
+    conn.close()
+    charts = []
+    for row in rows:
+        charts.append({
+            "id": row[0], "name": row[1], "birth_date": row[2], "birth_time": row[3],
+            "birth_lat": row[4], "birth_lon": row[5], "birth_tz": row[6],
+            "birth_city": row[7] or "", "notes": row[8] or "", "is_starred": bool(row[9]),
+            "created_at": row[10]
+        })
+    return charts
+
+def search_charts(query):
+    """Search charts by name, city, or notes."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    search = f"%{query}%"
+    c.execute("""
+        SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
+        FROM saved_charts 
+        WHERE name LIKE ? OR birth_city LIKE ? OR notes LIKE ?
+        ORDER BY updated_at DESC
+    """, (search, search, search))
+    rows = c.fetchall()
+    conn.close()
+    charts = []
+    for row in rows:
+        charts.append({
+            "id": row[0], "name": row[1], "birth_date": row[2], "birth_time": row[3],
+            "birth_lat": row[4], "birth_lon": row[5], "birth_tz": row[6],
+            "birth_city": row[7] or "", "notes": row[8] or "", "is_starred": bool(row[9]),
+            "created_at": row[10]
+        })
+    return charts
+
+def get_starred_charts():
+    """Retrieve only starred charts."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
+        FROM saved_charts WHERE is_starred=1 ORDER BY updated_at DESC
+    """)
+    rows = c.fetchall()
+    conn.close()
+    charts = []
+    for row in rows:
+        charts.append({
+            "id": row[0], "name": row[1], "birth_date": row[2], "birth_time": row[3],
+            "birth_lat": row[4], "birth_lon": row[5], "birth_tz": row[6],
+            "birth_city": row[7] or "", "notes": row[8] or "", "is_starred": bool(row[9]),
+            "created_at": row[10]
+        })
+    return charts
+
+def get_chart_by_id(chart_id):
+    """Get a single chart by ID."""
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
+        FROM saved_charts WHERE id=?
+    """, (chart_id,))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return {
+            "id": row[0], "name": row[1], "birth_date": row[2], "birth_time": row[3],
+            "birth_lat": row[4], "birth_lon": row[5], "birth_tz": row[6],
+            "birth_city": row[7] or "", "notes": row[8] or "", "is_starred": bool(row[9]),
+            "created_at": row[10]
+        }
+    return None
+
+# Initialize the database on module load
+init_db()
 
 # ─── PAGE CONFIG ──────────────────────────────────────────────────
 st.set_page_config(
@@ -40,6 +196,14 @@ def init_session_state():
         "computed_chart_name": "",
         "ai_ctx": "",
         "last_shalaka": None,
+        # Chart DB state
+        "chart_db_view": "all",
+        "chart_db_search": "",
+        "chart_db_edit_id": None,
+        "chart_db_show_form": False,
+        "chart_db_form_mode": "add",
+        "chart_db_form_data": {},
+        "chart_db_last_action": None,
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -336,6 +500,7 @@ with st.sidebar:
 
     page = st.radio(" ", [
         "Horoscope",
+        "Chart Database",
         "Matchmaking",
         "Yearly Predictions",
         "Varshphal",
@@ -359,6 +524,78 @@ with st.sidebar:
         e.g. Narsinghpur, Chhattisgarh, India
     </div>
     """, unsafe_allow_html=True)
+
+# ─── CHART DATABASE UI HELPERS ────────────────────────────────────
+def _chart_db_load_into_form(chart):
+    """Load a chart's data into the birth form and session state."""
+    st.session_state["birth_name"] = chart["name"]
+    st.session_state["birth_date"] = datetime.fromisoformat(chart["birth_date"])
+    st.session_state["birth_time"] = datetime.strptime(chart["birth_time"], "%H:%M").time()
+    st.session_state["birth_lat"] = chart["birth_lat"]
+    st.session_state["birth_lon"] = chart["birth_lon"]
+    st.session_state["birth_tz"] = chart["birth_tz"]
+    st.session_state["birth_city"] = chart["birth_city"]
+    # Clear geo suggestions to avoid stale dropdowns
+    for key in list(st.session_state.keys()):
+        if "geo_suggestions" in key or "geo_autofilled" in key or "city_last_searched" in key:
+            st.session_state[key] = None if "suggestions" in key else ""
+
+def _chart_db_render_card(chart, idx):
+    """Render a single chart card in the database."""
+    is_starred = chart["is_starred"]
+    card_border = f"border-left: 3px solid {GOLD};" if is_starred else ""
+
+    star_icon = "★" if is_starred else "☆"
+
+    try:
+        dt = datetime.fromisoformat(chart["birth_date"])
+        date_str = dt.strftime("%d %b %Y")
+    except:
+        date_str = chart["birth_date"]
+
+    city_display = chart["birth_city"] if chart["birth_city"] else "No location"
+    notes_display = chart["notes"] if chart["notes"] else ""
+
+    col1, col2 = st.columns([6, 1])
+    with col1:
+        st.markdown(f"""
+        <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:1rem 1.25rem; margin-bottom:0.75rem; {card_border}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                <div style="flex:1;">
+                    <div style="font-size:1rem; font-weight:500; color:{INK}; margin-bottom:0.25rem;">{chart["name"]}</div>
+                    <div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.5;">
+                        {date_str} · {chart["birth_time"]} · {city_display}<br/>
+                        Lat {chart["birth_lat"]:.4f}°, Lon {chart["birth_lon"]:.4f}° · TZ {chart["birth_tz"]:+.1f}
+                    </div>
+                    {f'<div style="font-size:0.75rem; color:{INK_SOFT}; margin-top:0.4rem; font-style:italic;">{notes_display}</div>' if notes_display else ''}
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        # Star button
+        if st.button(star_icon, key=f"star_{chart['id']}_{idx}", help="Toggle favourite"):
+            toggle_star_chart(chart["id"], not is_starred)
+            st.session_state["chart_db_last_action"] = f"starred_{chart['id']}"
+            st.rerun()
+        # Edit button
+        if st.button("✎", key=f"edit_{chart['id']}_{idx}", help="Edit chart"):
+            st.session_state["chart_db_edit_id"] = chart["id"]
+            st.session_state["chart_db_show_form"] = True
+            st.session_state["chart_db_form_mode"] = "edit"
+            st.session_state["chart_db_form_data"] = chart.copy()
+            st.rerun()
+        # Delete button
+        if st.button("🗑", key=f"del_{chart['id']}_{idx}", help="Delete chart"):
+            delete_chart_from_db(chart["id"])
+            st.session_state["chart_db_last_action"] = f"deleted_{chart['id']}"
+            st.rerun()
+        # Load button
+        if st.button("▶", key=f"load_{chart['id']}_{idx}", help="Load into birth form"):
+            _chart_db_load_into_form(chart)
+            st.session_state["chart_db_last_action"] = f"loaded_{chart['id']}"
+            st.success(f'Loaded "{chart["name"]}" into birth form')
+            st.rerun()
 
 # ─── HELPERS ─────────────────────────────────────────────────────
 def label(text):
@@ -402,7 +639,7 @@ def pill(text, color=INK_MUTE):
     return f'<span style="background:{WARM}; color:{INK}; font-size:0.75rem; padding:3px 10px; border-radius:20px; border:1px solid {BORDER};">{text}</span>'
 
 # ─── BIRTH INPUT FORM ─────────────────────────────────────────────
-def birth_input_form(key_prefix: str):
+def birth_input_form(key_prefix: str, prefill_data=None):
     # ── Initialise all per-prefix state keys ──
     state_defaults = {
         f"{key_prefix}_geo_suggestions":    None,
@@ -414,24 +651,43 @@ def birth_input_form(key_prefix: str):
         if k not in st.session_state:
             st.session_state[k] = v
 
+    # If prefill data is provided (from chart DB), use it
+    if prefill_data:
+        name_default = prefill_data.get("name", st.session_state["birth_name"])
+        date_default = datetime.fromisoformat(prefill_data["birth_date"]) if isinstance(prefill_data["birth_date"], str) else prefill_data["birth_date"]
+        time_default = datetime.strptime(prefill_data["birth_time"], "%H:%M").time() if isinstance(prefill_data["birth_time"], str) else prefill_data["birth_time"]
+        lat_default = prefill_data.get("birth_lat", st.session_state["birth_lat"])
+        lon_default = prefill_data.get("birth_lon", st.session_state["birth_lon"])
+        tz_default = prefill_data.get("birth_tz", st.session_state["birth_tz"])
+        city_default = prefill_data.get("birth_city", st.session_state["birth_city"])
+    else:
+        name_default = st.session_state["birth_name"]
+        date_default = st.session_state["birth_date"]
+        time_default = st.session_state["birth_time"]
+        lat_default = st.session_state["birth_lat"]
+        lon_default = st.session_state["birth_lon"]
+        tz_default = st.session_state["birth_tz"]
+        city_default = st.session_state["birth_city"]
+
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1:
-        name = st.text_input("Name", st.session_state["birth_name"],
+        name = st.text_input("Name", name_default,
                              key=f"{key_prefix}_name", placeholder="Full name")
         st.session_state["birth_name"] = name
     with c2:
-        dob = st.date_input("Date of birth", st.session_state["birth_date"],
+        dob = st.date_input("Date of birth", date_default,
                             min_value=datetime(1901, 1, 1), max_value=datetime(2100, 12, 31),
                             key=f"{key_prefix}_date")
         st.session_state["birth_date"] = dob
     with c3:
-        tob = st.time_input("Time of birth", st.session_state["birth_time"],
+        tob = st.time_input("Time of birth", time_default,
                             step=60, key=f"{key_prefix}_time")
         st.session_state["birth_time"] = tob
 
     # ── City auto-suggest input (full width) ──
     st.text_input(
         "City",
+        value=city_default,
         key=f"{key_prefix}_city_input",
         placeholder="Type 3+ letters — e.g. Nar, Mum, Del, Narsinghpur…",
         on_change=_city_on_change,
@@ -477,11 +733,10 @@ def birth_input_form(key_prefix: str):
             st.session_state["birth_lon"] = round(selected["lon"], 4)
             st.session_state[suggestions_key] = None
             st.session_state[f"{key_prefix}_geo_autofilled"] = selected["display"]
-            st.session_state[f"{key_prefix}_city_last_searched"] = city_name  # prevent re-search
+            st.session_state[f"{key_prefix}_city_last_searched"] = city_name
             st.rerun()
 
     elif len(city_name.strip()) >= 3 and not autofilled and not suggestions:
-        # Nothing found — show a subtle hint
         last = st.session_state.get(f"{key_prefix}_city_last_searched", "")
         if last.lower() == city_name.strip().lower():
             st.markdown(
@@ -492,7 +747,7 @@ def birth_input_form(key_prefix: str):
 
     tz_col, lat_col, lon_col = st.columns([2, 1, 1])
     with tz_col:
-        cur_tz = st.session_state["birth_tz"]
+        cur_tz = tz_default
         tz_idx = 0
         for i, (k, v) in enumerate(TIMEZONES.items()):
             if v == cur_tz:
@@ -503,10 +758,10 @@ def birth_input_form(key_prefix: str):
             tz_val = st.number_input("UTC offset", -12.0, 14.0, cur_tz, 0.5, key=f"{key_prefix}_tz_custom")
         st.session_state["birth_tz"] = tz_val
     with lat_col:
-        lat = st.number_input("Lat", -90.0, 90.0, value=st.session_state["birth_lat"], key=f"{key_prefix}_lat")
+        lat = st.number_input("Lat", -90.0, 90.0, value=lat_default, key=f"{key_prefix}_lat")
         st.session_state["birth_lat"] = lat
     with lon_col:
-        lon = st.number_input("Lon", -180.0, 180.0, value=st.session_state["birth_lon"], key=f"{key_prefix}_lon")
+        lon = st.number_input("Lon", -180.0, 180.0, value=lon_default, key=f"{key_prefix}_lon")
         st.session_state["birth_lon"] = lon
 
     return name, dob, tob, lat, lon, tz_val
@@ -759,6 +1014,125 @@ def _muntha_interpretation(muntha: str) -> str:
         "Pisces": "Spirituality, foreign connections, creative pursuits.",
     }
     return interp.get(muntha, "Mixed results — maintain balance and adaptability.")
+
+# ═══════════════════════════════════════════════════════════════
+# CHART DATABASE PAGE
+# ═══════════════════════════════════════════════════════════════
+if page == "Chart Database":
+    section_title("Chart Database", "Save, manage & load birth charts")
+
+    # ── Toolbar: Search + Add + Filter ──
+    toolbar_col1, toolbar_col2, toolbar_col3 = st.columns([3, 1, 1])
+
+    with toolbar_col1:
+        search_query = st.text_input(
+            "🔍 Search",
+            value=st.session_state.get("chart_db_search", ""),
+            placeholder="Search by name, place, or notes…",
+            key="chart_db_search_input",
+            label_visibility="collapsed"
+        )
+        st.session_state["chart_db_search"] = search_query
+
+    with toolbar_col2:
+        view_mode = st.segmented_control(
+            "View",
+            ["All", "Starred"],
+            default="All" if st.session_state["chart_db_view"] == "all" else "Starred",
+            key="chart_db_view_toggle"
+        )
+        st.session_state["chart_db_view"] = "all" if view_mode == "All" else "starred"
+
+    with toolbar_col3:
+        if st.button("+ Add Chart", use_container_width=True):
+            st.session_state["chart_db_show_form"] = True
+            st.session_state["chart_db_form_mode"] = "add"
+            st.session_state["chart_db_form_data"] = {}
+            st.session_state["chart_db_edit_id"] = None
+            st.rerun()
+
+    st.divider()
+
+    # ── Add/Edit Form ──
+    if st.session_state.get("chart_db_show_form"):
+        form_mode = st.session_state["chart_db_form_mode"]
+        form_data = st.session_state.get("chart_db_form_data", {})
+
+        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">{"Edit Chart" if form_mode == "edit" else "Add New Chart"}</div>', unsafe_allow_html=True)
+
+        with st.container():
+            name, dob, tob, lat, lon, tz = birth_input_form("db", prefill_data=form_data if form_mode == "edit" else None)
+
+            notes_default = form_data.get("notes", "") if form_mode == "edit" else ""
+            notes = st.text_area("Notes", value=notes_default, placeholder="Optional notes about this chart…", key="db_notes", height=60)
+
+            btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 2])
+            with btn_col1:
+                if st.button("💾 Save" if form_mode == "add" else "💾 Update", use_container_width=True, key="db_save_btn"):
+                    city = st.session_state.get("birth_city", "")
+                    if form_mode == "add":
+                        add_chart_to_db(name, dob, tob, lat, lon, tz, city, notes)
+                        st.session_state["chart_db_last_action"] = "added"
+                    else:
+                        edit_id = st.session_state.get("chart_db_edit_id")
+                        if edit_id:
+                            update_chart_in_db(edit_id, name, dob, tob, lat, lon, tz, city, notes)
+                            st.session_state["chart_db_last_action"] = "updated"
+                    st.session_state["chart_db_show_form"] = False
+                    st.session_state["chart_db_edit_id"] = None
+                    st.session_state["chart_db_form_data"] = {}
+                    st.rerun()
+
+            with btn_col2:
+                if st.button("Cancel", use_container_width=True, key="db_cancel_btn"):
+                    st.session_state["chart_db_show_form"] = False
+                    st.session_state["chart_db_edit_id"] = None
+                    st.session_state["chart_db_form_data"] = {}
+                    st.rerun()
+
+        st.divider()
+
+    # ── Show last action toast ──
+    last_action = st.session_state.get("chart_db_last_action")
+    if last_action:
+        if last_action == "added":
+            st.toast("Chart saved successfully!", icon="✅")
+        elif last_action == "updated":
+            st.toast("Chart updated successfully!", icon="✅")
+        elif last_action.startswith("deleted_"):
+            st.toast("Chart deleted", icon="🗑")
+        elif last_action.startswith("starred_"):
+            st.toast("Favourite toggled", icon="⭐")
+        st.session_state["chart_db_last_action"] = None
+
+    # ── Chart List ──
+    view = st.session_state.get("chart_db_view", "all")
+    search = st.session_state.get("chart_db_search", "").strip()
+
+    if search:
+        charts = search_charts(search)
+    elif view == "starred":
+        charts = get_starred_charts()
+    else:
+        charts = get_all_charts()
+
+    if not charts:
+        empty_msg = "No charts found." if not search else f'No charts match "{search}".'
+        if view == "starred" and not search:
+            empty_msg = "No starred charts yet. Click the ☆ star on any chart to mark it as a favourite."
+        st.markdown(f"""
+        <div style="text-align:center; padding:3rem 1rem; color:{INK_MUTE};">
+            <div style="font-size:3rem; margin-bottom:0.5rem;">📂</div>
+            <div style="font-size:0.95rem;">{empty_msg}</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        total_count = len(charts)
+        starred_count = sum(1 for c in charts if c["is_starred"])
+        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Showing {total_count} chart{"s" if total_count != 1 else ""} {f"({starred_count} ★)" if starred_count > 0 else ""}</div>', unsafe_allow_html=True)
+
+        for idx, chart in enumerate(charts):
+            _chart_db_render_card(chart, idx)
 
 # ═══════════════════════════════════════════════════════════════
 # HOROSCOPE PAGE
