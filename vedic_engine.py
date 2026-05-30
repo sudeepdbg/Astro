@@ -295,34 +295,255 @@ FUNCTIONAL_BENEFICS = {
     "Pisces":      ["Jupiter","Moon","Mars"],
 }
 
-RAM_SHALAKA_GRID = [
-    ["श्री","राम","जय","राम","जय","जय","राम"],
-    ["जय","हनु","मान","ज्ञान","गुण","सा","गर"],
-    ["जय","कपी","श","तिहुँ","लोक","उजा","गर"],
-    ["राम","दूत","अतु","लित","बल","धा","मा"],
-    ["अंज","नि","पु","त्र","प","वन","सुत"],
-    ["महा","बीर","वि","क्र","म","बज","रंगी"],
-    ["कु","म","ति","नि","वा","र","हनु"]
+==================================================================
+SECTION 14 — RAM SHALAKA ORACLE (Authentic 15x15 Implementation)
+==================================================================
+
+# Authentic 9 Chaupais from Ram Charit Manas
+AUTHENTIC_CHAUPAIS = [
+    {
+        "id": 1,
+        "chars": "सुनुसियसत्यअसीसहमारीपूजिहिमनकामनतुम्हारी",
+        "hindi": "सुनु सिय सत्य असीस हमारी। पूजिहि मन कामना तुम्हारी॥",
+        "transliteration": "Sunu siya satya aseesa hamari, pujihi mana kamana tumhari",
+        "meaning_en": "Listen Siya, this is my true blessing — worship with your heart's desire.",
+        "context": "Bal Kand — Gauri blesses Sita",
+        "result": "Very Auspicious — The work will be accomplished with divine grace.",
+        "nature": "Very Auspicious",
+        "score": 90,
+        "color": "#2d6a4f",
+        "bg_color": "#d8f3dc",
+        "remedy": "Offer prayers to Lord Rama and Sita. Chant 'Siya-Ram' 108 times.",
+        "symbol": "शुभ",
+    },
+    {
+        "id": 2,
+        "chars": "प्रबिसिनगरकीजैसबकाजाहृदयराखिकौसलपुरराजा",
+        "hindi": "प्रबिसि नगर कीजै सब काजा। हृदय राखि कौसलपुर राजा॥",
+        "transliteration": "Prabisi nagara keejai saba kaaja, hridaya rakhi kausala pura raaja",
+        "meaning_en": "Enter the city and accomplish all tasks, keeping the King of Ayodhya in your heart.",
+        "context": "Sundar Kand — Hanuman enters Lanka",
+        "result": "Very Auspicious — Begin with faith. Success and divine protection are assured.",
+        "nature": "Very Auspicious",
+        "score": 85,
+        "color": "#2d6a4f",
+        "bg_color": "#d8f3dc",
+        "remedy": "Begin after remembering Lord Rama. Hanuman Chalisa is beneficial.",
+        "symbol": "शुभ",
+    },
+    {
+        "id": 3,
+        "chars": "मुदमंगलमयसंतसमाजूजिमिजगजंगमतीरथराजू",
+        "hindi": "मुद मंगलमय संत समाजू। जिमि जग जंगम तीरथ राजू॥",
+        "transliteration": "Muda mangalamaya santa samaaju, jimi jaga jangama tiratha raaju",
+        "meaning_en": "The assembly of saints is blissful, like the king of pilgrimage places.",
+        "context": "Bal Kand — Saintly gathering",
+        "result": "Auspicious — Work accomplished through good company and wisdom.",
+        "nature": "Auspicious",
+        "score": 75,
+        "color": "#40916c",
+        "bg_color": "#b7e4c7",
+        "remedy": "Seek company of wise people. Read Ramayana regularly.",
+        "symbol": "शुभ",
+    },
+    {
+        "id": 4,
+        "chars": "गरलसुधारिपुकरहिमिताईगोपदसिंधुअनलसितलाई",
+        "hindi": "गरल सुधा रिपु करहिं मिताई। गोपद सिंधु अनल सितलाई॥",
+        "transliteration": "Garala sudhaa ripu karahim mitaaee, gopada sindhu anala sitalaaee",
+        "meaning_en": "Poison turns to nectar, enemies become friends; ocean becomes a cow's hoof-print.",
+        "context": "Sundar Kand — Hanuman's power",
+        "result": "Extremely Auspicious — Even impossible tasks will succeed. Miracles possible.",
+        "nature": "Very Auspicious",
+        "score": 95,
+        "color": "#1b4332",
+        "bg_color": "#d8f3dc",
+        "remedy": "Have unwavering faith. Chant Hanuman Chalisa daily.",
+        "symbol": "श्री",
+    },
+    {
+        "id": 5,
+        "chars": "बरुनकुबेरसुरेससमीरारनसनमुखधरिकाहनधीरा",
+        "hindi": "बरुन कुबेर सुरेस समीरा। रन सनमुख धरि काह न धीरा॥",
+        "transliteration": "Baruna kubera suresha sameeraa, rana sanamukha dhari kaaha na dheeraa",
+        "meaning_en": "Varuna, Kubera, Indra, Vayu — who can face them in battle?",
+        "context": "Lanka Kand — Mighty warriors",
+        "result": "Auspicious with Effort — Obstacles exist, but victory is certain with courage.",
+        "nature": "Auspicious with Effort",
+        "score": 70,
+        "color": "#52b788",
+        "bg_color": "#95d5b2",
+        "remedy": "Be courageous. Worship Hanuman for strength.",
+        "symbol": "मध्य",
+    },
+    {
+        "id": 6,
+        "chars": "होइहैसोइजोरामरचिराखाकोकरितरकबढ़ावहिंसाखा",
+        "hindi": "होइ है सोइ जो राम रचि राखा। को करि तरक बढ़ावहिं साखा॥",
+        "transliteration": "Hoi hai soi jo raama rachi raakhaa, ko kari taraka badhaavahim saakhaa",
+        "meaning_en": "Whatever Rama has ordained shall happen — who can argue with it?",
+        "context": "Bal Kand — Shiva-Parvati dialogue",
+        "result": "Neutral — The outcome is destined. Surrender to divine will.",
+        "nature": "Neutral",
+        "score": 55,
+        "color": "#b69121",
+        "bg_color": "#fef3cd",
+        "remedy": "Accept divine will. Do duty without attachment. Chant 'Ram Naam'.",
+        "symbol": "मध्य",
+    },
+    {
+        "id": 7,
+        "chars": "बिधिबससुजनकुसंगतपरहींफनिमनिसमनिजगुनअनुसरहीं",
+        "hindi": "बिधि बस सुजन कुसंगत परहीं। फनि मनि सम निज गुन अनुसरहीं॥",
+        "transliteration": "Bidhi basa sujana kusangata parahim, phani mani sama nija guna anusarahim",
+        "meaning_en": "Good people fall into bad company by fate, but follow their own nature like the snake's gem.",
+        "context": "Bal Kand — Satsang description",
+        "result": "Caution — Beware of bad company. Doubt about success. Choose associations carefully.",
+        "nature": "Caution",
+        "score": 40,
+        "color": "#c17817",
+        "bg_color": "#ffe4b5",
+        "remedy": "Avoid negative influences. Maintain integrity. Read Ramayana.",
+        "symbol": "अशुभ",
+    },
+    {
+        "id": 8,
+        "chars": "उघरेंअंतनहोइनिबाहूकालनेमिजिमिरावनराहू",
+        "hindi": "उघरें अंत न होइ निबाहू। कालनेमि जिमि रावन राहू॥",
+        "transliteration": "Ugharenta na hoi nibaahuu, kaalanemi jimi raavana raahuu",
+        "meaning_en": "The end cannot be borne, like Kalanemi, Ravana, and Rahu.",
+        "context": "Bal Kand — Satsang description",
+        "result": "Inauspicious — This work is not beneficial. Better to reconsider or abandon.",
+        "nature": "Inauspicious",
+        "score": 25,
+        "color": "#9b2226",
+        "bg_color": "#fde2e2",
+        "remedy": "Reconsider plans. Seek divine guidance through prayer.",
+        "symbol": "अशुभ",
+    },
+    {
+        "id": 9,
+        "chars": "सूक्ष्मरूपधरिसियहिंदिखावाबिकटरूपधरिलंकजरावा",
+        "hindi": "सूक्ष्म रूप धरि सियहिं दिखावा। बिकट रूप धरि लंक जरावा॥",
+        "transliteration": "Sukshma roopa dhari siyahim dikhaavaa, bikata roopa dhari lanka jaraavaa",
+        "meaning_en": "Taking subtle form to show Sita, and terrifying form to burn Lanka.",
+        "context": "Sundar Kand — Hanuman's dual nature",
+        "result": "Auspicious with Wisdom — Adaptability is key. Success through transformation.",
+        "nature": "Auspicious with Wisdom",
+        "score": 80,
+        "color": "#2d6a4f",
+        "bg_color": "#d8f3dc",
+        "remedy": "Be adaptable. Use wisdom. Worship Hanuman for strength and devotion.",
+        "symbol": "शुभ",
+    },
 ]
 
-RAM_SHALAKA_MEANINGS = {
-    "auspicious_high":   "श्रीराम की कृपा है। कार्य सिद्ध होगा, मनोकामना पूर्ण होगी। विजय निश्चित है।\nSri Rama's full grace is upon you. Your endeavour will succeed, your heart's desire will be fulfilled. Victory is certain.",
-    "auspicious_medium": "प्रयास सफल होगा। धैर्य रखें, सहायता मिलेगी। राम नाम का जाप करें।\nYour effort will bear fruit. Be patient — support will come. Chant the name of Rama for protection.",
-    "auspicious_low":    "कार्य होगा परन्तु विलम्ब सम्भव है। विश्वास रखें, हनुमान जी रक्षा करेंगे।\nSuccess will come but may be delayed. Keep faith — Hanuman will protect and guide.",
-    "neutral":           "स्थिति मध्यम है। पुरुषार्थ और भक्ति दोनों चाहिए। हनुमान चालीसा का पाठ करें।\nThe situation is balanced. Both effort and devotion are needed. Recite Hanuman Chalisa for clarity.",
-    "inauspicious_low":  "अभी प्रतीक्षा करें। कार्य में बाधा है परन्तु हनुमान जी की भक्ति से बाधा दूर होगी।\nWait for a better moment. There is an obstacle, but devotion to Hanuman will remove it in time.",
-    "inauspicious_high": "कार्य अभी उचित नहीं। विचार बदलें, परामर्श लें। राम नाम के 108 जाप करके पुनः प्रयास करें।\nThis undertaking is not favoured now. Reconsider, seek counsel. Chant Ram Naam 108 times before trying again.",
-}
+GRID_SIZE = 15
+TOTAL_CELLS = GRID_SIZE * GRID_SIZE  # 225
+STEP = 9
+NUM_TRACKS = 9
+CYCLE_LENGTH = TOTAL_CELLS // STEP  # 25
 
-SHALAKA_VERSE_MAP = {
-    range(0,7):   ("श्रीगुरु चरन सरोज रज", "By the dust of the Guru's lotus feet, all is illuminated. Proceed with devotion."),
-    range(7,14):  ("बुद्धिहीन तनु जानिके", "Even the seemingly weak succeed through Rama's grace. Strength comes from within."),
-    range(14,21): ("जय हनुमान ज्ञान गुण सागर", "Hanuman — ocean of wisdom — blesses this path. Knowledge and virtue will guide you."),
-    range(21,28): ("राम दूत अतुलित बल धामा", "The emissary of Rama carries boundless power. Invoke this force in your endeavour."),
-    range(28,35): ("सूक्ष्म रूप धरि सियहिं दिखावा", "Through subtle means and divine timing, the path becomes clear. Trust the unseen process."),
-    range(35,42): ("भीम रूप धरि असुर संहारे", "Obstacles will be vanquished by courageous action. Be bold and righteous."),
-    range(42,49): ("राम रसायन तुम्हरे पासा", "You hold the elixir of Rama. Success, health, and liberation are within reach."),
-}
+def build_shalaka_grid() -> list:
+    """Build the 15×15 Ram Shalaka grid."""
+    # Initialize empty grid
+    grid = [[{"char": " ", "track": -1, "pos": -1, "symbol": " "} for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+    
+    # For each track (0-8), place the Chaupai characters
+    for track_id in range(NUM_TRACKS):
+        chaupai = AUTHENTIC_CHAUPAIS[track_id]
+        chars = chaupai["chars"]
+        symbol = chaupai["symbol"]
+
+        # Track positions: start at track_id, then add 9 each time
+        for pos_in_track in range(CYCLE_LENGTH):
+            cell_idx = (track_id + pos_in_track * STEP) % TOTAL_CELLS
+            row = cell_idx // GRID_SIZE
+            col = cell_idx % GRID_SIZE
+
+            # Get character (cycle through if Chaupai is shorter than 25)
+            char_idx = pos_in_track % len(chars)
+            char = chars[char_idx]
+
+            grid[row][col] = {
+                "char": char,
+                "track": track_id,
+                "pos_in_track": pos_in_track,
+                "symbol": symbol,
+                "chaupai_id": chaupai["id"],
+            }
+    return grid
+
+# Pre-build the grid
+SHALAKA_GRID = build_shalaka_grid()
+
+def ram_shalaka_query(question: str = "", seed: int = None) -> dict:
+    """
+    Perform an authentic Ram Shalaka query using the 15x15 grid.
+    """
+    if seed is None:
+        import time
+        time_seed = int(time.time() * 1000) % 100000
+        question_hash = sum(ord(c) for c in question) if question else 0
+        seed = time_seed + question_hash
+
+    random.seed(seed)
+
+    # Random starting position
+    start_row = random.randint(0, GRID_SIZE - 1)
+    start_col = random.randint(0, GRID_SIZE - 1)
+
+    # Get the track for this starting position
+    start_cell = SHALAKA_GRID[start_row][start_col]
+    track_id = start_cell["track"]
+
+    # Trace the path: step by 9 until we return to start
+    path_cells = []
+    path_chars = []
+
+    current_row, current_col = start_row, start_col
+    max_steps = 50  # Safety limit
+
+    for step in range(max_steps):
+        path_cells.append((current_row, current_col))
+        cell = SHALAKA_GRID[current_row][current_col]
+        path_chars.append(cell["char"])
+
+        # Move 9 cells forward
+        current_idx = current_row * GRID_SIZE + current_col
+        next_idx = (current_idx + STEP) % TOTAL_CELLS
+        next_row = next_idx // GRID_SIZE
+        next_col = next_idx % GRID_SIZE
+
+        # Check if we've returned to start
+        if next_row == start_row and next_col == start_col:
+            break
+
+        current_row, current_col = next_row, next_col
+
+    # Get the Chaupai for this track
+    chaupai = AUTHENTIC_CHAUPAIS[track_id]
+    formed_text = "".join(path_chars)
+
+    return {
+        "question": question,
+        "start_row": start_row,
+        "start_col": start_col,
+        "track_id": track_id,
+        "chaupai": chaupai,
+        "path_cells": path_cells,
+        "path_chars": path_chars,
+        "formed_text": formed_text,
+        "score": chaupai["score"],
+        "nature": chaupai["nature"],
+        "result": chaupai["result"],
+        "remedy": chaupai["remedy"],
+        "meaning_en": chaupai["meaning_en"],
+        "context": chaupai["context"],
+        "transliteration": chaupai["transliteration"],
+        "symbol": chaupai["symbol"],
+        "grid": SHALAKA_GRID  # Include grid for UI rendering
+    }
 
 
 # ==================================================================
