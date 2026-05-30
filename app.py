@@ -28,47 +28,47 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-    CREATE TABLE IF NOT EXISTS saved_charts (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        birth_date TEXT NOT NULL,
-        birth_time TEXT NOT NULL,
-        birth_lat REAL NOT NULL,
-        birth_lon REAL NOT NULL,
-        birth_tz REAL NOT NULL,
-        birth_city TEXT,
-        notes TEXT,
-        is_starred INTEGER DEFAULT 0,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    )
+        CREATE TABLE IF NOT EXISTS saved_charts (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            birth_date TEXT NOT NULL,
+            birth_time TEXT NOT NULL,
+            birth_lat REAL NOT NULL,
+            birth_lon REAL NOT NULL,
+            birth_tz REAL NOT NULL,
+            birth_city TEXT,
+            notes TEXT,
+            is_starred INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
     """)
     conn.commit()
     conn.close()
 
-def add_chart_to_db(name, birth_date, birth_time, lat, lon, tz, city=" ", notes=" "):
+def add_chart_to_db(name, birth_date, birth_time, lat, lon, tz, city="", notes=""):
     """Add a new chart entry to the database."""
     chart_id = str(uuid.uuid4())[:8]
     now = datetime.now().isoformat()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-    INSERT INTO saved_charts (id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO saved_charts (id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, (chart_id, name, birth_date.isoformat(), birth_time.strftime("%H:%M"), lat, lon, tz, city, notes, 0, now, now))
     conn.commit()
     conn.close()
     return chart_id
 
-def update_chart_in_db(chart_id, name, birth_date, birth_time, lat, lon, tz, city=" ", notes=" "):
+def update_chart_in_db(chart_id, name, birth_date, birth_time, lat, lon, tz, city="", notes=""):
     """Update an existing chart entry."""
     now = datetime.now().isoformat()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-    UPDATE saved_charts
-    SET name=?, birth_date=?, birth_time=?, birth_lat=?, birth_lon=?, birth_tz=?, birth_city=?, notes=?, updated_at=?
-    WHERE id=?
+        UPDATE saved_charts 
+        SET name=?, birth_date=?, birth_time=?, birth_lat=?, birth_lon=?, birth_tz=?, birth_city=?, notes=?, updated_at=?
+        WHERE id=?
     """, (name, birth_date.isoformat(), birth_time.strftime("%H:%M"), lat, lon, tz, city, notes, now, chart_id))
     conn.commit()
     conn.close()
@@ -94,8 +94,8 @@ def get_all_charts():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-    SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
-    FROM saved_charts ORDER BY updated_at DESC
+        SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
+        FROM saved_charts ORDER BY updated_at DESC
     """)
     rows = c.fetchall()
     conn.close()
@@ -104,7 +104,7 @@ def get_all_charts():
         charts.append({
             "id": row[0], "name": row[1], "birth_date": row[2], "birth_time": row[3],
             "birth_lat": row[4], "birth_lon": row[5], "birth_tz": row[6],
-            "birth_city": row[7] or " ", "notes": row[8] or " ", "is_starred": bool(row[9]),
+            "birth_city": row[7] or "", "notes": row[8] or "", "is_starred": bool(row[9]),
             "created_at": row[10]
         })
     return charts
@@ -115,10 +115,10 @@ def search_charts(query):
     c = conn.cursor()
     search = f"%{query}%"
     c.execute("""
-    SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
-    FROM saved_charts
-    WHERE name LIKE ? OR birth_city LIKE ? OR notes LIKE ?
-    ORDER BY updated_at DESC
+        SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
+        FROM saved_charts 
+        WHERE name LIKE ? OR birth_city LIKE ? OR notes LIKE ?
+        ORDER BY updated_at DESC
     """, (search, search, search))
     rows = c.fetchall()
     conn.close()
@@ -127,7 +127,7 @@ def search_charts(query):
         charts.append({
             "id": row[0], "name": row[1], "birth_date": row[2], "birth_time": row[3],
             "birth_lat": row[4], "birth_lon": row[5], "birth_tz": row[6],
-            "birth_city": row[7] or " ", "notes": row[8] or " ", "is_starred": bool(row[9]),
+            "birth_city": row[7] or "", "notes": row[8] or "", "is_starred": bool(row[9]),
             "created_at": row[10]
         })
     return charts
@@ -137,8 +137,8 @@ def get_starred_charts():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-    SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
-    FROM saved_charts WHERE is_starred=1 ORDER BY updated_at DESC
+        SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
+        FROM saved_charts WHERE is_starred=1 ORDER BY updated_at DESC
     """)
     rows = c.fetchall()
     conn.close()
@@ -147,7 +147,7 @@ def get_starred_charts():
         charts.append({
             "id": row[0], "name": row[1], "birth_date": row[2], "birth_time": row[3],
             "birth_lat": row[4], "birth_lon": row[5], "birth_tz": row[6],
-            "birth_city": row[7] or " ", "notes": row[8] or " ", "is_starred": bool(row[9]),
+            "birth_city": row[7] or "", "notes": row[8] or "", "is_starred": bool(row[9]),
             "created_at": row[10]
         })
     return charts
@@ -157,8 +157,8 @@ def get_chart_by_id(chart_id):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("""
-    SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
-    FROM saved_charts WHERE id=?
+        SELECT id, name, birth_date, birth_time, birth_lat, birth_lon, birth_tz, birth_city, notes, is_starred, created_at
+        FROM saved_charts WHERE id=?
     """, (chart_id,))
     row = c.fetchone()
     conn.close()
@@ -166,7 +166,7 @@ def get_chart_by_id(chart_id):
         return {
             "id": row[0], "name": row[1], "birth_date": row[2], "birth_time": row[3],
             "birth_lat": row[4], "birth_lon": row[5], "birth_tz": row[6],
-            "birth_city": row[7] or " ", "notes": row[8] or " ", "is_starred": bool(row[9]),
+            "birth_city": row[7] or "", "notes": row[8] or "", "is_starred": bool(row[9]),
             "created_at": row[10]
         }
     return None
@@ -191,14 +191,14 @@ def init_session_state():
         "birth_lat": 25.42,
         "birth_lon": 86.13,
         "birth_tz": 5.5,
-        "birth_city": " ",
+        "birth_city": "",
         "computed_chart": None,
-        "computed_chart_name": " ",
-        "ai_ctx": " ",
+        "computed_chart_name": "",
+        "ai_ctx": "",
         "last_shalaka": None,
         # Chart DB state
         "chart_db_view": "all",
-        "chart_db_search": " ",
+        "chart_db_search": "",
         "chart_db_edit_id": None,
         "chart_db_show_form": False,
         "chart_db_form_mode": "add",
@@ -283,8 +283,9 @@ def _city_on_change(key_prefix: str):
     and differs from the last searched value.
     Results are stored in session state; the form re-renders with the dropdown.
     """
-    typed = st.session_state.get(f"{key_prefix}_city_input", " ").strip()
-    last_searched = st.session_state.get(f"{key_prefix}_city_last_searched", " ")
+    typed = st.session_state.get(f"{key_prefix}_city_input", "").strip()
+    last_searched = st.session_state.get(f"{key_prefix}_city_last_searched", "")
+    
     # Only search if ≥3 chars and the value actually changed since last search
     if len(typed) < 3 or typed.lower() == last_searched.lower():
         if len(typed) < 3:
@@ -379,12 +380,12 @@ html, body, [class*="css"] {{
 }}
 
 /* Typography */
-h1 {{ font-family: 'Cormorant Garamond', serif !important; font-weight: 500 !important; font-size: 2.4rem !important; color: {INK} !important; letter-spacing: -0.02em; line-height: 1.1; }}
+h1 {{ font-family: 'Cormorant Garamond', serif !important; font-weight: 500 !important; font-size: 2.4rem !important;  color: {INK} !important; letter-spacing: -0.02em; line-height: 1.1; }}
 h2 {{ font-family: 'Cormorant Garamond', serif !important; font-weight: 500 !important; font-size: 1.7rem !important; color: {INK} !important; letter-spacing: -0.01em; }}
 h3 {{ font-family: 'DM Sans', sans-serif !important; font-weight: 500 !important; font-size: 0.8rem !important; color: {INK_MUTE} !important; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 1rem; }}
 p {{ color: {INK_SOFT}; line-height: 1.65; font-size: 0.95rem; }}
 
-/* Buttons */ 
+/* Buttons */
 .stButton > button {{
     background: {INK} !important;
     color: #fff !important;
@@ -497,10 +498,9 @@ with st.sidebar:
         <div style="font-size: 0.72rem; color: {INK_MUTE}; letter-spacing: 0.08em; text-transform: uppercase; margin-top: 2px;">Vedic Astrology · v5.0</div>
     </div>
     """, unsafe_allow_html=True)
-    
     st.divider()
-    
-    page = st.radio("  ", [
+
+    page = st.radio(" ", [
         "Horoscope",
         "Chart Database",
         "Matchmaking",
@@ -540,7 +540,7 @@ def _chart_db_load_into_form(chart):
     # Clear geo suggestions to avoid stale dropdowns
     for key in list(st.session_state.keys()):
         if "geo_suggestions" in key or "geo_autofilled" in key or "city_last_searched" in key:
-            st.session_state[key] = None if "suggestions" in key else " "
+            st.session_state[key] = None if "suggestions" in key else ""
     # FLAG: sync all form widget keys on next run
     for prefix in ["chart", "pred", "varsh", "ai", "db"]:
         st.session_state[f"{prefix}_sync_coords"] = True
@@ -549,6 +549,7 @@ def _chart_db_render_card(chart, idx):
     """Render a single chart card in the database."""
     is_starred = chart["is_starred"]
     card_border = f"border-left: 3px solid {GOLD};" if is_starred else ""
+
     star_icon = "★" if is_starred else "☆"
 
     try:
@@ -558,7 +559,7 @@ def _chart_db_render_card(chart, idx):
         date_str = chart["birth_date"]
 
     city_display = chart["birth_city"] if chart["birth_city"] else "No location"
-    notes_display = chart["notes"] if chart["notes"] else " "
+    notes_display = chart["notes"] if chart["notes"] else ""
 
     col1, col2 = st.columns([6, 1])
     with col1:
@@ -613,7 +614,7 @@ def rule_row(title, detail, score, sev="neutral"):
         "neutral":  ("#f0ede8", "#5c5650", "#3a3530"),
     }
     bg, fc, tc = colors.get(sev, colors["neutral"])
-    sign = "+" if score > 0 else " "
+    sign = "+" if score > 0 else ""
     st.markdown(f"""
     <div style="border:1px solid {BORDER}; border-radius:5px; padding:0.85rem 1rem; margin-bottom:0.6rem; background:#fff; display:flex; gap:1rem; align-items:flex-start;">
         <div style="flex:1;">
@@ -631,7 +632,7 @@ def render_fired_rules(fired_rules):
     for r in fired_rules:
         rule_row(r["title"], r["detail"], r["score"], r.get("severity", "neutral"))
 
-def section_title(text, sub=" "):
+def section_title(text, sub=""):
     st.markdown(f"""
     <div style="margin-bottom:1.5rem; margin-top:0.5rem;">
         <div style="font-family:'Cormorant Garamond',serif; font-size:1.6rem; font-weight:500; color:{INK}; letter-spacing:-0.01em;">{text}</div>
@@ -733,7 +734,7 @@ def birth_input_form(key_prefix: str, prefill_data=None):
         on_change=_city_on_change,
         args=(key_prefix,),
     )
-    city_name = st.session_state.get(f"{key_prefix}_city_input", " ")
+    city_name = st.session_state.get(f"{key_prefix}_city_input", "")
     st.session_state["birth_city"] = city_name
 
     # ── Auto-filled single-result banner ──
@@ -779,7 +780,7 @@ def birth_input_form(key_prefix: str, prefill_data=None):
             st.rerun()
 
     elif len(city_name.strip()) >= 3 and not autofilled and not suggestions:
-        last = st.session_state.get(f"{key_prefix}_city_last_searched", " ")
+        last = st.session_state.get(f"{key_prefix}_city_last_searched", "")
         if last.lower() == city_name.strip().lower():
             st.markdown(
                 f'<div style="font-size:0.78rem; color:{RUST}; margin-top:2px;">'
@@ -832,7 +833,7 @@ def draw_north_indian_chart(chart: ChartData, title=""):
         6: [(0,0),(5,0),(2.5,2.5)],
         7: [(0,5),(2.5,2.5),(5,5),(2.5,7.5)],
         8: [(0,10),(2.5,7.5),(0,5)],
-        9: [(0,10),(5,10),(2.5,7.5)], 
+        9: [(0,10),(5,10),(2.5,7.5)],
         10: [(5,10),(10,10),(7.5,7.5)],
         11: [(5,5),(2.5,2.5),(0,5)],
         12: [(0,0),(0,5),(2.5,2.5)],
@@ -857,7 +858,7 @@ def draw_north_indian_chart(chart: ChartData, title=""):
     ax.add_patch(diamond)
     ax.plot([5,5],[0,10], color=BORDER, lw=0.7, zorder=2)
     ax.plot([0,10],[5,5], color=BORDER, lw=0.7, zorder=2)
-    ax.plot([5,10],[10,5],  color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
+    ax.plot([5,10],[10,5], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
     ax.plot([5,0],[10,5], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
     ax.plot([10,5],[5,0], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
     ax.plot([0,5],[5,0], color=BORDER, lw=0.5, ls="--", alpha=0.4, zorder=2)
@@ -920,7 +921,7 @@ def draw_navamsa_chart(chart: ChartData):
         6: [(0,0),(5,0),(2.5,2.5)],
         7: [(0,5),(2.5,2.5),(5,5),(2.5,7.5)],
         8: [(0,10),(2.5,7.5),(0,5)],
-        9: [(0,10),(5,10),(2.5,7.5)], 
+        9: [(0,10),(5,10),(2.5,7.5)],
         10: [(5,10),(10,10),(7.5,7.5)],
         11: [(5,5),(2.5,2.5),(0,5)],
         12: [(0,0),(0,5),(2.5,2.5)],
@@ -994,7 +995,7 @@ def planet_table(chart: ChartData) -> pd.DataFrame:
         sign, deg = longitude_to_sign(chart.planets[p])
         nak = chart.nakshatras[p]
         house = ((ZODIAC.index(sign) - lagna_idx) % 12) + 1
-        retro = "℞" if chart.retrograde.get(p, False) else " "
+        retro = "℞" if chart.retrograde.get(p, False) else ""
         rows.append({
             "Planet": f"{p} {retro}".strip(),
             "Sign": sign,
@@ -1017,20 +1018,20 @@ def save_chart_ui(chart: ChartData, name: str):
                            file_name=f"{name.replace(' ','_')}_chart.json",
                            mime="application/json", use_container_width=True)
     with c2:
-        lines = [f"VEDIC CHART — {name}", "= "*50]
+        lines = [f"VEDIC CHART — {name}", "="*50]
         if chart.birth_date:
             lines.append(f"Birth: {chart.birth_date.strftime('%d %b %Y, %I:%M %p')}")
         lines += [
             f"Lagna: {chart.lagna_sign}  Moon: {chart.moon_sign}  Sun: {chart.sun_sign}",
             f"Nakshatra: {chart.nakshatras['Moon']['nakshatra']} pada {chart.nakshatras['Moon']['pada']}",
-            " ", "PLANETS: "
+            "", "PLANETS:"
         ]
         for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
             sign, deg = longitude_to_sign(chart.planets[p])
             lines.append(f"  {p}: {sign} {deg:.1f}° — {chart.nakshatras[p]['nakshatra']} p{chart.nakshatras[p]['pada']}")
         current = chart.get_current_dasha_info()
         if current:
-            lines += [" ", "DASHA: ",
+            lines += ["", "DASHA:",
                       f"  MD: {current['mahadasha']} ({current['mahadasha_start']}→{current['mahadasha_end']})",
                       f"  AD: {current['antardasha']} ({current['antardasha_start']}→{current['antardasha_end']})"]
         st.download_button("↓ Summary TXT", "\n".join(lines),
@@ -1059,14 +1060,14 @@ def _muntha_interpretation(muntha: str) -> str:
 # ═══════════════════════════════════════════════════════════════
 if page == "Chart Database":
     section_title("Chart Database", "Save, manage & load birth charts")
-    
+
     # ── Toolbar: Search + Add + Filter ──
     toolbar_col1, toolbar_col2, toolbar_col3 = st.columns([3, 1, 1])
 
     with toolbar_col1:
         search_query = st.text_input(
             "🔍 Search",
-            value=st.session_state.get("chart_db_search", " "),
+            value=st.session_state.get("chart_db_search", ""),
             placeholder="Search by name, place, or notes…",
             key="chart_db_search_input",
             label_visibility="collapsed"
@@ -1102,13 +1103,13 @@ if page == "Chart Database":
         with st.container():
             name, dob, tob, lat, lon, tz = birth_input_form("db", prefill_data=form_data if form_mode == "edit" else None)
 
-            notes_default = form_data.get("notes", " ") if form_mode == "edit" else " "
+            notes_default = form_data.get("notes", "") if form_mode == "edit" else ""
             notes = st.text_area("Notes", value=notes_default, placeholder="Optional notes about this chart…", key="db_notes", height=60)
 
             btn_col1, btn_col2, btn_col3 = st.columns([1, 1, 2])
             with btn_col1:
                 if st.button("💾 Save" if form_mode == "add" else "💾 Update", use_container_width=True, key="db_save_btn"):
-                    city = st.session_state.get("birth_city", " ")
+                    city = st.session_state.get("birth_city", "")
                     if form_mode == "add":
                         add_chart_to_db(name, dob, tob, lat, lon, tz, city, notes)
                         st.session_state["chart_db_last_action"] = "added"
@@ -1146,7 +1147,7 @@ if page == "Chart Database":
 
     # ── Chart List ──
     view = st.session_state.get("chart_db_view", "all")
-    search = st.session_state.get("chart_db_search", " ").strip()
+    search = st.session_state.get("chart_db_search", "").strip()
 
     if search:
         charts = search_charts(search)
@@ -1168,7 +1169,7 @@ if page == "Chart Database":
     else:
         total_count = len(charts)
         starred_count = sum(1 for c in charts if c["is_starred"])
-        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Showing {total_count} chart{"s" if total_count != 1 else " "} {f"({starred_count} ★)" if starred_count > 0 else " "}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Showing {total_count} chart{"s" if total_count != 1 else ""} {f"({starred_count} ★)" if starred_count > 0 else ""}</div>', unsafe_allow_html=True)
 
         for idx, chart in enumerate(charts):
             _chart_db_render_card(chart, idx)
@@ -1318,7 +1319,7 @@ if page == "Horoscope":
             "Start":  p.start_date.strftime("%d %b %Y"),
             "End":    p.end_date.strftime("%d %b %Y"),
             "Years":  f"{p.years:.1f}",
-            "  ":         "← now" if p.start_date <= datetime.now() < p.end_date else " ",
+            " ":        "← now" if p.start_date <= datetime.now() < p.end_date else "",
         } for p in chart.dasha_periods])
         st.dataframe(dasha_df, hide_index=True, use_container_width=True)
 
@@ -1351,7 +1352,7 @@ if page == "Horoscope":
             st.markdown(f"""
             <div style="text-align:center; margin-top:0.5rem;">
                 <span style="background:{WARM}; color:{INK}; font-size:0.75rem; padding:4px 14px; border-radius:20px; border:1px solid {BORDER};">
-                   Overall Quality: <strong>{p['panchanga_quality']}</strong>
+                    Overall Quality: <strong>{p['panchanga_quality']}</strong>
                 </span>
             </div>
             """, unsafe_allow_html=True)
@@ -1382,9 +1383,9 @@ if page == "Horoscope":
                 <div style="font-size:0.9rem; font-weight:500; color:{INK}; margin-bottom:0.3rem;">{m['nakshatra']} · Pada {m['pada']} · Severity: {m['severity']}</div>
                 <div style="font-size:0.82rem; color:{INK_SOFT}; line-height:1.6; margin-bottom:0.5rem;">{m['effect']}</div>
                 <div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6;">
-                    <strong>Deity: </strong> {m.get('deity','—')}<br/>
-                    <strong>Remedy: </strong> {m.get('remedy','—')}<br/>
-                    <strong>Pacification: </strong> Days {', '.join(str(d) for d in m.get('pacification_milestones', {}).keys())}
+                    <strong>Deity:</strong> {m.get('deity','—')}<br/>
+                    <strong>Remedy:</strong> {m.get('remedy','—')}<br/>
+                    <strong>Pacification:</strong> Days {', '.join(str(d) for d in m.get('pacification_milestones', {}).keys())}
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1432,12 +1433,12 @@ if page == "Horoscope":
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Graha Avastha · Planetary States</div>', unsafe_allow_html=True)
         
         avastha_data = []
-        for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn", "Rahu", "Ketu"]:
+        for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn","Rahu","Ketu"]:
             if p not in chart.planets:
                 continue
             bal = getattr(chart, 'baladi_avasthas', {}).get(p, {})
             dee = getattr(chart, 'deeptadi_avasthas', {}).get(p, {})
-            jss = "Jagrat" if "Awake" in str(dee.get("effect", " ")) else "Svapna" if "Dreaming" in str(dee.get("effect", " ")) else "Sushupti"
+            jss = "Jagrat" if "Awake" in str(dee.get("effect", "")) else "Svapna" if "Dreaming" in str(dee.get("effect", "")) else "Sushupti"
             avastha_data.append({
                 "Planet": p,
                 "Baladi": f"{bal.get('state','—')} ({bal.get('strength_pct',0)}%)",
@@ -1485,7 +1486,7 @@ if page == "Horoscope":
             st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Shadbala · Six-Component Strength</div>', unsafe_allow_html=True)
             
             shadbala_rows = []
-            for p in ["Sun", "Moon", "Mars", "Mercury", "Jupiter", "Venus", "Saturn"]:
+            for p in ["Sun","Moon","Mars","Mercury","Jupiter","Venus","Saturn"]:
                 d = chart.shadbala_extended.get(p, {})
                 if not d:
                     continue
@@ -1573,7 +1574,7 @@ if page == "Horoscope":
                     </div>
                 </div>
                 <div style="font-size:0.82rem; color:{INK_SOFT}; line-height:1.6; margin-bottom:0.5rem;">{am.get('interpretation','')}</div>
-                {f'<div style="font-size:0.78rem; color:{SAGE}; font-weight:500; margin-top:0.4rem;">✦ {am.get("note", " ")}</div>' if am.get('note') else ''}
+                {f'<div style="font-size:0.78rem; color:{SAGE}; font-weight:500; margin-top:0.4rem;">✦ {am.get("note","")}</div>' if am.get('note') else ''}
                 {f'<div style="font-size:0.75rem; color:{INK_MUTE}; margin-top:0.4rem;">Viparita Raja Yoga detected</div>' if am.get('is_viparita_raja_yoga') else ''}
             </div>
             """, unsafe_allow_html=True)
@@ -1664,10 +1665,10 @@ elif page == "Matchmaking":
         st.markdown(f"""
         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1rem 1.25rem;">
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.5rem; font-size:0.85rem; color:{INK_SOFT};">
-                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Moon signs</span><br/>{chart1.moon_sign} · {chart2.moon_sign}</div>
-                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Nakshatras</span><br/>{chart1.nakshatras['Moon']['nakshatra']} · {chart2.nakshatras['Moon']['nakshatra']}</div>
-                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Gana</span><br/>{NAKSHATRA_GANA[chart1.nakshatras['Moon']['nakshatra']]} · {NAKSHATRA_GANA[chart2.nakshatras['Moon']['nakshatra']]}</div>
-                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Nadi</span><br/>{NAKSHATRA_NADI[chart1.nakshatras['Moon']['nakshatra']]} · {NAKSHATRA_NADI[chart2.nakshatras['Moon']['nakshatra']]}</div>
+                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Moon signs</span> <br/>{chart1.moon_sign} · {chart2.moon_sign}</div>
+                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Nakshatras</span> <br/>{chart1.nakshatras['Moon']['nakshatra']} · {chart2.nakshatras['Moon']['nakshatra']}</div>
+                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Gana</span> <br/>{NAKSHATRA_GANA[chart1.nakshatras['Moon']['nakshatra']]} · {NAKSHATRA_GANA[chart2.nakshatras['Moon']['nakshatra']]}</div>
+                <div> <span style="color:{INK_MUTE}; font-size:0.72rem; text-transform:uppercase; letter-spacing:0.06em;">Nadi</span> <br/>{NAKSHATRA_NADI[chart1.nakshatras['Moon']['nakshatra']]} · {NAKSHATRA_NADI[chart2.nakshatras['Moon']['nakshatra']]}</div>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -1678,6 +1679,7 @@ elif page == "Matchmaking":
 elif page == "Yearly Predictions":
     section_title("Yearly Predictions", "Dasha · Transit · Varshphal synthesis")
     name, date, time, lat, lon, tz = birth_input_form("pred")
+
     c1, c2 = st.columns([1, 2])
     with c1:
         year = st.selectbox("Year", list(range(2024, 2036)))
@@ -1696,7 +1698,7 @@ elif page == "Yearly Predictions":
         dasha = pred["dasha"]
         varsh = pred.get("varshphal", {})
         sade  = pred.get("sade_sati", {})
-        sade_txt = sade.get("phase", "  ") if isinstance(sade, dict) else str(sade)
+        sade_txt = sade.get("phase", " ") if isinstance(sade, dict) else str(sade)
 
         st.markdown(f"""
         <div style="background:#fff; border:1px solid {BORDER}; border-radius:8px; padding:1.25rem 1.5rem; margin:1rem 0;">
@@ -1721,7 +1723,7 @@ elif page == "Yearly Predictions":
             <div style="border-top:2px solid {BORDER}; padding-top:1.25rem; margin-top:1.25rem;">
                 <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:0.75rem;">
                     <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:500; color:{INK};">{t}</div>
-                    <div style="font-size:0.8rem; color:{rc}; font-weight:500;">{data['rating']} · {'+' if data['net_score']>0 else ''}{data['net_score']}</div>
+                    <div style="font-size:0.8rem; color:{rc}; font-weight:500;">{data['rating']} · {'+' if data['net_score'] >0 else ''}{data['net_score']}</div>
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -1737,9 +1739,9 @@ elif page == "Yearly Predictions":
                     try:
                         r = requests.post("https://openrouter.ai/api/v1/chat/completions",
                             headers={"Authorization":f"Bearer {api_key}", "Content-Type":"application/json"},
-                            json={"model":"google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
-                                {"role":"system", "content":"You are an expert Vedic Astrologer. Answer concisely and practically."},
-                                {"role":"user", "content":f"Context: {ctx}\n\nQuestion: {user_query}"}]}, timeout=30)
+                            json={"model": "google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
+                                {"role": "system", "content": "You are an expert Vedic Astrologer. Answer concisely and practically."},
+                                {"role": "user", "content":f"Context: {ctx}\n\nQuestion: {user_query}"}]}, timeout=30)
                         ai = r.json()["choices"][0]["message"]["content"]
                         st.markdown(f"""
                         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1.25rem; margin-top:0.75rem;">
@@ -1757,6 +1759,7 @@ elif page == "Varshphal":
     section_title("Varshphal", "Tajaka · Annual Solar Return chart")
     name, date, time, lat, lon, tz = birth_input_form("varsh")
     year = st.selectbox("Year for Varshphal", list(range(2024, 2036)))
+
     if st.button("Calculate Varshphal", use_container_width=True):
         with st.spinner("Calculating Solar Return…"):
             try:
@@ -1771,23 +1774,23 @@ elif page == "Varshphal":
 
         # ── Varshphal download ──
         varsh_lines = [
-            f"VARSHPHAL — {name} · Year {year}", "= " * 50,
+            f"VARSHPHAL — {name} · Year {year}", "=" * 50,
             f"Muntha Sign    : {varsh.get('muntha_sign','—')} (House {varsh.get('muntha_house','—')})",
             f"Muntha Lord    : {varsh.get('muntha_lord','—')} — {varsh.get('muntha_lord_dignity','—')}",
             f"Varsha Lagna   : {varsh.get('varsha_lagna_sign','—')} (Lord: {varsh.get('varsha_lagna_lord','—')})",
-            f"Varshesha      : {varsh.get('varshesha','—')} — {varsh.get('varshesha_dignity','—')}", "  ",
+            f"Varshesha      : {varsh.get('varshesha','—')} — {varsh.get('varshesha_dignity','—')}", " ",
         ]
         tp_dl = varsh.get("tri_pataki", {})
         if tp_dl:
             varsh_lines += [
-                "TRI-PATAKI CHAKRA: ",
+                "TRI-PATAKI CHAKRA:",
                 f"  Udaya  (Months 1–4) : {tp_dl.get('udaya_muntha','—')}",
                 f"  Madhya (Months 5–8) : {tp_dl.get('madhya_muntha','—')}",
-                f"  Asta   (Months 9–12): {tp_dl.get('asta_muntha','—')}", "  ",
+                f"  Asta   (Months 9–12): {tp_dl.get('asta_muntha','—')}", " ",
             ]
         themes_dl = varsh.get("themes", [])
         if themes_dl:
-            varsh_lines.append("ANNUAL THEMES: ")
+            varsh_lines.append("ANNUAL THEMES:")
             for t in themes_dl:
                 if isinstance(t, dict):
                     varsh_lines.append(
@@ -1797,11 +1800,11 @@ elif page == "Varshphal":
                         varsh_lines.append(f"    Calculation: {t['calculation']}")
                     if t.get("classical_rule"):
                         varsh_lines.append(f"    Classical Rule: {t['classical_rule']}")
-            varsh_lines.append("  ")
-        muntha_sign = varsh.get("muntha_sign", "  ")
+            varsh_lines.append(" ")
+        muntha_sign = varsh.get("muntha_sign", " ")
         if muntha_sign:
             varsh_lines += [
-                f"MUNTHA IN {muntha_sign.upper()}:  ",
+                f"MUNTHA IN {muntha_sign.upper()}: ",
                 _muntha_interpretation(muntha_sign),
             ]
 
@@ -1873,11 +1876,11 @@ elif page == "Varshphal":
                 if not isinstance(theme, dict):
                     continue
                 nature   = theme.get("nature", "Neutral")
-                cat      = theme.get("category", "  ")
-                interp   = theme.get("interpretation", "  ")
-                calc     = theme.get("calculation", "  ")
-                rule     = theme.get("classical_rule", "  ")
-                modifier = theme.get("modifier", "  ")
+                cat      = theme.get("category", " ")
+                interp   = theme.get("interpretation", " ")
+                calc     = theme.get("calculation", " ")
+                rule     = theme.get("classical_rule", " ")
+                modifier = theme.get("modifier", " ")
 
                 if nature == "Auspicious":
                     accent = SAGE; icon = "✦"
@@ -1893,14 +1896,14 @@ elif page == "Varshphal":
                         <div style="font-size:0.72rem; color:{accent}; font-weight:500; text-transform:uppercase; letter-spacing:0.06em;">{nature}</div>
                     </div>
                     <div style="font-size:0.82rem; color:{INK_SOFT}; line-height:1.65; margin-bottom:0.5rem;">{interp}</div>
-                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid {BORDER};"><span style="font-weight:500;">Calculation: </span> {calc}</div>' if calc else ''}
-                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.4rem;"><span style="font-weight:500;">Classical Rule: </span> {rule}</div>' if rule else ''}
-                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.4rem;"><span style="font-weight:500;">Note: </span> {modifier}</div>' if modifier else ''}
+                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.5rem; padding-top:0.5rem; border-top:1px solid {BORDER};"><span style="font-weight:500;">Calculation:</span> {calc}</div>' if calc else ''}
+                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.4rem;"><span style="font-weight:500;">Classical Rule:</span> {rule}</div>' if rule else ''}
+                    {f'<div style="font-size:0.78rem; color:{INK_MUTE}; line-height:1.6; margin-top:0.4rem;"><span style="font-weight:500;">Note:</span> {modifier}</div>' if modifier else ''}
                 </div>
                 """, unsafe_allow_html=True)
 
         # ── Muntha Interpretation ──
-        muntha = varsh.get("muntha_sign", "  ")
+        muntha = varsh.get("muntha_sign", " ")
         if muntha:
             lord   = SIGN_LORD.get(muntha, "—")
             interp = _muntha_interpretation(muntha)
@@ -1921,9 +1924,9 @@ elif page == "Varshphal":
                     try:
                         r = requests.post("https://openrouter.ai/api/v1/chat/completions",
                             headers={"Authorization":f"Bearer {api_key}", "Content-Type":"application/json"},
-                            json={"model":"google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
-                                {"role":"system", "content":"You are a Vedic astrologer specialising in Tajaka (Varshphal)."},
-                                {"role":"user", "content":f"Context: {ctx}\n\nQuestion: {q}"}]}, timeout=30)
+                            json={"model": "google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
+                                {"role": "system", "content": "You are a Vedic astrologer specialising in Tajaka (Varshphal)."},
+                                {"role": "user", "content":f"Context: {ctx}\n\nQuestion: {q}"}]}, timeout=30)
                         ai = r.json()["choices"][0]["message"]["content"]
                         st.markdown(f"""
                         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1.25rem; margin-top:0.75rem;">
@@ -1956,7 +1959,7 @@ elif page == "AI Astrologer":
                 st.success("Context loaded.")
             except RuntimeError as e:
                 st.error(str(e))
-        
+
         if st.session_state.get("ai_ctx"):
             st.markdown(f"""
             <div style="background:{WARM}; border-radius:5px; padding:0.75rem; font-size:0.78rem; color:{INK_SOFT}; margin-top:0.5rem; line-height:1.6;">
@@ -1966,7 +1969,7 @@ elif page == "AI Astrologer":
 
     with c2:
         st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Your question</div>', unsafe_allow_html=True)
-        question = st.text_area("  ", "What does my chart say about career in 2026?",
+        question = st.text_area(" ", "What does my chart say about career in 2026?",
                                 height=120, label_visibility="collapsed")
         if st.button("Ask Astrologer", use_container_width=True):
             if not api_key:
@@ -1978,9 +1981,9 @@ elif page == "AI Astrologer":
                     try:
                         r = requests.post("https://openrouter.ai/api/v1/chat/completions",
                             headers={"Authorization":f"Bearer {api_key}", "Content-Type":"application/json"},
-                            json={"model":"google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
-                                {"role":"system", "content":f"You are a wise Vedic Astrologer. Chart: {st.session_state['ai_ctx']}"},
-                                {"role":"user", "content":question}]}, timeout=30)
+                            json={"model": "google/gemini-2.0-flash-lite-preview-02-05:free", "messages":[
+                                {"role": "system", "content":f"You are a wise Vedic Astrologer. Chart: {st.session_state['ai_ctx']}"},
+                                {"role": "user", "content":question}]}, timeout=30)
                         ans = r.json()["choices"][0]["message"]["content"]
                         st.markdown(f"""
                         <div style="background:#fff; border:1px solid {BORDER}; border-radius:6px; padding:1.5rem; margin-top:1rem;">
@@ -1997,14 +2000,14 @@ elif page == "AI Astrologer":
 # ═══════════════════════════════════════════════════════════════
 elif page == "Ram Shalaka":
     section_title("Ram Shalaka", "Divine guidance from Shri Ram Charit Manas")
-    
+
     # ── Authentic 9 Chaupais from Ram Charit Manas ──
     SHALAKA_CHAUPAIS = [
         {
             "id": 1,
             "hindi": "सुनु सिय सत्य असीस हमारी। पूजिहि मन कामना तुम्हारी॥",
             "transliteration": "Sunu siya satya aseesa hamari, pujihi mana kamana tumhari",
-            "meaning_en": "Listen Siya, this is my true blessing — worship with your heart's desire.",
+            "meaning": "Listen Siya, this is my true blessing — worship with your heart's desire.",
             "context": "Bal Kand — Gauri blesses Sita",
             "result": "Very Auspicious — The work will be accomplished with divine grace.",
             "nature": "Very Auspicious",
@@ -2019,7 +2022,7 @@ elif page == "Ram Shalaka":
             "id": 2,
             "hindi": "प्रबिसि नगर कीजै सब काजा। हृदय राखि कौसलपुर राजा॥",
             "transliteration": "Prabisi nagara keejai saba kaaja, hridaya rakhi kausala pura raaja",
-            "meaning_en": "Enter the city and accomplish all tasks, keeping the King of Ayodhya in your heart.",
+            "meaning": "Enter the city and accomplish all tasks, keeping the King of Ayodhya in your heart.",
             "context": "Sundar Kand — Hanuman enters Lanka",
             "result": "Very Auspicious — Begin with faith. Success and divine protection are assured.",
             "nature": "Very Auspicious",
@@ -2034,7 +2037,7 @@ elif page == "Ram Shalaka":
             "id": 3,
             "hindi": "मुद मंगलमय संत समाजू। जिमि जग जंगम तीरथ राजू॥",
             "transliteration": "Muda mangalamaya santa samaaju, jimi jaga jangama tiratha raaju",
-            "meaning_en": "The assembly of saints is blissful, like the king of pilgrimage places.",
+            "meaning": "The assembly of saints is blissful, like the king of pilgrimage places.",
             "context": "Bal Kand — Saintly gathering",
             "result": "Auspicious — Work accomplished through good company and wisdom.",
             "nature": "Auspicious",
@@ -2049,7 +2052,7 @@ elif page == "Ram Shalaka":
             "id": 4,
             "hindi": "गरल सुधा रिपु करहिं मिताई। गोपद सिंधु अनल सितलाई॥",
             "transliteration": "Garala sudhaa ripu karahim mitaaee, gopada sindhu anala sitalaaee",
-            "meaning_en": "Poison turns to nectar, enemies become friends; ocean becomes a cow's hoof-print.",
+            "meaning": "Poison turns to nectar, enemies become friends; ocean becomes a cow's hoof-print.",
             "context": "Sundar Kand — Hanuman's power",
             "result": "Extremely Auspicious — Even impossible tasks will succeed. Miracles possible.",
             "nature": "Very Auspicious",
@@ -2064,7 +2067,7 @@ elif page == "Ram Shalaka":
             "id": 5,
             "hindi": "बरुन कुबेर सुरेस समीरा। रन सनमुख धरि काह न धीरा॥",
             "transliteration": "Baruna kubera suresha sameeraa, rana sanamukha dhari kaaha na dheeraa",
-            "meaning_en": "Varuna, Kubera, Indra, Vayu — who can face them in battle?",
+            "meaning": "Varuna, Kubera, Indra, Vayu — who can face them in battle?",
             "context": "Lanka Kand — Mighty warriors",
             "result": "Auspicious with Effort — Obstacles exist, but victory is certain with courage.",
             "nature": "Auspicious with Effort",
@@ -2079,7 +2082,7 @@ elif page == "Ram Shalaka":
             "id": 6,
             "hindi": "होइ है सोइ जो राम रचि राखा। को करि तरक बढ़ावहिं साखा॥",
             "transliteration": "Hoi hai soi jo raama rachi raakhaa, ko kari taraka badhaavahim saakhaa",
-            "meaning_en": "Whatever Rama has ordained shall happen — who can argue with it?",
+            "meaning": "Whatever Rama has ordained shall happen — who can argue with it?",
             "context": "Bal Kand — Shiva-Parvati dialogue",
             "result": "Neutral — The outcome is destined. Surrender to divine will.",
             "nature": "Neutral",
@@ -2094,7 +2097,7 @@ elif page == "Ram Shalaka":
             "id": 7,
             "hindi": "बिधि बस सुजन कुसंगत परहीं। फनि मनि सम निज गुन अनुसरहीं॥",
             "transliteration": "Bidhi basa sujana kusangata parahim, phani mani sama nija guna anusarahim",
-            "meaning_en": "Good people fall into bad company by fate, but follow their own nature like the snake's gem.",
+            "meaning": "Good people fall into bad company by fate, but follow their own nature like the snake's gem.",
             "context": "Bal Kand — Satsang description",
             "result": "Caution — Beware of bad company. Doubt about success. Choose associations carefully.",
             "nature": "Caution",
@@ -2109,7 +2112,7 @@ elif page == "Ram Shalaka":
             "id": 8,
             "hindi": "उघरें अंत न होइ निबाहू। कालनेमि जिमि रावन राहू॥",
             "transliteration": "Ugharenta na hoi nibaahuu, kaalanemi jimi raavana raahuu",
-            "meaning_en": "The end cannot be borne, like Kalanemi, Ravana, and Rahu.",
+            "meaning": "The end cannot be borne, like Kalanemi, Ravana, and Rahu.",
             "context": "Bal Kand — Satsang description",
             "result": "Inauspicious — This work is not beneficial. Better to reconsider or abandon.",
             "nature": "Inauspicious",
@@ -2124,7 +2127,7 @@ elif page == "Ram Shalaka":
             "id": 9,
             "hindi": "सूक्ष्म रूप धरि सियहिं दिखावा। बिकट रूप धरि लंक जरावा॥",
             "transliteration": "Sukshma roopa dhari siyahim dikhaavaa, bikata roopa dhari lanka jaraavaa",
-            "meaning_en": "Taking subtle form to show Sita, and terrifying form to burn Lanka.",
+            "meaning": "Taking subtle form to show Sita, and terrifying form to burn Lanka.",
             "context": "Sundar Kand — Hanuman's dual nature",
             "result": "Auspicious with Wisdom — Adaptability is key. Success through transformation.",
             "nature": "Auspicious with Wisdom",
@@ -2147,7 +2150,7 @@ elif page == "Ram Shalaka":
     # ── Build Grid ──
     @st.cache_data
     def build_shalaka_grid():
-        grid = [[{"char": " ", "track": -1, "symbol": " "} for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+        grid = [[{"char": "", "track": -1, "symbol": ""} for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
         for track_id in range(NUM_TRACKS):
             chaupai = SHALAKA_CHAUPAIS[track_id]
             chars = chaupai["chars"]
@@ -2168,7 +2171,7 @@ elif page == "Ram Shalaka":
     SHALAKA_GRID = build_shalaka_grid()
 
     # ── Query Function ──
-    def query_shalaka(question: str = " ", seed: int = None):
+    def query_shalaka(question: str = "", seed: int = None):
         if seed is None:
             import time
             time_seed = int(time.time() * 1000) % 100000
@@ -2203,7 +2206,7 @@ elif page == "Ram Shalaka":
             "chaupai": chaupai,
             "path_cells": path_cells,
             "path_chars": path_chars,
-            "formed": " ".join(path_chars),
+            "formed": "".join(path_chars),
             "seed": seed,
         }
 
@@ -2275,10 +2278,10 @@ elif page == "Ram Shalaka":
     <div class="shalaka-container">
         <div style="text-align:center; padding:1.5rem 0 0.5rem;">
             <div style="font-family:'Cormorant Garamond',serif; font-size:2rem; font-weight:500; color:{INK}; margin-bottom:0.4rem;">
-               ◎ Shri Ram Shalaka
+                ◎ Shri Ram Shalaka
             </div>
             <div style="font-size:0.82rem; color:{INK_MUTE}; line-height:1.6;">
-               Divine guidance from <em>Shri Ram Charit Manas</em><br>
+                Divine guidance from <em>Shri Ram Charit Manas</em><br>
                 <span style="font-size:0.75rem;">Pray sincerely, ask your question, and seek the blessing</span>
             </div>
         </div>
@@ -2299,7 +2302,7 @@ elif page == "Ram Shalaka":
 
     st.markdown(f"""
     <div class="shalaka-container" style="text-align:center; padding:0.3rem 0 1rem; font-size:0.78rem; color:{INK_MUTE}; font-style:italic;">
-       Close your eyes, concentrate on your question, then click "Consult"
+        Close your eyes, concentrate on your question, then click "Consult"
     </div>
     """, unsafe_allow_html=True)
 
@@ -2328,11 +2331,11 @@ elif page == "Ram Shalaka":
                 <div style="font-size: 2.8rem; margin-bottom: 0.5rem; line-height: 1;">{chaupai['symbol']}</div>
 
                 <div style="font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; color: {chaupai['color']}; margin-bottom: 0.3rem; letter-spacing: 0.02em;">
-                   {chaupai['nature'].upper()}
+                    {chaupai['nature'].upper()}
                 </div>
 
                 <div style="display: inline-block; background: {chaupai['color']}15; color: {chaupai['color']}; font-size: 1rem; font-weight: 600; padding: 6px 24px; border-radius: 30px; margin: 0.5rem 0; border: 2px solid {chaupai['color']}25;">
-                   {chaupai['score']}/100
+                    {chaupai['score']}/100
                 </div>
             </div>
         </div>
@@ -2353,15 +2356,15 @@ elif page == "Ram Shalaka":
                 <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem;">Divine Chaupai · {chaupai['context']}</div>
 
                 <div style="font-size: 1.2rem; color: {INK}; line-height: 1.8; text-align: center; margin-bottom: 0.75rem; font-family: serif;">
-                   {chaupai['hindi']}
+                    {chaupai['hindi']}
                 </div>
 
                 <div style="font-size: 0.8rem; color: {INK_SOFT}; line-height: 1.5; text-align: center; margin-bottom: 0.5rem; font-style: italic;">
-                   {chaupai['transliteration']}
+                    {chaupai['transliteration']}
                 </div>
 
                 <div style="font-size: 0.75rem; color: {INK_MUTE}; text-align: center; border-top: 1px solid {BORDER}; padding-top: 0.6rem;">
-                   {chaupai['meaning_en']}
+                    {chaupai['meaning']}
                 </div>
             </div>
         </div>
@@ -2373,7 +2376,7 @@ elif page == "Ram Shalaka":
             <div style="background: #fff; border: 1px solid {BORDER}; border-radius: 12px; padding: 1.25rem; margin-bottom: 0.75rem;">
                 <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Interpretation</div>
                 <div style="font-size: 0.9rem; color: {chaupai['color']}; font-weight: 500; line-height: 1.6; padding: 0.75rem; background: {chaupai['bg_color']}; border-radius: 8px;">
-                   {chaupai['result']}
+                    {chaupai['result']}
                 </div>
             </div>
         </div>
@@ -2385,7 +2388,7 @@ elif page == "Ram Shalaka":
             <div style="background: #fff; border: 1px solid {BORDER}; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem;">
                 <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Remedy & Guidance</div>
                 <div style="font-size: 0.88rem; color: {INK_SOFT}; line-height: 1.7;">
-                   {chaupai['remedy']}
+                    {chaupai['remedy']}
                 </div>
             </div>
         </div>
@@ -2412,7 +2415,7 @@ elif page == "Ram Shalaka":
                 elif (row, col) in path_set:
                     classes.append("path")
                 else:
-                    sym = cell.get("symbol", " ")
+                    sym = cell.get("symbol", "")
                     if sym == "शुभ": classes.append("shubh")
                     elif sym == "मध्य": classes.append("madhya")
                     elif sym == "अशुभ": classes.append("ashubh")
@@ -2454,7 +2457,7 @@ elif page == "Ram Shalaka":
                 cell = SHALAKA_GRID[row][col]
                 char = cell["char"] if cell["char"] else "·"
                 classes = ["shalaka-cell"]
-                sym = cell.get("symbol", " ")
+                sym = cell.get("symbol", "")
                 if sym == "शुभ": classes.append("shubh")
                 elif sym == "मध्य": classes.append("madhya")
                 elif sym == "अशुभ": classes.append("ashubh")
@@ -2493,7 +2496,6 @@ elif page == "Ram Shalaka":
             </div>
         </div>
         """, unsafe_allow_html=True)
-
 # ═══════════════════════════════════════════════════════════════
 # HOME
 # ═══════════════════════════════════════════════════════════════
@@ -2519,10 +2521,9 @@ else:
         </div>
     </div>
     <div style="margin-top:1.5rem; font-size:0.85rem; color:{INK_MUTE}; line-height:1.8;">
-    Select a section from the sidebar to begin. Enable Demo mode if pyswisseph is not installed.
+        Select a section from the sidebar to begin. Enable Demo mode if pyswisseph is not installed.
     </div>
     """, unsafe_allow_html=True)
-    
     st.divider()
     st.markdown(f'<div style="font-size:0.72rem; color:{INK_MUTE}; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:0.75rem;">Load a saved chart</div>', unsafe_allow_html=True)
     uploaded = st.file_uploader("Upload chart JSON", type=["json"], label_visibility="collapsed")
