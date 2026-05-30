@@ -2369,7 +2369,691 @@ def _house_career_meaning(house: int) -> str:
 #  score_topic, _apply_dasha_boost, _narrative_block) also unchanged.]
 
 # To keep this file self-contained for review, we include a condensed reference:
-PREDICTION_RULES: List[Dict] = []  # INSERT v7.0 PREDICTION_RULES here in deployment
+PREDICTION_RULES: List[Dict] = [
+
+    # ── CAREER ───────────────────────────────────────────────────
+    {
+        "id": "career_sun_10th",
+        "topic": "career",
+        "condition": lambda ctx: _house("Sun", ctx) == 10,
+        "severity": "positive",
+        "score": 3,
+        "title": "Sun in 10th — Authority & Recognition",
+        "detail": lambda ctx: (
+            "Sun placed in the 10th house bestows prominence, authority, and a strong drive for "
+            "recognition. You are likely to rise to leadership or senior management. Government "
+            "service, politics, senior corporate roles, medicine, or administration are natural fits. "
+            f"Sun is {_dignity('Sun', ctx)} here, {'amplifying' if _dignity('Sun',ctx) in ['Exalted','Own','Mool Trikona'] else 'which may moderate'} these effects."
+        )
+    },
+    {
+        "id": "career_saturn_10th",
+        "topic": "career",
+        "condition": lambda ctx: _house("Saturn", ctx) == 10,
+        "severity": "positive",
+        "score": 2,
+        "title": "Saturn in 10th — Disciplined Rise",
+        "detail": lambda ctx: (
+            "Saturn in the 10th house indicates a career built through consistent effort, patience, "
+            "and discipline. Success comes late but is enduring. Fields like engineering, law, "
+            "administration, real estate, or mining are favoured. "
+            f"Saturn is {_dignity('Saturn', ctx)} here — "
+            + ("exalted Saturn here is one of the strongest career placements in the zodiac." if _dignity("Saturn",ctx) == "Exalted"
+               else "debilitated Saturn may cause career disruptions; remedies are advised." if _dignity("Saturn",ctx) == "Debilitated"
+               else "steady, long-term rewards are expected.")
+        )
+    },
+    {
+        "id": "career_jupiter_10th",
+        "topic": "career",
+        "condition": lambda ctx: _house("Jupiter", ctx) == 10,
+        "severity": "positive",
+        "score": 3,
+        "title": "Jupiter in 10th — Wisdom & Expansion",
+        "detail": lambda ctx: (
+            "Jupiter in the 10th house is a strong Dharmakarmadhipati indicator. You are drawn to "
+            "professions that involve teaching, counselling, law, banking, spirituality, or large "
+            "institutions. Your reputation grows through integrity and wisdom. "
+            f"Jupiter is {_dignity('Jupiter', ctx)} — "
+            + ("exalted Jupiter here creates Hamsa Yoga, indicating distinguished career success." if _dignity("Jupiter",ctx) == "Exalted"
+               else "debilitated Jupiter slows expansion; consider Guru-related remedies." if _dignity("Jupiter",ctx) == "Debilitated"
+               else "benefic influence supports steady career growth.")
+        )
+    },
+    {
+        "id": "career_mercury_10th",
+        "topic": "career",
+        "condition": lambda ctx: _house("Mercury", ctx) == 10,
+        "severity": "positive",
+        "score": 2,
+        "title": "Mercury in 10th — Communication & Intellect",
+        "detail": lambda ctx: (
+            "Mercury in the 10th favours careers in writing, publishing, IT, analytics, teaching, "
+            "trade, or consulting. Your intellect is your greatest professional asset. Multiple "
+            "income streams or career pivots are common. "
+            f"Mercury is {_dignity('Mercury', ctx)} here."
+        )
+    },
+    {
+        "id": "career_mars_10th",
+        "topic": "career",
+        "condition": lambda ctx: _house("Mars", ctx) == 10,
+        "severity": "positive",
+        "score": 2,
+        "title": "Mars in 10th — Drive & Technical Skill",
+        "detail": lambda ctx: (
+            "Mars in the 10th brings ambition, courage, and technical aptitude. Careers in military, "
+            "police, surgery, engineering, sports, or competitive business are indicated. "
+            "Guard against impulsive decisions at work. "
+            f"Mars is {_dignity('Mars', ctx)} here."
+        )
+    },
+    {
+        "id": "career_venus_10th",
+        "topic": "career",
+        "condition": lambda ctx: _house("Venus", ctx) == 10,
+        "severity": "positive",
+        "score": 2,
+        "title": "Venus in 10th — Creative & Luxury Careers",
+        "detail": lambda ctx: (
+            "Venus in the 10th indicates success in arts, fashion, entertainment, hospitality, "
+            "beauty, luxury goods, or diplomacy. Public charm and aesthetic sense are career assets. "
+            f"Venus is {_dignity('Venus', ctx)} here."
+        )
+    },
+    {
+        "id": "career_rahu_10th",
+        "topic": "career",
+        "condition": lambda ctx: _house("Rahu", ctx) == 10,
+        "severity": "neutral",
+        "score": 1,
+        "title": "Rahu in 10th — Unconventional Career Path",
+        "detail": lambda ctx: (
+            "Rahu in the 10th creates strong ambition for status and can bring sudden career leaps. "
+            "Technology, media, foreign companies, research, or unconventional fields are favoured. "
+            "Beware of ethical shortcuts; career crises are possible if Rahu acts rashly."
+        )
+    },
+    {
+        "id": "career_ketu_10th",
+        "topic": "career",
+        "condition": lambda ctx: _house("Ketu", ctx) == 10,
+        "severity": "caution",
+        "score": -1,
+        "title": "Ketu in 10th — Detachment from Career",
+        "detail": lambda ctx: (
+            "Ketu in the 10th house can cause dissatisfaction with worldly career, bringing a pull "
+            "towards spirituality or alternative paths. Professional disruptions are possible. "
+            "Meditation, research, astrology, healing, or behind-the-scenes roles suit this placement."
+        )
+    },
+    {
+        "id": "career_10th_lord_strong",
+        "topic": "career",
+        "condition": lambda ctx: _dignity(_lord(10, ctx), ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 3,
+        "title": "Strong 10th Lord — Powerful Career Yoga",
+        "detail": lambda ctx: (
+            f"The 10th lord {_lord(10,ctx)} is {_dignity(_lord(10,ctx), ctx)}, conferring a strong "
+            f"Rajayoga element. This significantly boosts career success, status, and recognition. "
+            f"The house where the 10th lord sits (H{_house(_lord(10,ctx),ctx)}) becomes a zone of "
+            f"career activity and effort."
+        )
+    },
+    {
+        "id": "career_10th_lord_weak",
+        "topic": "career",
+        "condition": lambda ctx: _dignity(_lord(10, ctx), ctx) == "Debilitated",
+        "severity": "warning",
+        "score": -3,
+        "title": "Debilitated 10th Lord — Career Challenges",
+        "detail": lambda ctx: (
+            f"The 10th lord {_lord(10,ctx)} is debilitated, indicating significant career challenges, "
+            "possible loss of position, or difficulty sustaining professional momentum. Neechabhanga "
+            "cancellation (if applicable) can mitigate this. Remedies for the 10th lord planet are strongly advised."
+        )
+    },
+    {
+        "id": "career_budhaditya",
+        "topic": "career",
+        "condition": lambda ctx: (
+            abs(ctx["planets"].get("Sun",0) - ctx["planets"].get("Mercury",0)) <= 12
+            and longitude_to_sign(ctx["planets"]["Sun"])[0] == longitude_to_sign(ctx["planets"]["Mercury"])[0]
+        ),
+        "severity": "positive",
+        "score": 2,
+        "title": "Budhaditya Yoga — Intelligence & Leadership",
+        "detail": lambda ctx: (
+            "Sun and Mercury are conjunct, forming Budhaditya Yoga. This sharpens intellect, "
+            "communication, and analytical ability, supporting careers in management, writing, "
+            "commerce, or any field requiring quick thinking."
+        )
+    },
+    {
+        "id": "career_dasha_career_planet",
+        "topic": "career",
+        "condition": lambda ctx: ctx.get("dasha","") in ["Jupiter","Sun","Saturn","Mercury","Rahu"],
+        "severity": "positive",
+        "score": 2,
+        "title": "Active Career Dasha",
+        "detail": lambda ctx: (
+            f"{ctx.get('dasha','')} Mahadasha is running. "
+            + {
+                "Jupiter": "Jupiter Dasha supports expansion, wisdom-based career growth, and opportunities in education, law, or finance.",
+                "Sun":     "Sun Dasha brings authority, recognition, and advancement in government or leadership roles.",
+                "Saturn":  "Saturn Dasha rewards past effort with slow but solid career gains; discipline is key.",
+                "Mercury": "Mercury Dasha favours communication, trade, IT, and intellectual pursuits.",
+                "Rahu":    "Rahu Dasha can bring sudden rises through unconventional means; foreign or technology careers thrive."
+            }.get(ctx.get("dasha",""), "")
+            + f" Antardasha of {ctx.get('antardasha','')} colours the next sub-period."
+        )
+    },
+    {
+        "id": "career_dasha_challenging",
+        "topic": "career",
+        "condition": lambda ctx: ctx.get("dasha","") in ["Ketu","Moon","Mars","Venus"],
+        "severity": "neutral",
+        "score": 0,
+        "title": "Moderate Career Dasha",
+        "detail": lambda ctx: (
+            f"{ctx.get('dasha','')} Mahadasha is active. "
+            + {
+                "Ketu":  "Ketu Dasha may bring career transitions or a pull toward spiritual/research work. Not the strongest for promotion.",
+                "Moon":  "Moon Dasha favours public-facing or nurturing careers but can bring emotional fluctuations at work.",
+                "Mars":  "Mars Dasha boosts energy and initiative but risks conflicts with authority figures. Technical careers do well.",
+                "Venus": "Venus Dasha supports creative and luxury careers; financial gains through partnership or arts."
+            }.get(ctx.get("dasha",""), "")
+        )
+    },
+
+    # ── MARRIAGE ─────────────────────────────────────────────────
+    {
+        "id": "marriage_venus_strong",
+        "topic": "marriage",
+        "condition": lambda ctx: _dignity("Venus", ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 3,
+        "title": "Strong Venus — Excellent Marriage Prospects",
+        "detail": lambda ctx: (
+            f"Venus is {_dignity('Venus', ctx)}, indicating a happy, loving, and aesthetically "
+            "pleasing marriage. The spouse is likely attractive, refined, and emotionally warm. "
+            "Venus strong in the chart is one of the best indicators for marital happiness."
+        )
+    },
+    {
+        "id": "marriage_venus_weak",
+        "topic": "marriage",
+        "condition": lambda ctx: _dignity("Venus", ctx) == "Debilitated",
+        "severity": "warning",
+        "score": -2,
+        "title": "Debilitated Venus — Marital Caution",
+        "detail": lambda ctx: (
+            "Venus is debilitated, which can introduce dissatisfaction, misunderstandings, or "
+            "incompatibility in marriage. Neechabhanga may help. Venus remedies (white flowers, "
+            "sugar, Friday fasting) are recommended before marriage."
+        )
+    },
+    {
+        "id": "marriage_7th_lord_strong",
+        "topic": "marriage",
+        "condition": lambda ctx: _dignity(_lord(7, ctx), ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 3,
+        "title": "Strong 7th Lord — Blessed Partnership",
+        "detail": lambda ctx: (
+            f"The 7th lord {_lord(7,ctx)} is {_dignity(_lord(7,ctx), ctx)}, strongly supporting a "
+            "stable and rewarding marriage. The spouse will be a genuine source of strength."
+        )
+    },
+    {
+        "id": "marriage_7th_lord_weak",
+        "topic": "marriage",
+        "condition": lambda ctx: _dignity(_lord(7, ctx), ctx) == "Debilitated",
+        "severity": "warning",
+        "score": -3,
+        "title": "Debilitated 7th Lord — Partnership Challenges",
+        "detail": lambda ctx: (
+            f"The 7th lord {_lord(7,ctx)} is debilitated, indicating potential difficulties in "
+            "marriage such as incompatibility, delays, or separation risk. Remedies for the 7th "
+            "lord and Venus are strongly advised."
+        )
+    },
+    {
+        "id": "marriage_kuja_dosha_high",
+        "topic": "marriage",
+        "condition": lambda ctx: _house("Mars", ctx) == 7,
+        "severity": "warning",
+        "score": -2,
+        "title": "High Kuja Dosha — Mars in 7th",
+        "detail": lambda ctx: (
+            "Mars in the 7th house creates strong Kuja (Mangal) Dosha. This is the most intense "
+            "form. It can cause conflicts, dominance issues, or in severe cases, separation. "
+            "Matching with a Manglik partner nullifies this. Mars Shanti puja is advised."
+        )
+    },
+    {
+        "id": "marriage_kuja_dosha_moderate",
+        "topic": "marriage",
+        "condition": lambda ctx: _house("Mars", ctx) in [1,2,4,8,12] and _house("Mars", ctx) != 7,
+        "severity": "caution",
+        "score": -1,
+        "title": "Moderate Kuja Dosha",
+        "detail": lambda ctx: (
+            f"Mars is in House {_house('Mars',ctx)}, creating moderate Kuja Dosha. "
+            "This can bring assertiveness or friction in relationships. Partial dosha — "
+            "matching with a partner whose chart has similar Mars placement reduces its effect."
+        )
+    },
+    {
+        "id": "marriage_rahu_7th",
+        "topic": "marriage",
+        "condition": lambda ctx: _house("Rahu", ctx) == 7,
+        "severity": "caution",
+        "score": -1,
+        "title": "Rahu in 7th — Unconventional Marriage",
+        "detail": lambda ctx: (
+            "Rahu in the 7th house often brings an unusual or inter-cultural marriage, or a "
+            "relationship that starts suddenly. There may be obsession or mistrust. The spouse "
+            "may have a foreign connection or unconventional personality."
+        )
+    },
+    {
+        "id": "marriage_saturn_7th",
+        "topic": "marriage",
+        "condition": lambda ctx: _house("Saturn", ctx) == 7,
+        "severity": "caution",
+        "score": -1,
+        "title": "Saturn in 7th — Delayed or Serious Marriage",
+        "detail": lambda ctx: (
+            "Saturn in the 7th house can delay marriage (often after age 28-30) and brings a "
+            "serious, karmic quality to partnerships. The spouse may be older, more mature, or "
+            "reserved. Long-term commitment is strong once formed."
+        )
+    },
+    {
+        "id": "marriage_jupiter_7th",
+        "topic": "marriage",
+        "condition": lambda ctx: _house("Jupiter", ctx) == 7,
+        "severity": "positive",
+        "score": 2,
+        "title": "Jupiter in 7th — Wise & Supportive Spouse",
+        "detail": lambda ctx: (
+            "Jupiter in the 7th is highly auspicious for marriage. The spouse is likely to be "
+            "educated, wise, and spiritually inclined. This placement supports a dharmic, "
+            "growth-oriented partnership."
+        )
+    },
+    {
+        "id": "marriage_dasha_venus",
+        "topic": "marriage",
+        "condition": lambda ctx: ctx.get("dasha","") == "Venus",
+        "severity": "positive",
+        "score": 3,
+        "title": "Venus Mahadasha — Prime Marriage Window",
+        "detail": lambda ctx: (
+            "Venus Mahadasha is the most potent period for marriage and romantic unions. "
+            f"The current Antardasha of {ctx.get('antardasha','')} further refines timing. "
+            "Venus-Jupiter or Venus-Mercury Antardashas are the most auspicious sub-periods for wedding ceremonies."
+        )
+    },
+    {
+        "id": "marriage_dasha_jupiter",
+        "topic": "marriage",
+        "condition": lambda ctx: ctx.get("dasha","") == "Jupiter",
+        "severity": "positive",
+        "score": 2,
+        "title": "Jupiter Mahadasha — Auspicious for Marriage",
+        "detail": lambda ctx: (
+            "Jupiter Mahadasha blesses partnerships and family life. This is a highly auspicious "
+            f"time for marriage, especially in Jupiter-Venus or Jupiter-Moon Antardasha periods. "
+            f"Current Antardasha: {ctx.get('antardasha','')}."
+        )
+    },
+    {
+        "id": "marriage_dasha_saturn",
+        "topic": "marriage",
+        "condition": lambda ctx: ctx.get("dasha","") == "Saturn",
+        "severity": "caution",
+        "score": -1,
+        "title": "Saturn Mahadasha — Delayed but Stable",
+        "detail": lambda ctx: (
+            "Saturn Mahadasha is not the first choice for marriage timing, but unions formed "
+            "during this period tend to be karmic, serious, and lasting. Wait for Venus or "
+            f"Jupiter Antardasha within Saturn Mahadasha. Current AD: {ctx.get('antardasha','')}."
+        )
+    },
+
+    # ── CHILDREN ─────────────────────────────────────────────────
+    {
+        "id": "children_jupiter_strong",
+        "topic": "children",
+        "condition": lambda ctx: _dignity("Jupiter", ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 4,
+        "title": "Strong Jupiter — Blessed Progeny",
+        "detail": lambda ctx: (
+            f"Jupiter (Putrakaraka) is {_dignity('Jupiter',ctx)}, one of the strongest indicators "
+            "of good fortune in matters of children. Multiple children are possible; at least one "
+            "is likely to be notably talented or spiritually inclined."
+        )
+    },
+    {
+        "id": "children_jupiter_weak",
+        "topic": "children",
+        "condition": lambda ctx: _dignity("Jupiter", ctx) == "Debilitated",
+        "severity": "warning",
+        "score": -3,
+        "title": "Debilitated Jupiter — Progeny Challenges",
+        "detail": lambda ctx: (
+            "Jupiter (Putrakaraka) is debilitated, which is the most significant indicator of "
+            "difficulty in having children. Delays, miscarriages, or fewer children are possible. "
+            "Jupiter Shanti and Santana Gopala Puja are classical remedies."
+        )
+    },
+    {
+        "id": "children_5th_lord_strong",
+        "topic": "children",
+        "condition": lambda ctx: _dignity(_lord(5, ctx), ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 3,
+        "title": "Strong 5th Lord — Fertile House",
+        "detail": lambda ctx: (
+            f"The 5th lord {_lord(5,ctx)} is {_dignity(_lord(5,ctx),ctx)}, strongly activating the "
+            "Putra (children) bhava. Children are likely to be intellectually bright and bring honour."
+        )
+    },
+    {
+        "id": "children_5th_lord_weak",
+        "topic": "children",
+        "condition": lambda ctx: _dignity(_lord(5, ctx), ctx) == "Debilitated",
+        "severity": "warning",
+        "score": -3,
+        "title": "Debilitated 5th Lord — Challenges with Progeny",
+        "detail": lambda ctx: (
+            f"The 5th lord {_lord(5,ctx)} is debilitated, weakening the house of children. "
+            "Conception challenges or difficult pregnancies are possible. Remedies for the 5th "
+            "lord and regular Santana Gopala prayers are advised."
+        )
+    },
+    {
+        "id": "children_saturn_5th",
+        "topic": "children",
+        "condition": lambda ctx: _house("Saturn", ctx) == 5,
+        "severity": "caution",
+        "score": -2,
+        "title": "Saturn in 5th — Delayed Children",
+        "detail": lambda ctx: (
+            "Saturn in the 5th house is a classical indicator of delayed progeny. Children may "
+            "come later in life (after Saturn's maturation at age 36, or after Saturn Antardasha "
+            "passes). The children born will be serious, responsible, and long-lived."
+        )
+    },
+    {
+        "id": "children_rahu_5th",
+        "topic": "children",
+        "condition": lambda ctx: _house("Rahu", ctx) == 5,
+        "severity": "caution",
+        "score": -1,
+        "title": "Rahu in 5th — Unconventional Progeny Path",
+        "detail": lambda ctx: (
+            "Rahu in the 5th house can create confusion around conception or unusual circumstances "
+            "around children (e.g., adoption, IVF, or step-children). Medical consultation and "
+            "Rahu remedies are advised if conception is delayed."
+        )
+    },
+    {
+        "id": "children_ketu_5th",
+        "topic": "children",
+        "condition": lambda ctx: _house("Ketu", ctx) == 5,
+        "severity": "caution",
+        "score": -1,
+        "title": "Ketu in 5th — Spiritual Orientation",
+        "detail": lambda ctx: (
+            "Ketu in the 5th may reduce the desire for children or indicate a spiritually gifted "
+            "child. There is sometimes a past-life karmic connection with children born under this "
+            "placement."
+        )
+    },
+    {
+        "id": "children_dasha_jupiter",
+        "topic": "children",
+        "condition": lambda ctx: ctx.get("dasha","") == "Jupiter",
+        "severity": "positive",
+        "score": 3,
+        "title": "Jupiter Mahadasha — Best Period for Children",
+        "detail": lambda ctx: (
+            "Jupiter Mahadasha is the most auspicious period for conception and birth of children. "
+            f"Jupiter-Jupiter and Jupiter-Venus Antardashas are particularly fruitful. "
+            f"Current Antardasha: {ctx.get('antardasha','')}."
+        )
+    },
+    {
+        "id": "children_dasha_venus",
+        "topic": "children",
+        "condition": lambda ctx: ctx.get("dasha","") == "Venus",
+        "severity": "positive",
+        "score": 2,
+        "title": "Venus Mahadasha — Favourable for Progeny",
+        "detail": lambda ctx: (
+            "Venus Mahadasha is generally favourable for family expansion. "
+            f"Venus-Jupiter or Venus-Moon Antardashas within this period are the best sub-windows. "
+            f"Current Antardasha: {ctx.get('antardasha','')}."
+        )
+    },
+    {
+        "id": "children_dasha_saturn",
+        "topic": "children",
+        "condition": lambda ctx: ctx.get("dasha","") == "Saturn",
+        "severity": "caution",
+        "score": -1,
+        "title": "Saturn Mahadasha — Patience Required",
+        "detail": lambda ctx: (
+            "Saturn Mahadasha can bring delays in having children. Medical check-ups are advised. "
+            "Saturn-Jupiter or Saturn-Venus Antardashas can still deliver children within this period. "
+            f"Current Antardasha: {ctx.get('antardasha','')}."
+        )
+    },
+    {
+        "id": "children_dasha_rahu",
+        "topic": "children",
+        "condition": lambda ctx: ctx.get("dasha","") == "Rahu",
+        "severity": "caution",
+        "score": -1,
+        "title": "Rahu Mahadasha — Consult Medically",
+        "detail": lambda ctx: (
+            "Rahu Mahadasha is unpredictable for children. Conception is possible but may involve "
+            "unusual circumstances. Medical consultation is advised if trying. "
+            f"Rahu-Jupiter Antardasha is the best sub-period. Current AD: {ctx.get('antardasha','')}."
+        )
+    },
+
+    # ── HEALTH ───────────────────────────────────────────────────
+    {
+        "id": "health_lagna_lord_strong",
+        "topic": "health",
+        "condition": lambda ctx: _dignity(_lord(1, ctx), ctx) in ["Exalted","Own","Mool Trikona"],
+        "severity": "positive",
+        "score": 3,
+        "title": "Strong Lagna Lord — Vitality & Immunity",
+        "detail": lambda ctx: (
+            f"The Lagna lord {_lord(1,ctx)} is {_dignity(_lord(1,ctx),ctx)}, bestowing robust "
+            "physical constitution, strong immunity, and faster recovery from illness. "
+            "This is a protective factor against chronic disease."
+        )
+    },
+    {
+        "id": "health_lagna_lord_weak",
+        "topic": "health",
+        "condition": lambda ctx: _dignity(_lord(1, ctx), ctx) == "Debilitated",
+        "severity": "warning",
+        "score": -3,
+        "title": "Debilitated Lagna Lord — Physical Vulnerability",
+        "detail": lambda ctx: (
+            f"The Lagna lord {_lord(1,ctx)} is debilitated, weakening the physical body and immune "
+            "system. Regular health check-ups, Lagna lord remedies, and avoiding stress are important."
+        )
+    },
+    {
+        "id": "health_saturn_6th",
+        "topic": "health",
+        "condition": lambda ctx: _house("Saturn", ctx) == 6,
+        "severity": "caution",
+        "score": -2,
+        "title": "Saturn in 6th — Chronic Conditions",
+        "detail": lambda ctx: (
+            "Saturn in the 6th house, while giving victory over enemies, can predispose to chronic "
+            "or long-term health issues — particularly joints, bones, teeth, and skin. "
+            "Saturn here is also a classic indicator of service-related stress and fatigue."
+        )
+    },
+    {
+        "id": "health_saturn_8th",
+        "topic": "health",
+        "condition": lambda ctx: _house("Saturn", ctx) == 8,
+        "severity": "caution",
+        "score": -1,
+        "title": "Saturn in 8th — Longevity with Chronic Issues",
+        "detail": lambda ctx: (
+            "Saturn in the 8th house often gives long life but with chronic health challenges. "
+            "Digestive issues, nerve problems, or constitutional weakness may arise. "
+            "Saturn in the 8th also indicates a contemplative, research-oriented mind."
+        )
+    },
+    {
+        "id": "health_mars_6th",
+        "topic": "health",
+        "condition": lambda ctx: _house("Mars", ctx) == 6,
+        "severity": "caution",
+        "score": -1,
+        "title": "Mars in 6th — Fevers & Inflammation",
+        "detail": lambda ctx: (
+            "Mars in the 6th house can cause inflammatory conditions, fevers, blood disorders, "
+            "or accident-proneness. However, it also gives strong fighting spirit and quick recovery. "
+            "Physical exercise is an excellent outlet for this energy."
+        )
+    },
+    {
+        "id": "health_mars_8th",
+        "topic": "health",
+        "condition": lambda ctx: _house("Mars", ctx) == 8,
+        "severity": "caution",
+        "score": -1,
+        "title": "Mars in 8th — Accident Caution",
+        "detail": lambda ctx: (
+            "Mars in the 8th house increases the risk of accidents, surgeries, or injuries, "
+            "particularly to the head, blood, or reproductive system. Caution while driving "
+            "and during Mars Antardasha is advised."
+        )
+    },
+    {
+        "id": "health_rahu_6th",
+        "topic": "health",
+        "condition": lambda ctx: _house("Rahu", ctx) == 6,
+        "severity": "caution",
+        "score": -1,
+        "title": "Rahu in 6th — Hidden or Unusual Ailments",
+        "detail": lambda ctx: (
+            "Rahu in the 6th can cause mysterious or hard-to-diagnose health issues. Allergies, "
+            "anxiety, addictions, or unusual infections are possible. Second medical opinions "
+            "and regular detox are beneficial."
+        )
+    },
+    {
+        "id": "health_ketu_8th",
+        "topic": "health",
+        "condition": lambda ctx: _house("Ketu", ctx) == 8,
+        "severity": "caution",
+        "score": -1,
+        "title": "Ketu in 8th — Spiritual Crises & Psychosomatic Issues",
+        "detail": lambda ctx: (
+            "Ketu in the 8th house can cause psychosomatic conditions, sudden surgeries, or "
+            "near-death experiences. Spiritual practices and avoiding extreme sports are advisable."
+        )
+    },
+    {
+        "id": "health_moon_6th_or_8th",
+        "topic": "health",
+        "condition": lambda ctx: _house("Moon", ctx) in [6, 8],
+        "severity": "caution",
+        "score": -2,
+        "title": "Moon in 6th/8th — Mental & Digestive Health",
+        "detail": lambda ctx: (
+            f"Moon in the {_house('Moon',ctx)}th house can cause emotional instability, digestive "
+            "disorders, fluid-related issues, or mental health challenges. Meditation, "
+            "proper sleep, and reducing emotional stress are vital."
+        )
+    },
+    {
+        "id": "health_sade_sati",
+        "topic": "health",
+        "condition": lambda ctx: ctx.get("sade_sati_active", False),
+        "severity": "caution",
+        "score": -2,
+        "title": "Sade Sati Active — Physical & Mental Stress",
+        "detail": lambda ctx: (
+            f"Saturn's Sade Sati is active ({ctx.get('sade_sati_phase','')}) over your Moon sign. "
+            "This 7.5-year period tests physical stamina and mental resilience. Immune function "
+            "may be lowered. Regular exercise, proper rest, and Saturn remedies (oil on Saturdays, "
+            "blue sapphire consultation) are protective."
+        )
+    },
+    {
+        "id": "health_dasha_saturn",
+        "topic": "health",
+        "condition": lambda ctx: ctx.get("dasha","") == "Saturn",
+        "severity": "caution",
+        "score": -1,
+        "title": "Saturn Mahadasha — Health Vigilance",
+        "detail": lambda ctx: (
+            "Saturn Mahadasha requires careful attention to bones, joints, teeth, digestion, and "
+            f"chronic conditions. Fatigue and slow recovery are common. Saturn-Rahu Antardasha "
+            f"is particularly sensitive. Current AD: {ctx.get('antardasha','')}."
+        )
+    },
+    {
+        "id": "health_dasha_rahu",
+        "topic": "health",
+        "condition": lambda ctx: ctx.get("dasha","") == "Rahu",
+        "severity": "caution",
+        "score": -1,
+        "title": "Rahu Mahadasha — Anxiety & Unusual Ailments",
+        "detail": lambda ctx: (
+            "Rahu Mahadasha can manifest as anxiety, stress, unusual diagnoses, or lifestyle "
+            f"excesses affecting health. Rahu-Rahu and Rahu-Saturn are the most sensitive "
+            f"sub-periods. Current AD: {ctx.get('antardasha','')}."
+        )
+    },
+    {
+        "id": "health_dasha_ketu",
+        "topic": "health",
+        "condition": lambda ctx: ctx.get("dasha","") == "Ketu",
+        "severity": "caution",
+        "score": -1,
+        "title": "Ketu Mahadasha — Mysterious Health Episodes",
+        "detail": lambda ctx: (
+            "Ketu Mahadasha can bring sudden or puzzling health events, psychosomatic symptoms, "
+            "or hospitalisation. Ketu-Mars Antardasha requires particular caution. "
+            f"Current AD: {ctx.get('antardasha','')}."
+        )
+    },
+    {
+        "id": "health_jupiter_strong_protection",
+        "topic": "health",
+        "condition": lambda ctx: (
+            _dignity("Jupiter", ctx) in ["Exalted","Own","Mool Trikona"]
+            and _house("Jupiter", ctx) in [1, 5, 9]
+        ),
+        "severity": "positive",
+        "score": 3,
+        "title": "Jupiter in Trine — Powerful Health Protection",
+        "detail": lambda ctx: (
+            f"Jupiter is {_dignity('Jupiter',ctx)} and placed in House {_house('Jupiter',ctx)} (a trine). "
+            "This is one of the strongest protective factors in Vedic astrology for health and longevity. "
+            "Recovery from illness is excellent."
+        )
+    },
+]
 
 
 def evaluate_rules(ctx: Dict, topic: str = None, debug: bool = False) -> List[Dict]:
