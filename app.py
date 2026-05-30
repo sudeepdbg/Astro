@@ -2210,8 +2210,8 @@ elif page == "Ram Shalaka":
             "seed": seed,
         }
 
-    # ── CSS ──
-    st.markdown(f"""
+    # ── CSS (rendered via st.html to avoid markdown escaping) ──
+    st.html(f"""
     <style>
     .shalaka-container {{
         max-width: 650px;
@@ -2271,10 +2271,10 @@ elif page == "Ram Shalaka":
         50% {{ transform: scale(1.3); }}
     }}
     </style>
-    """, unsafe_allow_html=True)
+    """)
 
     # ── Header ──
-    st.markdown(f"""
+    st.html(f"""
     <div class="shalaka-container">
         <div style="text-align:center; padding:1.5rem 0 0.5rem;">
             <div style="font-family:'Cormorant Garamond',serif; font-size:2rem; font-weight:500; color:{INK}; margin-bottom:0.4rem;">
@@ -2286,7 +2286,7 @@ elif page == "Ram Shalaka":
             </div>
         </div>
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     # ── Question Input ──
     col1, col2 = st.columns([3, 1])
@@ -2300,11 +2300,11 @@ elif page == "Ram Shalaka":
     with col2:
         consult = st.button("✨ Consult", use_container_width=True, key="shalaka_consult")
 
-    st.markdown(f"""
+    st.html(f"""
     <div class="shalaka-container" style="text-align:center; padding:0.3rem 0 1rem; font-size:0.78rem; color:{INK_MUTE}; font-style:italic;">
         Close your eyes, concentrate on your question, then click "Consult"
     </div>
-    """, unsafe_allow_html=True)
+    """)
 
     # ── Process Query ──
     if "shalaka_result" not in st.session_state:
@@ -2323,7 +2323,7 @@ elif page == "Ram Shalaka":
         chaupai = result["chaupai"]
 
         # Result Card
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container">
             <div style="background: {chaupai['bg_color']}; border: 1px solid {chaupai['color']}25; border-radius: 16px; padding: 2.2rem; text-align: center; margin: 1rem 0; position: relative; overflow: hidden;">
                 <div style="position: absolute; top: -30px; right: -20px; font-size: 10rem; opacity: 0.04; color: {chaupai['color']}; font-family: 'Cormorant Garamond', serif;">ॐ</div>
@@ -2339,18 +2339,18 @@ elif page == "Ram Shalaka":
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Question
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container" style="margin: 0 auto 1rem;">
             <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.3rem;">Your Question</div>
             <div style="font-size: 1rem; color: {INK}; font-style: italic; font-family: 'Cormorant Garamond', serif;">"{result['question']}"</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Chaupai Card
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container">
             <div style="background: #fff; border: 1px solid {BORDER}; border-radius: 12px; padding: 1.5rem; margin-bottom: 0.75rem;">
                 <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem;">Divine Chaupai · {chaupai['context']}</div>
@@ -2368,10 +2368,10 @@ elif page == "Ram Shalaka":
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Interpretation
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container">
             <div style="background: #fff; border: 1px solid {BORDER}; border-radius: 12px; padding: 1.25rem; margin-bottom: 0.75rem;">
                 <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Interpretation</div>
@@ -2380,10 +2380,10 @@ elif page == "Ram Shalaka":
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Remedy
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container">
             <div style="background: #fff; border: 1px solid {BORDER}; border-radius: 12px; padding: 1.25rem; margin-bottom: 1.25rem;">
                 <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Remedy & Guidance</div>
@@ -2392,14 +2392,14 @@ elif page == "Ram Shalaka":
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Grid with highlighted path
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container" style="text-align: center; margin: 1rem auto 0.5rem;">
             <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Shri Ram Shalaka Grid · Your Path Highlighted</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         path_set = set(result["path_cells"])
         start = result["start"]
@@ -2422,10 +2422,10 @@ elif page == "Ram Shalaka":
                     elif sym == "श्री": classes.append("shri")
                 grid_html += f'<div class="{" ".join(classes)}">{char}</div>'
         grid_html += '</div></div>'
-        st.markdown(grid_html, unsafe_allow_html=True)
+        st.html(grid_html)
 
         # Legend
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container" style="display: flex; justify-content: center; gap: 1.2rem; font-size: 0.7rem; color: {INK_MUTE}; margin: 0.5rem auto 1.5rem; flex-wrap: wrap;">
             <span><span style="display:inline-block; width:10px; height:10px; background:{INK}; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>Selected</span>
             <span><span style="display:inline-block; width:10px; height:10px; background:{GOLD}; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>Divine Path</span>
@@ -2434,7 +2434,7 @@ elif page == "Ram Shalaka":
             <span><span style="display:inline-block; width:10px; height:10px; background:#fde2e2; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>Ashubh</span>
             <span><span style="display:inline-block; width:10px; height:10px; background:#e8d5f2; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>Shri</span>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Ask Again
         col_center = st.columns([1, 2, 1])[1]
@@ -2445,11 +2445,11 @@ elif page == "Ram Shalaka":
 
     else:
         # Show empty grid with color coding
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container" style="text-align: center; margin: 0.5rem auto 0.5rem;">
             <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.5rem;">Shri Ram Shalaka Grid · 15 × 15</div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         grid_html = '<div class="shalaka-container"><div class="shalaka-grid">'
         for row in range(GRID_SIZE):
@@ -2464,20 +2464,20 @@ elif page == "Ram Shalaka":
                 elif sym == "श्री": classes.append("shri")
                 grid_html += f'<div class="{" ".join(classes)}">{char}</div>'
         grid_html += '</div></div>'
-        st.markdown(grid_html, unsafe_allow_html=True)
+        st.html(grid_html)
 
         # Legend
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container" style="display: flex; justify-content: center; gap: 1.2rem; font-size: 0.7rem; color: {INK_MUTE}; margin: 0.5rem auto 1.5rem; flex-wrap: wrap;">
             <span><span style="display:inline-block; width:10px; height:10px; background:#d8f3dc; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>Shubh (Auspicious)</span>
             <span><span style="display:inline-block; width:10px; height:10px; background:#fef3cd; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>Madhya (Mixed)</span>
             <span><span style="display:inline-block; width:10px; height:10px; background:#fde2e2; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>Ashubh (Inauspicious)</span>
             <span><span style="display:inline-block; width:10px; height:10px; background:#e8d5f2; border-radius:2px; margin-right:4px; vertical-align:middle;"></span>Shri (Most Auspicious)</span>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 
         # Instructions
-        st.markdown(f"""
+        st.html(f"""
         <div class="shalaka-container">
             <div style="background: #fff; border: 1px solid {BORDER}; border-radius: 12px; padding: 1.25rem;">
                 <div style="font-size: 0.7rem; color: {INK_MUTE}; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.6rem;">How to Use Shri Ram Shalaka</div>
@@ -2495,7 +2495,7 @@ elif page == "Ram Shalaka":
                 </div>
             </div>
         </div>
-        """, unsafe_allow_html=True)
+        """)
 # ═══════════════════════════════════════════════════════════════
 # HOME
 # ═══════════════════════════════════════════════════════════════
